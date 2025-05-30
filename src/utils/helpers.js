@@ -1,4 +1,4 @@
-// src/utils/helpers.js
+// src/utils/helpers.js - แก้ไขแล้ว
 export const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -87,6 +87,7 @@ export const formatDate = (timestamp) => {
   });
 };
 
+// ลบฟังก์ชันซ้ำออก และรวมเป็นฟังก์ชันเดียว
 export const validateQuiz = (quiz) => {
   const errors = [];
 
@@ -120,7 +121,9 @@ export const validateQuiz = (quiz) => {
     question.options?.forEach((option, optionIndex) => {
       if (!option?.trim()) {
         errors.push(
-          `คำถามข้อ ${index + 1}, ตัวเลือก ${optionIndex + 1}: กรุณาใส่ข้อความ`
+          `คำถามข้อ ${index + 1}, ตัวเลือก ${String.fromCharCode(
+            65 + optionIndex
+          )}: กรุณาใส่ข้อความ`
         );
       }
     });
@@ -157,38 +160,4 @@ export const clearLocalStorage = (key) => {
   } catch (error) {
     console.warn("Failed to clear localStorage:", error);
   }
-};
-
-export const validateQuiz = (quiz) => {
-  const errors = [];
-
-  if (!quiz.title?.trim()) {
-    errors.push("กรุณาใส่ชื่อข้อสอบ");
-  }
-
-  if (!quiz.questions || quiz.questions.length === 0) {
-    errors.push("กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อ");
-  }
-
-  quiz.questions?.forEach((question, index) => {
-    if (!question.question?.trim()) {
-      errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
-    }
-
-    if (!question.options || question.options.length < 2) {
-      errors.push(
-        `คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือกอย่างน้อย 2 ตัวเลือก`
-      );
-    }
-
-    question.options?.forEach((option, optionIndex) => {
-      if (!option?.trim()) {
-        errors.push(
-          `คำถามข้อ ${index + 1}, ตัวเลือก ${optionIndex + 1}: กรุณาใส่ข้อความ`
-        );
-      }
-    });
-  });
-
-  return errors;
 };

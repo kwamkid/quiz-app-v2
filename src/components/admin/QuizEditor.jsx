@@ -1,4 +1,4 @@
-// src/components/admin/QuizEditor.jsx - เวอร์ชันง่าย แก้ syntax error
+// src/components/admin/QuizEditor.jsx - แก้ไขใหม่สมบูรณ์
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
@@ -30,7 +30,10 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
         title: quiz.title || '',
         emoji: quiz.emoji || '📚',
         difficulty: quiz.difficulty || 'ง่าย',
-        questions: quiz.questions?.length > 0 ? quiz.questions : [
+        questions: quiz.questions?.length > 0 ? quiz.questions.map(q => ({
+          ...q,
+          options: [...(q.options || []), '', '', '', ''].slice(0, 4) // ให้แน่ใจว่ามี 4 ตัวเลือก
+        })) : [
           {
             question: '',
             options: ['', '', '', ''],
@@ -59,9 +62,16 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
         errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
       }
       
-      const filledOptions = question.options?.filter(opt => opt?.trim()).length || 0;
-      if (filledOptions < 2) {
-        errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือกอย่างน้อย 2 ตัวเลือก`);
+      // ตรวจสอบตัวเลือกบังคับ (A และ B)
+      const requiredOptions = question.options?.slice(0, 2).filter(opt => opt?.trim()).length || 0;
+      if (requiredOptions < 2) {
+        errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือก A และ B (บังคับ)`);
+      }
+
+      // ตรวจสอบคำตอบที่ถูกต้อง
+      const filledOptions = question.options?.filter(opt => opt?.trim()) || [];
+      if (question.correctAnswer >= filledOptions.length) {
+        errors.push(`คำถามข้อ ${index + 1}: คำตอบที่เลือกไม่ถูกต้อง กรุณาเลือกจากตัวเลือกที่มีข้อความ`);
       }
     });
     
@@ -251,51 +261,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
             </button>
           </div>
           
-          {/* Save Button */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'center'
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontSize: '0.9rem',
+            textAlign: 'center'
           }}>
-            <button
-              onClick={handleSave}
-              disabled={isLoading}
-              style={{
-                background: isLoading 
-                  ? 'rgba(255, 255, 255, 0.1)' 
-                  : 'linear-gradient(135deg, #10b981, #059669)',
-                color: isLoading ? 'rgba(255, 255, 255, 0.5)' : 'white',
-                border: 'none',
-                borderRadius: '16px',
-                padding: '16px 32px',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: isLoading ? 'none' : '0 8px 20px rgba(16, 185, 129, 0.3)'
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    borderTop: '2px solid white',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                  <span>กำลังบันทึก...</span>
-                </>
-              ) : (
-                <>
-                  <Save size={20} />
-                  <span>{quiz ? '💾 บันทึกการแก้ไข' : '🎉 สร้างข้อสอบ'}</span>
-                </>
-              )}
-            </button>
+            💡 ปุ่มเพิ่มคำถามและปุ่มบันทึกอยู่ด้านล่างสุดของหน้า
           </div>
         </div>
 
@@ -459,43 +430,17 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
           backdropFilter: 'blur(10px)',
           borderRadius: '20px',
           padding: '24px',
+          marginBottom: '24px',
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+          <h2 style={{
+            color: 'white',
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
             marginBottom: '20px'
           }}>
-            <h2 style={{
-              color: 'white',
-              fontSize: '1.5rem',
-              fontWeight: 'bold'
-            }}>
-              🎯 คำถาม ({quizData.questions.length} ข้อ)
-            </h2>
-            
-            <button
-              onClick={addQuestion}
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '10px 16px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '0.9rem',
-                fontWeight: '500'
-              }}
-            >
-              <Plus size={16} />
-              เพิ่มคำถาม
-            </button>
-          </div>
+            🎯 คำถาม ({quizData.questions.length} ข้อ)
+          </h2>
 
           {quizData.questions.map((question, questionIndex) => (
             <div 
@@ -591,13 +536,20 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                       marginBottom: '6px',
                       display: 'block'
                     }}>
-                      ตัวเลือก {String.fromCharCode(65 + optionIndex)} *
+                      ตัวเลือก {String.fromCharCode(65 + optionIndex)} 
+                      {optionIndex < 2 ? (
+                        <span style={{ color: '#ef4444' }}> *</span>
+                      ) : (
+                        <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}> (ไม่บังคับ)</span>
+                      )}
                     </label>
                     <input
                       type="text"
                       value={option}
                       onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value)}
-                      placeholder={`ตัวเลือก ${String.fromCharCode(65 + optionIndex)}`}
+                      placeholder={optionIndex < 2 
+                        ? `ตัวเลือก ${String.fromCharCode(65 + optionIndex)} (บังคับ)` 
+                        : `ตัวเลือก ${String.fromCharCode(65 + optionIndex)} (ไม่บังคับ)`}
                       style={{
                         width: '100%',
                         padding: '10px 14px',
@@ -606,7 +558,9 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                           : 'rgba(255, 255, 255, 0.1)',
                         border: question.correctAnswer === optionIndex 
                           ? '2px solid #22c55e' 
-                          : '1px solid rgba(255, 255, 255, 0.2)',
+                          : optionIndex < 2 
+                            ? '2px solid rgba(239, 68, 68, 0.5)' 
+                            : '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '10px',
                         color: 'white',
                         fontSize: '0.9rem',
@@ -650,14 +604,16 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                       fontFamily: 'inherit'
                     }}
                   >
-                    {question.options.map((_, optionIndex) => (
-                      <option 
-                        key={optionIndex} 
-                        value={optionIndex}
-                        style={{ background: '#374151', color: 'white' }}
-                      >
-                        {String.fromCharCode(65 + optionIndex)}
-                      </option>
+                    {question.options.map((opt, optionIndex) => (
+                      opt.trim() && (
+                        <option 
+                          key={optionIndex} 
+                          value={optionIndex}
+                          style={{ background: '#374151', color: 'white' }}
+                        >
+                          {String.fromCharCode(65 + optionIndex)} - {opt.substring(0, 20)}{opt.length > 20 ? '...' : ''}
+                        </option>
+                      )
                     ))}
                   </select>
                 </div>
@@ -694,6 +650,101 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
               </div>
             </div>
           ))}
+
+          {/* Add Question Button - ย้ายมาล่างสุด */}
+          <div style={{ textAlign: 'center', marginTop: '24px' }}>
+            <button
+              onClick={addQuestion}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '16px 32px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                margin: '0 auto',
+                boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0) scale(1)';
+                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+              }}
+            >
+              <Plus size={20} />
+              ➕ เพิ่มคำถามใหม่
+            </button>
+          </div>
+        </div>
+
+        {/* Save Button - ย้ายมาล่างสุด */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: '32px',
+          marginBottom: '32px'
+        }}>
+          <button
+            onClick={handleSave}
+            disabled={isLoading}
+            style={{
+              background: isLoading 
+                ? 'rgba(255, 255, 255, 0.1)' 
+                : 'linear-gradient(135deg, #10b981, #059669)',
+              color: isLoading ? 'rgba(255, 255, 255, 0.5)' : 'white',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '20px 48px',
+              fontSize: '1.3rem',
+              fontWeight: 'bold',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              margin: '0 auto',
+              boxShadow: isLoading ? 'none' : '0 12px 30px rgba(16, 185, 129, 0.4)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                e.target.style.boxShadow = '0 16px 40px rgba(16, 185, 129, 0.5)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.transform = 'translateY(0) scale(1)';
+                e.target.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.4)';
+              }
+            }}
+          >
+            {isLoading ? (
+              <>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  border: '3px solid rgba(255, 255, 255, 0.3)',
+                  borderTop: '3px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                <span>กำลังบันทึก...</span>
+              </>
+            ) : (
+              <>
+                <Save size={24} />
+                <span>{quiz ? '💾 บันทึกการแก้ไข' : '🎉 สร้างข้อสอบ'}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 

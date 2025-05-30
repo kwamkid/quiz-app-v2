@@ -1,15 +1,17 @@
-// src/App.jsx - แก้ไขสมบูรณ์
-import React, { useState } from 'react';
+// src/App.jsx - เพิ่มระบบดูคะแนนสมบูรณ์
+import React, { useState, useEffect } from 'react';
 import LandingPage from './components/layout/LandingPage';
 import StudentLogin from './components/student/StudentLogin';
 import QuizList from './components/student/QuizList';
 import QuizTaking from './components/student/QuizTaking';
+import ScoreHistory from './components/student/ScoreHistory';
 import AdminLogin from './components/admin/AdminLogin';
-import FirebaseService from './services/firebase';
 import AdminDashboard from './components/admin/AdminDashboard';
+import AdminScores from './components/admin/AdminScores';
 import QuizEditor from './components/admin/QuizEditor';
-
-
+import LoadingSpinner from './components/common/LoadingSpinner';
+import FirebaseService from './services/firebase';
+import { loadFromLocalStorage, saveToLocalStorage, clearLocalStorage } from './utils/helpers';
 
 function App() {
   const [view, setView] = useState('landing');
@@ -18,11 +20,23 @@ function App() {
   const [quizResults, setQuizResults] = useState(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState(null);
+  const [loading, setLoading] = useState(false);
 
+  // Load saved student name on mount
+  useEffect(() => {
+    const savedName = loadFromLocalStorage('studentName');
+    if (savedName) {
+      setStudentName(savedName);
+    }
+  }, []);
 
   const handleSelectRole = (role) => {
     if (role === 'student') {
-      setView('studentLogin');
+      if (studentName) {
+        setView('quizList');
+      } else {
+        setView('studentLogin');
+      }
     } else {
       setView('adminLogin');
     }
@@ -30,6 +44,7 @@ function App() {
 
   const handleNameSubmit = (name) => {
     setStudentName(name);
+    saveToLocalStorage('studentName', name);
     setView('quizList');
   };
 
@@ -44,6 +59,8 @@ function App() {
 
   const handleQuizEnd = async (results) => {
     try {
+      setLoading(true);
+      
       // Save results to Firebase
       await FirebaseService.saveStudentAttempt({
         studentName: studentName,
@@ -62,15 +79,19 @@ function App() {
       // Still show results even if save fails
       setQuizResults(results);
       setView('quizResult');
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ✅ เพิ่ม handler สำหรับดูประวัติคะแนนของนักเรียน
   const handleViewHistory = () => {
-    alert('📊 ดูประวัติคะแนน\n(ฟีเจอร์นี้จะพัฒนาในขั้นตอนถัดไป)');
+    setView('scoreHistory');
   };
 
   const handleLogout = () => {
     setStudentName('');
+    clearLocalStorage('studentName');
     setCurrentQuiz(null);
     setQuizResults(null);
     setView('landing');
@@ -91,47 +112,58 @@ function App() {
     setView('quizList');
   };
 
-// แก้ไข handleAdminLoginSuccess
-const handleAdminLoginSuccess = () => {
-  setIsAdminLoggedIn(true);
-  setView('adminDashboard'); // เปลี่ยนจาก alert
-};
+  // ✅ เพิ่ม handler สำหรับกลับจากหน้าประวัติคะแนน
+  const handleBackFromHistory = () => {
+    setView('quizList');
+  };
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdminLoggedIn(true);
+    setView('adminDashboard');
+  };
 
   const handleAdminLogout = () => {
     setIsAdminLoggedIn(false);
     setView('landing');
   };
 
-// แก้ไข handlers
-const handleCreateQuiz = () => {
-  setEditingQuiz(null); // สำหรับสร้างใหม่
-  setView('quizEditor');
-};
+  const handleCreateQuiz = () => {
+    setEditingQuiz(null);
+    setView('quizEditor');
+  };
 
-const handleEditQuiz = (quiz) => {
-  setEditingQuiz(quiz); // สำหรับแก้ไข
-  setView('quizEditor');
-};
+  const handleEditQuiz = (quiz) => {
+    setEditingQuiz(quiz);
+    setView('quizEditor');
+  };
 
-const handleAdminViewScores = () => {
-  alert('📊 ดูคะแนนนักเรียน\n(ฟีเจอร์นี้จะพัฒนาในขั้นตอนถัดไป) 📈');
-};
+  // ✅ เพิ่ม handler สำหรับดูคะแนนของครู
+  const handleAdminViewScores = () => {
+    setView('adminScores');
+  };
 
-const handleQuizSaved = (savedQuiz) => {
-  setEditingQuiz(null);
-  setView('adminDashboard');
-  // Reload dashboard data จะเกิดขึ้นเองใน AdminDashboard
-};
+  const handleQuizSaved = (savedQuiz) => {
+    setEditingQuiz(null);
+    setView('adminDashboard');
+  };
 
-const handleBackToAdmin = () => {
-  setEditingQuiz(null);
-  setView('adminDashboard');
-};
+  const handleBackToAdmin = () => {
+    setEditingQuiz(null);
+    setView('adminDashboard');
+  };
 
+  // ✅ เพิ่ม handler สำหรับกลับจากหน้าดูคะแนนของครู
+  const handleBackFromAdminScores = () => {
+    setView('adminDashboard');
+  };
 
+  // Show loading spinner when loading
+  if (loading) {
+    return <LoadingSpinner message="กำลังบันทึกข้อมูล..." />;
+  }
 
   return (
-    <div>
+    <div style={{ fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif' }}>
       {view === 'landing' && (
         <LandingPage onSelectRole={handleSelectRole} />
       )}
@@ -158,6 +190,14 @@ const handleBackToAdmin = () => {
           onLogout={handleLogout}
         />
       )}
+
+      {/* ✅ เพิ่มหน้าประวัติคะแนนของนักเรียน */}
+      {view === 'scoreHistory' && (
+        <ScoreHistory
+          studentName={studentName}
+          onBack={handleBackFromHistory}
+        />
+      )}
       
       {view === 'quizTaking' && currentQuiz && (
         <QuizTaking
@@ -168,7 +208,6 @@ const handleBackToAdmin = () => {
         />
       )}
       
-      // เพิ่มใน return
       {view === 'adminDashboard' && isAdminLoggedIn && (
         <AdminDashboard
           onCreateQuiz={handleCreateQuiz}
@@ -180,7 +219,13 @@ const handleBackToAdmin = () => {
         />
       )}
 
-      // เพิ่มใน return
+      {/* ✅ เพิ่มหน้าดูคะแนนของครู */}
+      {view === 'adminScores' && isAdminLoggedIn && (
+        <AdminScores
+          onBack={handleBackFromAdminScores}
+        />
+      )}
+
       {view === 'quizEditor' && isAdminLoggedIn && (
         <QuizEditor
           quiz={editingQuiz}
@@ -298,32 +343,67 @@ const handleBackToAdmin = () => {
               }}>โดย {quizResults.studentName}</p>
             </div>
             
-            <button
-              onClick={handleBackToHome}
-              style={{
-                width: '100%',
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '16px 32px',
-                fontSize: '1.2rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
-              }}
-            >
-              🏠 กลับหน้าหลัก
-            </button>
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              flexWrap: 'wrap'
+            }}>
+              <button
+                onClick={handleBackToHome}
+                style={{
+                  flex: 1,
+                  minWidth: '200px',
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '16px 24px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0) scale(1)';
+                  e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+                }}
+              >
+                🏠 กลับหน้าหลัก
+              </button>
+
+              <button
+                onClick={handleViewHistory}
+                style={{
+                  flex: 1,
+                  minWidth: '200px',
+                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '16px 24px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.target.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0) scale(1)';
+                  e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
+                }}
+              >
+                🏆 ดูประวัติคะแนน
+              </button>
+            </div>
           </div>
         </div>
       )}
