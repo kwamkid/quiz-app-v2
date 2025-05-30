@@ -1,7 +1,7 @@
 // src/components/student/QuizTaking.jsx
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
-import Button from '../common/Button';
+// import Button from '../common/Button'; // ไม่ได้ถูกใช้งานในโค้ดที่ให้มา อาจลบออกได้ถ้าไม่ใช้
 import audioService from '../../services/simpleAudio';
 import { shuffleArray, getTimerColor } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
@@ -31,7 +31,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
         const newTime = timeLeft - 1;
         setTimeLeft(newTime);
         
-        // Warning sounds
         if (newTime === 10) {
           audioService.timeWarning();
         }
@@ -42,7 +41,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && !showFeedback) {
-      // Time's up - submit with no answer
       handleAnswerSubmit(null);
     }
   }, [timeLeft, showFeedback]);
@@ -65,7 +63,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     setIsCorrect(correct);
     setShowFeedback(true);
 
-    // Save answer
     const answerRecord = {
       questionIndex: currentQuestionIndex,
       question: currentQuestion.question,
@@ -90,13 +87,11 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     await audioService.navigation();
     
     if (currentQuestionIndex < shuffledQuestions.length - 1) {
-      // Next question
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
       setShowFeedback(false);
       setTimeLeft(QUIZ_SETTINGS.TIME_PER_QUESTION);
     } else {
-      // Quiz completed
       await audioService.quizComplete();
       
       const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
@@ -108,7 +103,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
         quizTitle: quiz.title,
         studentName,
         completedAt: new Date(),
-        answers: answers,
+        answers: answers, // ใส่ answers เข้าไปใน results
         percentage: Math.round((score / (shuffledQuestions.length * QUIZ_SETTINGS.POINTS_PER_QUESTION)) * 100)
       };
       
@@ -161,7 +156,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       overflow: 'auto',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
     }}>
-      {/* Floating Background Elements */}
       <div style={{
         position: 'absolute',
         top: '5%',
@@ -194,7 +188,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
         maxWidth: '1000px',
         margin: '0 auto'
       }}>
-        {/* Header */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
@@ -261,7 +254,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             </button>
           </div>
 
-          {/* Progress Bar */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{
               display: 'flex',
@@ -301,7 +293,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             </div>
           </div>
 
-          {/* Timer */}
           <div style={{
             textAlign: 'center'
           }}>
@@ -331,7 +322,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
           </div>
         </div>
 
-        {/* Question Card */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
@@ -340,7 +330,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
           border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
         }}>
-          {/* Question */}
           <div style={{
             textAlign: 'center',
             marginBottom: '32px'
@@ -357,97 +346,103 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             </h2>
           </div>
 
-          {/* Answer Options */}
           <div style={{
             display: 'grid',
             gap: '16px',
             marginBottom: '32px'
           }}>
             {currentQuestion.options.map((option, index) => {
-              let buttonStyle = {
-                width: '100%',
-                padding: '20px 24px',
-                borderRadius: '16px',
-                fontSize: '1.1rem',
-                fontWeight: '500',
-                cursor: showFeedback ? 'default' : 'pointer',
-                transition: 'all 0.3s ease',
-                border: '2px solid transparent',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                textAlign: 'left'
-              };
-              
-              if (showFeedback) {
-                if (index === currentQuestion.correctAnswer) {
-                  buttonStyle.background = 'rgba(34, 197, 94, 0.3)';
-                  buttonStyle.borderColor = '#22c55e';
-                  buttonStyle.color = '#22c55e';
-                  buttonStyle.animation = 'pulse 1s infinite';
-                } else if (index === selectedAnswer && selectedAnswer !== currentQuestion.correctAnswer) {
-                  buttonStyle.background = 'rgba(239, 68, 68, 0.3)';
-                  buttonStyle.borderColor = '#ef4444';
-                  buttonStyle.color = '#ef4444';
+              // ================== START OF CHANGE ==================
+              // ตรวจสอบว่าตัวเลือกมีข้อความ (ไม่ใช่สตริงว่าง) หรือไม่
+              if (option && option.trim() !== "") {
+              // =================== END OF CHANGE ===================
+                let buttonStyle = {
+                  width: '100%',
+                  padding: '20px 24px',
+                  borderRadius: '16px',
+                  fontSize: '1.1rem',
+                  fontWeight: '500',
+                  cursor: showFeedback ? 'default' : 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: '2px solid transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  textAlign: 'left'
+                };
+                
+                if (showFeedback) {
+                  if (index === currentQuestion.correctAnswer) {
+                    buttonStyle.background = 'rgba(34, 197, 94, 0.3)';
+                    buttonStyle.borderColor = '#22c55e';
+                    buttonStyle.color = '#22c55e';
+                    buttonStyle.animation = 'pulse 1s infinite';
+                  } else if (index === selectedAnswer && selectedAnswer !== currentQuestion.correctAnswer) {
+                    buttonStyle.background = 'rgba(239, 68, 68, 0.3)';
+                    buttonStyle.borderColor = '#ef4444';
+                    buttonStyle.color = '#ef4444';
+                  } else {
+                    buttonStyle.background = 'rgba(255, 255, 255, 0.05)';
+                    buttonStyle.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    buttonStyle.color = 'rgba(255, 255, 255, 0.5)';
+                  }
                 } else {
-                  buttonStyle.background = 'rgba(255, 255, 255, 0.05)';
-                  buttonStyle.borderColor = 'rgba(255, 255, 255, 0.2)';
-                  buttonStyle.color = 'rgba(255, 255, 255, 0.5)';
+                  if (selectedAnswer === index) {
+                    buttonStyle.background = 'rgba(59, 130, 246, 0.3)';
+                    buttonStyle.borderColor = '#3b82f6';
+                    buttonStyle.color = '#60a5fa';
+                  } else {
+                    buttonStyle.background = 'rgba(255, 255, 255, 0.1)';
+                    buttonStyle.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    buttonStyle.color = 'white';
+                  }
                 }
-              } else {
-                if (selectedAnswer === index) {
-                  buttonStyle.background = 'rgba(59, 130, 246, 0.3)';
-                  buttonStyle.borderColor = '#3b82f6';
-                  buttonStyle.color = '#60a5fa';
-                } else {
-                  buttonStyle.background = 'rgba(255, 255, 255, 0.1)';
-                  buttonStyle.borderColor = 'rgba(255, 255, 255, 0.3)';
-                  buttonStyle.color = 'white';
-                }
-              }
 
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  disabled={showFeedback}
-                  style={buttonStyle}
-                  onMouseEnter={(e) => {
-                    if (!showFeedback && selectedAnswer !== index) {
-                      e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                      e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                      e.target.style.transform = 'translateY(-2px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!showFeedback && selectedAnswer !== index) {
-                      e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                      e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                      e.target.style.transform = 'translateY(0)';
-                    }
-                  }}
-                >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
-                    flexShrink: 0
-                  }}>
-                    {String.fromCharCode(65 + index)}
-                  </div>
-                  <span style={{ flex: 1 }}>{option}</span>
-                </button>
-              );
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(index)}
+                    disabled={showFeedback}
+                    style={buttonStyle}
+                    onMouseEnter={(e) => {
+                      if (!showFeedback && selectedAnswer !== index) {
+                        e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                        e.target.style.transform = 'translateY(-2px)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!showFeedback && selectedAnswer !== index) {
+                        e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                        e.target.style.transform = 'translateY(0)';
+                      }
+                    }}
+                  >
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      fontSize: '1rem',
+                      flexShrink: 0
+                    }}>
+                      {String.fromCharCode(65 + index)}
+                    </div>
+                    <span style={{ flex: 1 }}>{option}</span>
+                  </button>
+                );
+              // ================== START OF CHANGE ==================
+              }
+              return null; // ถ้าตัวเลือกเป็นสตริงว่าง ก็ไม่ต้องแสดงผลอะไร
+              // =================== END OF CHANGE ===================
             })}
           </div>
 
-          {/* Action Button */}
           <div style={{ textAlign: 'center' }}>
             {!showFeedback ? (
               <button
@@ -490,7 +485,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
               </button>
             ) : (
               <div style={{ textAlign: 'center' }}>
-                {/* Feedback */}
                 <div style={{
                   fontSize: '1.8rem',
                   fontWeight: 'bold',
@@ -551,7 +545,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
         </div>
       </div>
 
-      {/* CSS Animations */}
       <style>{`
         @keyframes bounce {
           0%, 20%, 53%, 80%, 100% {

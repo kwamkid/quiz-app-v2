@@ -237,6 +237,7 @@ function App() {
       {view === 'quizResult' && quizResults && (
         <div style={{
           minHeight: '100vh',
+          width: '100vw',
           background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)',
           display: 'flex',
           alignItems: 'center',
