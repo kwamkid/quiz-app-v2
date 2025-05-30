@@ -1,277 +1,230 @@
-// src/services/firebase.js - กลับไปเป็นเหมือนเดิม แต่เพิ่มการป้องกัน
+// src/services/firebase.js - Production Ready
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
   collection,
-  addDoc,
   getDocs,
   doc,
+  getDoc,
+  addDoc,
   updateDoc,
   deleteDoc,
-  query,
-  orderBy,
-  where,
 } from "firebase/firestore";
-import { getAuth, signInAnonymously } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBl0DIY-zL87ML70QQahY9vre9dniL5G2g",
-  authDomain: "quizwhiz-225ab.firebaseapp.com",
-  projectId: "quizwhiz-225ab",
-  storageBucket: "quizwhiz-225ab.firebasestorage.app",
-  messagingSenderId: "401259195294",
-  appId: "1:401259195294:web:f874034945cd0fd8bdc48f",
-  measurementId: "G-BV2Y0P6GRP",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-// Firebase Service Class
-export class FirebaseService {
-  // Authentication
-  static async signInAnonymously() {
-    try {
-      console.log("🔐 Attempting anonymous sign-in...");
-      const result = await signInAnonymously(auth);
-      console.log("✅ Anonymous sign-in successful, UID:", result.user.uid);
-      return result.user;
-    } catch (error) {
-      console.error("❌ Error signing in anonymously:", error);
-      return { uid: "demo-user-" + Date.now() };
-    }
-  }
+// Environment check
+const isDevelopment = import.meta.env.VITE_NODE_ENV === "development";
+const isProduction = import.meta.env.VITE_NODE_ENV === "production";
 
-  // Get all quizzes
+console.log("🔥 Firebase initialized:", {
+  environment: import.meta.env.VITE_NODE_ENV || "development",
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+});
+
+// Mock data สำหรับ development (ถ้าต้องการ)
+const mockQuizzes = [
+  {
+    id: "mock-1",
+    title: "🧮 คณิตศาสตร์ ป.6",
+    emoji: "🧮",
+    difficulty: "ง่าย",
+    questions: [
+      {
+        question: "5 + 3 = ?",
+        options: ["6", "7", "8", "9"],
+        correctAnswer: 2,
+        points: 10,
+      },
+      {
+        question: "12 ÷ 4 = ?",
+        options: ["2", "3", "4", "6"],
+        correctAnswer: 1,
+        points: 10,
+      },
+    ],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+class FirebaseService {
+  // ✅ Get all quizzes
   static async getQuizzes() {
     try {
-      console.log("📚 Loading quizzes from Firebase...");
-      const q = query(collection(db, "quizzes"), orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
+      console.log("🔍 Getting quizzes from Firestore...");
 
-      const quizzes = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const querySnapshot = await getDocs(collection(db, "quizzes"));
+      const quizzes = [];
 
-      console.log("📊 Loaded quizzes:", quizzes.length, "items");
+      querySnapshot.forEach((doc) => {
+        quizzes.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
 
-      // ถ้าไม่มีข้อสอบใน Firebase ให้ใช้ Demo data
-      if (quizzes.length === 0) {
-        console.log("⚠️ No quizzes in Firebase, using demo data");
-        return this.getDemoQuizzes();
+      console.log("✅ Quizzes loaded from Firestore:", quizzes.length);
+
+      // ถ้าไม่มีข้อมูลใน production และเป็น development ให้ใช้ mock
+      if (quizzes.length === 0 && isDevelopment) {
+        console.log(
+          "📝 No quizzes found in Firestore, using mock data for development"
+        );
+        return mockQuizzes;
       }
 
       return quizzes;
     } catch (error) {
       console.error("❌ Error getting quizzes:", error);
-      console.log("🔄 Falling back to demo data");
-      return this.getDemoQuizzes();
+
+      // ถ้า error ใน development ให้ใช้ mock data
+      if (isDevelopment) {
+        console.log("🔄 Fallback to mock data in development");
+        return mockQuizzes;
+      }
+
+      // ใน production ให้ return empty array
+      return [];
     }
   }
 
-  // Demo data for testing
-  static getDemoQuizzes() {
-    return [
-      {
-        id: "demo-1",
-        title: "🧮 คณิตศาสตร์ ป.6",
-        emoji: "🧮",
-        difficulty: "ง่าย",
-        questions: [
-          {
-            question: "5 + 3 = ?",
-            options: ["6", "7", "8", "9"],
-            correctAnswer: 2,
-            points: 10,
-          },
-          {
-            question: "12 ÷ 4 = ?",
-            options: ["2", "3", "4", "6"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "7 × 8 = ?",
-            options: ["54", "56", "58", "60"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "15 - 6 = ?",
-            options: ["8", "9", "10", "11"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "100 ÷ 5 = ?",
-            options: ["15", "20", "25", "30"],
-            correctAnswer: 1,
-            points: 10,
-          },
-        ],
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-      {
-        id: "demo-2",
-        title: "🌟 วิทยาศาสตร์",
-        emoji: "🔬",
-        difficulty: "ปานกลาง",
-        questions: [
-          {
-            question: "โลกมีดวงจันทร์กี่ดวง?",
-            options: ["1 ดวง", "2 ดวง", "3 ดวง", "4 ดวง"],
-            correctAnswer: 0,
-            points: 10,
-          },
-          {
-            question: "น้ำเดือดที่กี่องศาเซลเซียส?",
-            options: ["90°C", "100°C", "110°C", "120°C"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "แสงอาทิตย์เดินทางมาถึงโลกใช้เวลากี่นาที?",
-            options: ["6 นาที", "8 นาที", "10 นาที", "12 นาที"],
-            correctAnswer: 1,
-            points: 10,
-          },
-        ],
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-      {
-        id: "demo-3",
-        title: "🇬🇧 ภาษาอังกฤษ",
-        emoji: "🇬🇧",
-        difficulty: "ยาก",
-        questions: Array.from({ length: 25 }, (_, i) => ({
-          question: `English Question ${
-            i + 1
-          }: What is the capital of Thailand?`,
-          options: ["Bangkok", "Chiang Mai", "Phuket", "Pattaya"],
-          correctAnswer: 0,
-          points: 10,
-        })),
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-      {
-        id: "demo-4",
-        title: "🎨 ศิลปะ",
-        emoji: "🎨",
-        difficulty: "ง่าย",
-        questions: [],
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-    ];
+  // ✅ Get single quiz
+  static async getQuiz(quizId) {
+    try {
+      console.log("🔍 Getting quiz:", quizId);
+
+      const docRef = doc(db, "quizzes", quizId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      } else {
+        console.log("❌ Quiz not found:", quizId);
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error getting quiz:", error);
+      return null;
+    }
   }
 
-  // Create new quiz
+  // ✅ Create new quiz
   static async createQuiz(quizData) {
     try {
+      console.log("➕ Creating quiz:", quizData.title);
+
       const docRef = await addDoc(collection(db, "quizzes"), {
         ...quizData,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+
       console.log("✅ Quiz created with ID:", docRef.id);
-
-      // Clear cache เพื่อให้โหลดข้อมูลใหม่
-      this.clearQuizzesCache();
-
       return docRef.id;
     } catch (error) {
-      console.error("Error creating quiz:", error);
+      console.error("❌ Error creating quiz:", error);
       throw error;
     }
   }
 
-  // Update quiz
+  // ✅ Update quiz
   static async updateQuiz(quizId, quizData) {
     try {
-      const quizRef = doc(db, "quizzes", quizId);
-      await updateDoc(quizRef, {
+      console.log("📝 Updating quiz:", quizId);
+
+      const docRef = doc(db, "quizzes", quizId);
+      await updateDoc(docRef, {
         ...quizData,
         updatedAt: new Date(),
       });
-      console.log("✅ Quiz updated:", quizId);
 
-      // Clear cache เพื่อให้โหลดข้อมูลใหม่
-      this.clearQuizzesCache();
+      console.log("✅ Quiz updated successfully");
+      return true;
     } catch (error) {
-      console.error("Error updating quiz:", error);
+      console.error("❌ Error updating quiz:", error);
       throw error;
     }
   }
 
-  // Delete quiz
+  // ✅ Delete quiz
   static async deleteQuiz(quizId) {
     try {
-      await deleteDoc(doc(db, "quizzes", quizId));
-      console.log("✅ Quiz deleted:", quizId);
+      console.log("🗑️ Deleting quiz:", quizId);
 
-      // Clear cache เพื่อให้โหลดข้อมูลใหม่
-      this.clearQuizzesCache();
+      await deleteDoc(doc(db, "quizzes", quizId));
+
+      console.log("✅ Quiz deleted successfully");
+      return true;
     } catch (error) {
-      console.error("Error deleting quiz:", error);
+      console.error("❌ Error deleting quiz:", error);
       throw error;
     }
   }
 
-  // Save student attempt
-  static async saveStudentAttempt(attemptData) {
+  // ✅ Save quiz result
+  static async saveQuizResult(resultData) {
     try {
-      await addDoc(collection(db, "studentAttempts"), {
-        ...attemptData,
+      console.log("💾 Saving quiz result...");
+
+      const docRef = await addDoc(collection(db, "quiz_results"), {
+        ...resultData,
         timestamp: new Date(),
       });
-      console.log("✅ Student attempt saved");
+
+      console.log("✅ Quiz result saved with ID:", docRef.id);
+      return docRef.id;
     } catch (error) {
-      console.error("Error saving student attempt:", error);
-      // ไม่ throw error เพราะไม่อยากให้ขัดขวางการทำงาน
+      console.error("❌ Error saving quiz result:", error);
+      throw error;
     }
   }
 
-  // Get student attempts (for history)
-  static async getStudentAttempts(studentName) {
+  // ✅ Get quiz results for student
+  static async getStudentResults(studentName) {
     try {
-      const q = query(
-        collection(db, "studentAttempts"),
-        where("studentName", "==", studentName),
-        orderBy("timestamp", "desc")
-      );
-      const snapshot = await getDocs(q);
+      console.log("📊 Getting results for student:", studentName);
 
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const querySnapshot = await getDocs(collection(db, "quiz_results"));
+      const results = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.studentName === studentName) {
+          results.push({
+            id: doc.id,
+            ...data,
+          });
+        }
+      });
+
+      // เรียงลำดับตามวันที่ล่าสุด
+      results.sort((a, b) => b.timestamp?.toDate() - a.timestamp?.toDate());
+
+      console.log("✅ Results loaded:", results.length);
+      return results;
     } catch (error) {
-      console.error("Error getting student attempts:", error);
-      return [];
-    }
-  }
-
-  // Get all student attempts (for admin)
-  static async getAllStudentAttempts() {
-    try {
-      const q = query(
-        collection(db, "studentAttempts"),
-        orderBy("timestamp", "desc")
-      );
-      const snapshot = await getDocs(q);
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      console.error("Error getting all student attempts:", error);
+      console.error("❌ Error getting student results:", error);
       return [];
     }
   }
 }
 
 export default FirebaseService;
+export { auth, db };

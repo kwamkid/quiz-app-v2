@@ -1,0 +1,42 @@
+// firestore.rules - Security Rules สำหรับ Firestore
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ✅ Quizzes Collection
+    match /quizzes/{quizId} {
+      // อ่านได้ทุกคน (สำหรับนักเรียน)
+      allow read: if true;
+      
+      // เขียน/แก้ไข/ลบได้เฉพาะ admin (ตอนนี้ยังไม่มี auth)
+      allow write: if true; // TODO: เปลี่ยนเป็น admin only เมื่อมี authentication
+    }
+    
+    // ✅ Quiz Results Collection
+    match /quiz_results/{resultId} {
+      // อ่านได้เฉพาะผลงานของตัวเอง
+      allow read: if true; // TODO: เปลี่ยนเป็น resource.data.studentName == request.auth.token.name
+      
+      // เขียนได้ทุกคน (สำหรับบันทึกผลสอบ)
+      allow create: if true;
+      
+      // แก้ไข/ลบได้เฉพาะเจ้าของหรือ admin
+      allow update, delete: if true; // TODO: เพิ่ม authorization
+    }
+    
+    // ✅ Students Collection (สำหรับอนาคต)
+    match /students/{studentId} {
+      allow read, write: if true; // TODO: เพิ่ม proper authentication
+    }
+    
+    // ✅ Teachers/Admins Collection (สำหรับอนาคต)
+    match /teachers/{teacherId} {
+      allow read, write: if true; // TODO: เพิ่ม admin-only access
+    }
+    
+    // ❌ ปิดกั้น collection อื่นๆ
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

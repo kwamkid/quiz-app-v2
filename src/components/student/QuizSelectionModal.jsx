@@ -1,457 +1,375 @@
-// src/components/student/QuizList.jsx - อัพเดตให้รองรับ Quiz Selection
+// src/components/student/QuizSelectionModal.jsx - แก้ไขปัญหา infinite loop
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trophy, Music, VolumeX } from 'lucide-react';
-import QuizSelectionModal from './QuizSelectionModal';
-import LoadingSpinner from '../common/LoadingSpinner';
+import { X, Play, AlertCircle } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
-import FirebaseService from '../../services/firebase';
 
-const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
-  const [quizzes, setQuizzes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [musicEnabled, setMusicEnabled] = useState(false);
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
-  const [showQuizModal, setShowQuizModal] = useState(false);
+const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState(10);
+  const [isStarting, setIsStarting] = useState(false);
 
+  // ✅ ใช้ allQuizzes ที่ส่งมาจาก props แทนการโหลดเอง
+  const quizzes = allQuizzes || [];
+
+  // Reset selected count when quiz changes
   useEffect(() => {
-    loadQuizzes();
-  }, []);
-
-  const loadQuizzes = async () => {
-    try {
-      setLoading(true);
-      const quizzesData = await FirebaseService.getQuizzes();
-      setQuizzes(quizzesData);
-    } catch (error) {
-      console.error('Error loading quizzes:', error);
-    } finally {
-      setLoading(false);
+    if (quiz && quiz.questions) {
+      const totalQuestions = quiz.questions.length;
+      if (totalQuestions <= 10) {
+        setSelectedQuestionCount(totalQuestions);
+      } else {
+        setSelectedQuestionCount(10);
+      }
     }
-  };
+  }, [quiz]);
 
-  const handleQuizClick = async (quiz) => {
-    if (quiz.questions?.length > 0) {
-      await audioService.buttonClick();
-      setSelectedQuiz(quiz);
-      setShowQuizModal(true);
-    } else {
+  // Reset starting state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsStarting(false);
+    }
+  }, [isOpen]);
+
+  const handleStart = async () => {
+    if (!selectedQuestionCount || selectedQuestionCount < 1) {
       await audioService.wrongAnswer();
-      alert('❌ ข้อสอบนี้ยังไม่มีคำถาม กรุณาติดต่อครูเพื่อเพิ่มคำถาม');
+      alert('กรุณาเลือกจำนวนข้อสอบ');
+      return;
     }
+
+    setIsStarting(true);
+    await audioService.correctAnswer();
+    
+    // Delay เล็กน้อยเพื่อให้ animation ทำงาน
+    setTimeout(() => {
+      onStart(selectedQuestionCount);
+    }, 300);
   };
 
-  const handleStartQuiz = async (questionCount) => {
-    if (selectedQuiz) {
-      await audioService.correctAnswer();
-      
-      // สุ่มคำถามและเลือกจำนวนที่ต้องการ
-      const shuffledQuestions = [...selectedQuiz.questions].sort(() => Math.random() - 0.5);
-      const selectedQuestions = shuffledQuestions.slice(0, questionCount);
-      
-      const quizWithSelectedQuestions = {
-        ...selectedQuiz,
-        questions: selectedQuestions,
-        originalTotalQuestions: selectedQuiz.questions.length,
-        selectedQuestionCount: questionCount
-      };
-      
-      setShowQuizModal(false);
-      setSelectedQuiz(null);
-      onStartQuiz(quizWithSelectedQuestions);
+  const handleClose = async () => {
+    await audioService.navigation();
+    onClose();
+  };
+
+  const getQuestionCountOptions = () => {
+    if (!quiz?.questions) return [];
+    
+    const totalQuestions = quiz.questions.length;
+    const options = [];
+    
+    // ถ้ามีคำถามน้อยกว่า 10 ข้อ ให้เลือกได้แค่จำนวนที่มี
+    if (totalQuestions <= 10) {
+      for (let i = 1; i <= totalQuestions; i++) {
+        options.push(i);
+      }
+    } else {
+      // ถ้ามีมากกว่า 10 ข้อ ให้เลือกได้ 5, 10, 15, 20, หรือทั้งหมด
+      options.push(5, 10, 15, 20);
+      if (totalQuestions > 20) {
+        options.push(totalQuestions); // ทั้งหมด
+      }
     }
+    
+    return options.filter(option => option <= totalQuestions);
   };
 
-  const handleCloseModal = async () => {
-    await audioService.navigation();
-    setShowQuizModal(false);
-    setSelectedQuiz(null);
-  };
+  if (!isOpen || !quiz) return null;
 
-  const handleLogout = async () => {
-    await audioService.navigation();
-    audioService.stopBackgroundMusic();
-    onLogout();
-  };
-
-  const handleViewHistory = async () => {
-    await audioService.buttonClick();
-    onViewHistory();
-  };
-
-  const toggleMusic = async () => {
-    await audioService.buttonClick();
-    await audioService.initialize();
-    const newState = audioService.toggleBackgroundMusic();
-    setMusicEnabled(newState);
-    console.log('🎵 Music toggled:', newState ? 'ON' : 'OFF');
-  };
-
-  if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อสอบ..." />;
-  }
+  const questionCountOptions = getQuestionCountOptions();
+  const totalQuestions = quiz.questions?.length || 0;
 
   return (
     <div style={{
-      minHeight: '100vh',
-      width: '100vw',
-      background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%)',
-      position: 'relative',
-      overflow: 'auto',
-      fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px',
+      animation: 'fadeIn 0.3s ease-out'
     }}>
-      {/* Floating Background Elements */}
       <div style={{
-        position: 'absolute',
-        top: '5%',
-        left: '3%',
-        fontSize: '3rem',
-        opacity: '0.1',
-        animation: 'pulse 3s infinite'
-      }}>🏆</div>
-      
-      <div style={{
-        position: 'absolute',
-        top: '10%',
-        right: '5%',
-        fontSize: '2.5rem',
-        opacity: '0.2',
-        animation: 'bounce 4s infinite'
-      }}>⭐</div>
-      
-      <div style={{
-        position: 'absolute',
-        bottom: '10%',
-        left: '2%',
-        fontSize: '4rem',
-        opacity: '0.15',
-        animation: 'pulse 5s infinite 1s'
-      }}>🎯</div>
-
-      <div style={{
-        padding: '20px',
-        maxWidth: '1400px',
-        margin: '0 auto'
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05))',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '24px',
+        padding: '40px',
+        maxWidth: '500px',
+        width: '100%',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+        position: 'relative',
+        animation: 'slideUp 0.3s ease-out'
       }}>
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            padding: '8px',
+            cursor: 'pointer',
+            color: 'white',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+            e.target.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+          }}
+        >
+          <X size={20} />
+        </button>
+
         {/* Header */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          padding: '32px',
-          marginBottom: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          animation: 'slideUp 0.8s ease-out'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '20px',
-            marginBottom: '24px'
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ 
+            fontSize: '4rem', 
+            marginBottom: '16px',
+            animation: 'bounce 2s infinite'
           }}>
-            <div>
-              <h1 style={{
-                fontSize: '2.5rem',
-                fontWeight: 'bold',
-                color: 'white',
-                marginBottom: '8px',
-                textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <span style={{
-                  fontSize: '3rem',
-                  animation: 'bounce 3s infinite'
-                }}>👋</span>
-                สวัสดี {studentName}!
-              </h1>
-              <p style={{
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '1.2rem'
-              }}>
-                เลือกข้อสอบที่ต้องการทำ 🎮
-              </p>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center'
-            }}>
-              {/* Music Toggle */}
-              <button
-                onClick={toggleMusic}
-                style={{
-                  background: musicEnabled 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                }}
-                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
-              >
-                {musicEnabled ? <Music size={20} /> : <VolumeX size={20} />}
-              </button>
-
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  padding: '12px 20px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '0.9rem'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.color = 'white';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <ArrowLeft size={16} />
-                ออก
-              </button>
-            </div>
+            {quiz.emoji}
           </div>
-          
-          {/* Action Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            flexWrap: 'wrap'
+          <h2 style={{
+            fontSize: '1.8rem',
+            fontWeight: 'bold',
+            color: 'white',
+            marginBottom: '8px',
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
           }}>
-            <button
-              onClick={handleViewHistory}
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '16px',
-                padding: '12px 24px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
-              }}
-            >
-              <Trophy size={18} />
-              🏆 ดูคะแนนของฉัน
-            </button>
-          </div>
+            {quiz.title}
+          </h2>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: '1.1rem'
+          }}>
+            📚 มีทั้งหมด {totalQuestions} คำถาม
+          </p>
         </div>
-        
-        {/* Quiz Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-          gap: '24px',
-          animation: 'slideUp 0.8s ease-out 0.2s both'
-        }}>
-          {quizzes.map((quiz, index) => (
-            <div 
-              key={quiz.id}
-              style={{
-                background: `linear-gradient(135deg, ${getQuizColor(index)})`,
-                backdropFilter: 'blur(10px)',
-                borderRadius: '24px',
-                padding: '28px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1)',
-                animation: `slideUp 0.8s ease-out ${0.2 + index * 0.1}s both`
-              }}
-              onClick={() => handleQuizClick(quiz)}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-5px) scale(1.02)';
-                e.target.style.boxShadow = '0 20px 45px rgba(0, 0, 0, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.1)';
-              }}
-            >
-              {/* Background Emoji */}
-              <div style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                fontSize: '5rem',
-                opacity: '0.1'
-              }}>
-                {quiz.emoji}
-              </div>
-              
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                {/* Header */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '20px'
-                }}>
-                  <div style={{ 
-                    fontSize: '3rem', 
-                    marginBottom: '12px',
-                    animation: `bounce 3s infinite ${index * 0.5}s`
-                  }}>
-                    {quiz.emoji}
-                  </div>
-                  <span style={{
-                    background: getDifficultyColor(quiz.difficulty),
-                    padding: '6px 16px',
-                    borderRadius: '25px',
-                    fontSize: '0.9rem',
-                    fontWeight: 'bold',
-                    border: '1px solid rgba(255, 255, 255, 0.3)'
-                  }}>
-                    {quiz.difficulty || 'ง่าย'}
-                  </span>
-                </div>
-                
-                {/* Content */}
-                <h3 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  marginBottom: '12px',
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-                }}>
-                  {quiz.title}
-                </h3>
-                
-                <p style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  fontSize: '1.1rem'
-                }}>
-                  🎯 {quiz.questions?.length || 0} คำถาม
-                  {quiz.questions?.length > 20 && (
-                    <span style={{
-                      background: 'rgba(34, 197, 94, 0.2)',
-                      color: '#4ade80',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '0.8rem',
-                      fontWeight: 'bold'
-                    }}>
-                      เลือกได้
-                    </span>
-                  )}
-                </p>
-                
-                {/* Action Button */}
-                <div style={{
-                  background: quiz.questions?.length > 0 
-                    ? 'rgba(255, 255, 255, 0.2)' 
+
+        {/* Question Count Selection */}
+        <div style={{ marginBottom: '32px' }}>
+          <h3 style={{
+            color: 'white',
+            fontSize: '1.3rem',
+            fontWeight: 'bold',
+            marginBottom: '16px',
+            textAlign: 'center'
+          }}>
+            🎯 เลือกจำนวนข้อที่ต้องการทำ
+          </h3>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
+            gap: '12px',
+            marginBottom: '20px'
+          }}>
+            {questionCountOptions.map((count) => (
+              <button
+                key={count}
+                onClick={async () => {
+                  await audioService.buttonClick();
+                  setSelectedQuestionCount(count);
+                }}
+                style={{
+                  background: selectedQuestionCount === count
+                    ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
                     : 'rgba(255, 255, 255, 0.1)',
-                  color: quiz.questions?.length > 0 
-                    ? 'white' 
-                    : 'rgba(255, 255, 255, 0.5)',
-                  fontWeight: 'bold',
-                  padding: '14px 20px',
+                  border: selectedQuestionCount === count
+                    ? '2px solid #60a5fa'
+                    : '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  padding: '16px 12px',
                   borderRadius: '16px',
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
                   fontSize: '1.1rem',
-                  transition: 'all 0.3s ease'
-                }}>
-                  {quiz.questions?.length > 0 ? (
-                    <>
-                      ▶️ เลือกจำนวนข้อ
-                    </>
-                  ) : (
-                    <>
-                      🚫 ยังไม่มีคำถาม
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Empty State */}
-        {quizzes.length === 0 && (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            animation: 'slideUp 0.8s ease-out 0.4s both'
-          }}>
-            <div style={{ fontSize: '5rem', marginBottom: '24px' }}>📚</div>
-            <h3 style={{
-              fontSize: '2rem',
-              color: 'white',
-              marginBottom: '12px',
-              fontWeight: 'bold'
-            }}>
-              ยังไม่มีข้อสอบให้ทำ
-            </h3>
-            <p style={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '1.2rem'
-            }}>
-              รอครูสร้างข้อสอบก่อนนะ! 🎓
-            </p>
+                  transition: 'all 0.3s ease',
+                  textAlign: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedQuestionCount !== count) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedQuestionCount !== count) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                {count} ข้อ
+                {count === totalQuestions && totalQuestions > 20 && (
+                  <div style={{
+                    fontSize: '0.7rem',
+                    opacity: 0.8,
+                    marginTop: '2px'
+                  }}>
+                    (ทั้งหมด)
+                  </div>
+                )}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
 
-      {/* Quiz Selection Modal */}
-      <QuizSelectionModal
-        isOpen={showQuizModal}
-        quiz={selectedQuiz}
-        onClose={handleCloseModal}
-        onStart={handleStartQuiz}
-      />
+          {/* Info Box */}
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '16px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <AlertCircle size={20} color="#60a5fa" />
+            <div style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.95rem' }}>
+              <strong>💡 เคล็ดลับ:</strong> คำถามจะถูกสุ่มใหม่ทุกครั้ง 
+              แต่ละข้อได้ 10 คะแนน
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '16px'
+        }}>
+          <button
+            onClick={handleClose}
+            style={{
+              flex: 1,
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: 'rgba(255, 255, 255, 0.8)',
+              padding: '16px 24px',
+              borderRadius: '16px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '1.1rem',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.target.style.color = 'rgba(255, 255, 255, 0.8)';
+            }}
+          >
+            ยกเลิก
+          </button>
+
+          <button
+            onClick={handleStart}
+            disabled={isStarting || !selectedQuestionCount}
+            style={{
+              flex: 2,
+              background: isStarting 
+                ? 'rgba(34, 197, 94, 0.6)'
+                : 'linear-gradient(135deg, #10b981, #059669)',
+              border: 'none',
+              color: 'white',
+              padding: '16px 24px',
+              borderRadius: '16px',
+              cursor: isStarting ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              fontSize: '1.1rem',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              opacity: isStarting ? 0.7 : 1
+            }}
+            onMouseEnter={(e) => {
+              if (!isStarting) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isStarting) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
+              }
+            }}
+          >
+            {isStarting ? (
+              <>
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                กำลังเริ่ม...
+              </>
+            ) : (
+              <>
+                <Play size={20} />
+                🚀 เริ่มทำข้อสอบ ({selectedQuestionCount} ข้อ)
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Selected Quiz Info */}
+        <div style={{
+          marginTop: '24px',
+          padding: '16px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          textAlign: 'center'
+        }}>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '0.9rem',
+            margin: 0
+          }}>
+            🎯 คะแนนเต็ม: <strong style={{ color: 'white' }}>{selectedQuestionCount * 10}</strong> คะแนน
+            <br />
+            ⏱️ เวลาทำ: <strong style={{ color: 'white' }}>{selectedQuestionCount * 30}</strong> วินาที
+          </p>
+        </div>
+      </div>
 
       {/* CSS Animations */}
       <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(50px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        
         @keyframes bounce {
           0%, 20%, 53%, 80%, 100% {
             transform: translate3d(0,0,0);
@@ -467,52 +385,13 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
           }
         }
         
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 0.5;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.1);
-          }
-        }
-        
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
   );
 };
 
-// Helper functions
-const getQuizColor = (index) => {
-  const colors = [
-    'rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3)',
-    'rgba(34, 197, 94, 0.3), rgba(59, 130, 246, 0.3)',
-    'rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.3)',
-    'rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3)',
-    'rgba(236, 72, 153, 0.3), rgba(239, 68, 68, 0.3)',
-    'rgba(99, 102, 241, 0.3), rgba(59, 130, 246, 0.3)'
-  ];
-  return colors[index % colors.length];
-};
-
-const getDifficultyColor = (difficulty) => {
-  const colors = {
-    'ง่าย': 'rgba(34, 197, 94, 0.2)',
-    'ปานกลาง': 'rgba(251, 191, 36, 0.2)',
-    'ยาก': 'rgba(239, 68, 68, 0.2)'
-  };
-  return colors[difficulty] || colors['ง่าย'];
-};
-
-export default QuizList;
+export default QuizSelectionModal;

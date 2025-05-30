@@ -1,54 +1,10 @@
-// src/components/student/QuizList.jsx - ใช้ Mock Data เพื่อ Debug
+// src/components/student/QuizList.jsx - แก้ไขปัญหา infinite loop
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trophy, Music, VolumeX } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
-// import FirebaseService from '../../services/firebase'; // ปิดการใช้ Firebase ชั่วคราว
-
-// Mock Data สำหรับทดสอบ
-const MOCK_QUIZZES = [
-  {
-    id: 'mock-1',
-    title: '🧮 คณิตศาสตร์ ป.6',
-    emoji: '🧮',
-    difficulty: 'ง่าย',
-    questions: [
-      { question: '5 + 3 = ?', options: ['6', '7', '8', '9'], correctAnswer: 2, points: 10 },
-      { question: '12 ÷ 4 = ?', options: ['2', '3', '4', '6'], correctAnswer: 1, points: 10 },
-      { question: '7 × 8 = ?', options: ['54', '56', '58', '60'], correctAnswer: 1, points: 10 }
-    ]
-  },
-  {
-    id: 'mock-2',
-    title: '🌟 วิทยาศาสตร์',
-    emoji: '🔬',
-    difficulty: 'ปานกลาง',
-    questions: [
-      { question: 'โลกมีดวงจันทร์กี่ดวง?', options: ['1 ดวง', '2 ดวง', '3 ดวง', '4 ดวง'], correctAnswer: 0, points: 10 },
-      { question: 'น้ำเดือดที่กี่องศาเซลเซียส?', options: ['90°C', '100°C', '110°C', '120°C'], correctAnswer: 1, points: 10 }
-    ]
-  },
-  {
-    id: 'mock-3',
-    title: '🇬🇧 ภาษาอังกฤษ',
-    emoji: '🇬🇧',
-    difficulty: 'ยาก',
-    questions: Array.from({ length: 25 }, (_, i) => ({
-      question: `English Question ${i + 1}: What is the capital of Thailand?`,
-      options: ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya'],
-      correctAnswer: 0,
-      points: 10
-    }))
-  },
-  {
-    id: 'mock-4',
-    title: '🎨 ศิลปะ',
-    emoji: '🎨',
-    difficulty: 'ง่าย',
-    questions: [] // Empty quiz for testing
-  }
-];
+import FirebaseService from '../../services/firebase';
 
 const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
   const [quizzes, setQuizzes] = useState([]);
@@ -57,49 +13,43 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
 
+  // ✅ ใช้ useEffect แบบที่ไม่ทำให้เกิด infinite loop
   useEffect(() => {
-    console.log('🧪 QuizList useEffect triggered');
+    let isMounted = true; // flag เพื่อป้องกัน memory leak
     
-    // จำลองการโหลดข้อมูล
-    const mockLoadQuizzes = async () => {
+    const loadQuizzes = async () => {
       try {
+        console.log('🔄 Loading quizzes...');
         setLoading(true);
-        console.log('📚 Mock loading quizzes...');
+        const quizzesData = await FirebaseService.getQuizzes();
         
-        // จำลอง delay การโหลด
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setQuizzes(MOCK_QUIZZES);
-        console.log('✅ Mock quizzes loaded:', MOCK_QUIZZES.length, 'items');
+        // ✅ ตรวจสอบว่า component ยัง mount อยู่หรือไม่
+        if (isMounted) {
+          setQuizzes(quizzesData);
+          console.log('✅ Quizzes loaded:', quizzesData.length);
+        }
       } catch (error) {
-        console.error('❌ Mock loading error:', error);
+        console.error('❌ Error loading quizzes:', error);
       } finally {
-        setLoading(false);
-        console.log('🏁 Mock loading completed');
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    mockLoadQuizzes();
-  }, []); // Empty dependency
+    loadQuizzes();
+
+    // ✅ Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, []); // ✅ Empty dependency array - จะรันแค่ครั้งเดียวตอน mount
 
   const handleQuizClick = async (quiz) => {
-    console.log('🎯 Quiz clicked:', quiz.title);
-    
     if (quiz.questions?.length > 0) {
       await audioService.buttonClick();
-      
-      if (quiz.questions.length <= 20) {
-        const quizWithAllQuestions = {
-          ...quiz,
-          questions: [...quiz.questions].sort(() => Math.random() - 0.5),
-          originalTotalQuestions: quiz.questions.length,
-          selectedQuestionCount: quiz.questions.length
-        };
-        onStartQuiz(quizWithAllQuestions);
-      } else {
-        setSelectedQuiz(quiz);
-        setShowQuizModal(true);
-      }
+      setSelectedQuiz(quiz);
+      setShowQuizModal(true);
     } else {
       await audioService.wrongAnswer();
       alert('❌ ข้อสอบนี้ยังไม่มีคำถาม กรุณาติดต่อครูเพื่อเพิ่มคำถาม');
@@ -110,6 +60,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     if (selectedQuiz) {
       await audioService.correctAnswer();
       
+      // สุ่มคำถามและเลือกจำนวนที่ต้องการ
       const shuffledQuestions = [...selectedQuiz.questions].sort(() => Math.random() - 0.5);
       const selectedQuestions = shuffledQuestions.slice(0, questionCount);
       
@@ -140,8 +91,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
   const handleViewHistory = async () => {
     await audioService.buttonClick();
-    console.log('🏆 Navigating to score history...');
-    onViewHistory();
+    onViewHistory(); // ✅ เรียกฟังก์ชันจาก props เพื่อไปหน้า history
   };
 
   const toggleMusic = async () => {
@@ -152,10 +102,8 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     console.log('🎵 Music toggled:', newState ? 'ON' : 'OFF');
   };
 
-  console.log('🔄 QuizList render - quizzes:', quizzes.length, 'loading:', loading);
-
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อสอบ... (Mock)" />;
+    return <LoadingSpinner message="กำลังโหลดข้อสอบ..." />;
   }
 
   return (
@@ -167,21 +115,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
       overflow: 'auto',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
     }}>
-      {/* Debug Info */}
-      <div style={{
-        position: 'fixed',
-        top: '10px',
-        right: '10px',
-        background: 'rgba(0, 0, 0, 0.8)',
-        color: 'white',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        fontSize: '0.8rem',
-        zIndex: 1000
-      }}>
-        🧪 Mock Mode | Quizzes: {quizzes.length}
-      </div>
-
       {/* Floating Background Elements */}
       <div style={{
         position: 'absolute',
@@ -255,7 +188,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                เลือกข้อสอบที่ต้องการทำ 🎮 (Mock Data)
+                เลือกข้อสอบที่ต้องการทำ 🎮
               </p>
             </div>
             
@@ -281,6 +214,12 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                   alignItems: 'center',
                   gap: '8px'
                 }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
                 title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
               >
                 {musicEnabled ? <Music size={20} /> : <VolumeX size={20} />}
@@ -301,6 +240,14 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                   alignItems: 'center',
                   gap: '8px',
                   fontSize: '0.9rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = 'white';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 <ArrowLeft size={16} />
@@ -330,6 +277,14 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
               }}
             >
               <Trophy size={18} />
@@ -362,6 +317,14 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 animation: `slideUp 0.8s ease-out ${0.2 + index * 0.1}s both`
               }}
               onClick={() => handleQuizClick(quiz)}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-5px) scale(1.02)';
+                e.target.style.boxShadow = '0 20px 45px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0) scale(1)';
+                e.target.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.1)';
+              }}
             >
               {/* Background Emoji */}
               <div style={{
@@ -455,13 +418,13 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                   transition: 'all 0.3s ease'
                 }}>
                   {quiz.questions?.length > 0 ? (
-                    quiz.questions.length <= 20 ? (
-                      <>▶️ ทำข้อสอบ ({quiz.questions.length} ข้อ)</>
-                    ) : (
-                      <>🎯 ทำข้อสอบ (เลือกจำนวนข้อ)</>
-                    )
+                    <>
+                      ▶️ เลือกจำนวนข้อ
+                    </>
                   ) : (
-                    <>🚫 ยังไม่มีคำถาม</>
+                    <>
+                      🚫 ยังไม่มีคำถาม
+                    </>
                   )}
                 </div>
               </div>
@@ -483,22 +446,23 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
               marginBottom: '12px',
               fontWeight: 'bold'
             }}>
-              ไม่มี Mock Data
+              ยังไม่มีข้อสอบให้ทำ
             </h3>
             <p style={{
               color: 'rgba(255, 255, 255, 0.7)',
               fontSize: '1.2rem'
             }}>
-              ตรวจสอบ MOCK_QUIZZES array
+              รอครูสร้างข้อสอบก่อนนะ! 🎓
             </p>
           </div>
         )}
       </div>
 
-      {/* Quiz Selection Modal */}
+      {/* ✅ ส่ง quizzes และ selectedQuiz ไปให้ QuizSelectionModal แทนที่จะให้ modal โหลดเอง */}
       <QuizSelectionModal
         isOpen={showQuizModal}
         quiz={selectedQuiz}
+        allQuizzes={quizzes} // ✅ เพิ่มบรรทัดนี้
         onClose={handleCloseModal}
         onStart={handleStartQuiz}
       />
