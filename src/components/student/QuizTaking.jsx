@@ -1,8 +1,8 @@
-// src/components/student/QuizTaking.jsx - อัพเดตให้รองรับคำถามที่ถูกสุ่มแล้ว
+// src/components/student/QuizTaking.jsx - แก้ไขการส่งข้อมูลคะแนน
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
-import { getTimerColor } from '../../utils/helpers';
+import { getTimerColor, calculatePercentage } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
 
 const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
@@ -80,6 +80,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     }
   };
 
+  // 🔥 แก้ไขหลัก: ปรับการส่งข้อมูลผลลัพธ์
   const handleNextQuestion = async () => {
     await audioService.navigation();
     
@@ -92,21 +93,38 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       await audioService.quizComplete();
       
       const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+      const maxScore = totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION;
+      const percentage = Math.round((score / maxScore) * 100);
+      
+      // 🔥 ข้อมูลที่ครบถ้วนสำหรับบันทึก
       const results = {
-        quizId: quiz.id,
-        score,
-        totalQuestions: totalQuestions,
-        totalTime,
+        // ข้อมูลพื้นฐาน
+        quizId: quiz.id || 'unknown',
         quizTitle: quiz.title,
-        studentName,
+        studentName: studentName,
+        
+        // คะแนน
+        score: score,
+        totalQuestions: totalQuestions,
+        percentage: percentage,
+        
+        // เวลา
+        totalTime: totalTime,
         completedAt: new Date(),
-        answers: answers,
-        percentage: Math.round((score / (totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION)) * 100),
+        
+        // ข้อมูลการเลือกคำถาม
         selectedQuestionCount: selectedQuestionCount,
-        originalTotalQuestions: originalTotalQuestions
+        originalTotalQuestions: originalTotalQuestions,
+        
+        // รายละเอียดคำตอบ
+        answers: answers,
+        
+        // ข้อมูลเพิ่มเติม
+        difficulty: quiz.difficulty || 'ง่าย',
+        emoji: quiz.emoji || '📚'
       };
       
-      console.log('🏆 Quiz completed:', results);
+      console.log('🏆 Quiz completed with full results:', results);
       onQuizEnd(results);
     }
   };

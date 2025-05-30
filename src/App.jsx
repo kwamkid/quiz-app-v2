@@ -1,4 +1,4 @@
-// src/App.jsx - เพิ่มระบบดูคะแนนสมบูรณ์
+// src/App.jsx - แก้ไขการบันทึกคะแนน
 import React, { useState, useEffect } from 'react';
 import LandingPage from './components/layout/LandingPage';
 import StudentLogin from './components/student/StudentLogin';
@@ -57,26 +57,45 @@ function App() {
     }
   };
 
+  // 🔥 แก้ไขหลัก: ปรับการบันทึกคะแนน
   const handleQuizEnd = async (results) => {
     try {
       setLoading(true);
       
-      // Save results to Firebase
-      await FirebaseService.saveStudentAttempt({
+      console.log("🎯 Quiz completed with results:", results);
+      
+      // เตรียมข้อมูลสำหรับบันทึก
+      const attemptData = {
         studentName: studentName,
         quizTitle: results.quizTitle,
-        quizId: results.quizId,
+        quizId: results.quizId || currentQuiz?.id || 'unknown',
         score: results.score,
         totalQuestions: results.totalQuestions,
         totalTime: results.totalTime,
-        percentage: results.percentage
-      });
+        percentage: results.percentage,
+        selectedQuestionCount: results.selectedQuestionCount || results.totalQuestions,
+        originalTotalQuestions: results.originalTotalQuestions || results.totalQuestions,
+        answers: results.answers || []
+      };
       
+      console.log("💾 Saving attempt data:", attemptData);
+      
+      // บันทึกลง Firebase
+      const savedId = await FirebaseService.saveStudentAttempt(attemptData);
+      
+      console.log("✅ Quiz result saved successfully with ID:", savedId);
+      
+      // แสดงผลลัพธ์
       setQuizResults(results);
       setView('quizResult');
+      
     } catch (error) {
-      console.error('Error saving quiz result:', error);
-      // Still show results even if save fails
+      console.error("❌ Error saving quiz result:", error);
+      
+      // แสดง error message ให้ผู้ใช้ทราบ
+      alert(`⚠️ บันทึกคะแนนไม่สำเร็จ: ${error.message}\n\nแต่คุณยังสามารถดูผลลัพธ์ได้`);
+      
+      // แสดงผลลัพธ์แม้ว่าจะบันทึกไม่สำเร็จ
       setQuizResults(results);
       setView('quizResult');
     } finally {

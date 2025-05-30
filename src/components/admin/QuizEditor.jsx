@@ -1,4 +1,4 @@
-// src/components/admin/QuizEditor.jsx - เพิ่มฟีเจอร์ Import
+// src/components/admin/QuizEditor.jsx - แก้ไข validation UI (Fixed)
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
 import QuizImport from './QuizImport';
@@ -139,7 +139,6 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     }
   };
 
-  // ฟีเจอร์ใหม่: Import คำถาม
   const handleImportQuestions = (importedQuestions) => {
     setQuizData(prev => ({
       ...prev,
@@ -369,7 +368,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 marginBottom: '8px',
                 display: 'block'
               }}>
-                ชื่อข้อสอบ *
+                ชื่อข้อสอบ <span style={{ color: quizData.title.trim() ? 'rgba(255, 255, 255, 0.8)' : '#ef4444' }}>*</span>
               </label>
               <input
                 type="text"
@@ -380,12 +379,24 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                   width: '100%',
                   padding: '12px 16px',
                   background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: quizData.title.trim() 
+                    ? '1px solid rgba(255, 255, 255, 0.3)' 
+                    : '2px solid #ef4444',
                   borderRadius: '12px',
                   color: 'white',
                   fontSize: '1rem',
                   outline: 'none',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  if (!quizData.title.trim()) {
+                    e.target.style.borderColor = '#3b82f6';
+                  }
+                }}
+                onBlur={(e) => {
+                  const hasContent = e.target.value.trim();
+                  e.target.style.borderColor = hasContent ? 'rgba(255, 255, 255, 0.3)' : '#ef4444';
                 }}
               />
             </div>
@@ -541,7 +552,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                   marginBottom: '8px',
                   display: 'block'
                 }}>
-                  คำถาม *
+                  คำถาม <span style={{ color: question.question.trim() ? 'rgba(255, 255, 255, 0.8)' : '#ef4444' }}>*</span>
                 </label>
                 <textarea
                   value={question.question}
@@ -552,13 +563,25 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                     width: '100%',
                     padding: '12px 16px',
                     background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    border: question.question.trim() 
+                      ? '1px solid rgba(255, 255, 255, 0.3)' 
+                      : '2px solid #ef4444',
                     borderRadius: '12px',
                     color: 'white',
                     fontSize: '1rem',
                     outline: 'none',
                     resize: 'vertical',
-                    fontFamily: 'inherit'
+                    fontFamily: 'inherit',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    if (!question.question.trim()) {
+                      e.target.style.borderColor = '#3b82f6';
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const hasContent = e.target.value.trim();
+                    e.target.style.borderColor = hasContent ? 'rgba(255, 255, 255, 0.3)' : '#ef4444';
                   }}
                 />
               </div>
@@ -570,49 +593,70 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 gap: '12px',
                 marginBottom: '16px'
               }}>
-                {question.options.map((option, optionIndex) => (
-                  <div key={optionIndex}>
-                    <label style={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      marginBottom: '6px',
-                      display: 'block'
-                    }}>
-                      ตัวเลือก {String.fromCharCode(65 + optionIndex)} 
-                      {optionIndex < 2 ? (
-                        <span style={{ color: '#ef4444' }}> *</span>
-                      ) : (
-                        <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}> (ไม่บังคับ)</span>
-                      )}
-                    </label>
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value)}
-                      placeholder={optionIndex < 2 
-                        ? `ตัวเลือก ${String.fromCharCode(65 + optionIndex)} (บังคับ)` 
-                        : `ตัวเลือก ${String.fromCharCode(65 + optionIndex)} (ไม่บังคับ)`}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        background: question.correctAnswer === optionIndex 
-                          ? 'rgba(34, 197, 94, 0.1)' 
-                          : 'rgba(255, 255, 255, 0.1)',
-                        border: question.correctAnswer === optionIndex 
-                          ? '2px solid #22c55e' 
-                          : optionIndex < 2 
-                            ? '2px solid rgba(239, 68, 68, 0.5)' 
-                            : '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '10px',
-                        color: 'white',
+                {question.options.map((option, index) => {
+                  const hasContent = option && option.trim() !== '';
+                  const isRequired = index < 2;
+                  
+                  return (
+                    <div key={index}>
+                      <label style={{
+                        color: 'rgba(255, 255, 255, 0.8)',
                         fontSize: '0.9rem',
-                        outline: 'none',
-                        fontFamily: 'inherit'
-                      }}
-                    />
-                  </div>
-                ))}
+                        fontWeight: '500',
+                        marginBottom: '6px',
+                        display: 'block'
+                      }}>
+                        ตัวเลือก {String.fromCharCode(65 + index)} 
+                        {isRequired ? (
+                          <span style={{ color: hasContent ? 'rgba(255, 255, 255, 0.8)' : '#ef4444' }}> *</span>
+                        ) : (
+                          <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}> (ไม่บังคับ)</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={option}
+                        onChange={(e) => handleOptionChange(questionIndex, index, e.target.value)}
+                        placeholder={isRequired 
+                          ? `ตัวเลือก ${String.fromCharCode(65 + index)} (บังคับ)` 
+                          : `ตัวเลือก ${String.fromCharCode(65 + index)} (ไม่บังคับ)`}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          background: question.correctAnswer === index 
+                            ? 'rgba(34, 197, 94, 0.1)' 
+                            : 'rgba(255, 255, 255, 0.1)',
+                          border: question.correctAnswer === index 
+                            ? '2px solid #22c55e' 
+                            : isRequired 
+                              ? hasContent 
+                                ? '2px solid #10b981'
+                                : '2px solid #ef4444'
+                              : hasContent
+                                ? '1px solid #10b981'
+                                : '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '10px',
+                          color: 'white',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          fontFamily: 'inherit',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onFocus={(e) => {
+                          if (isRequired && !hasContent) {
+                            e.target.style.borderColor = '#3b82f6';
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const newHasContent = e.target.value && e.target.value.trim() !== '';
+                          if (isRequired) {
+                            e.target.style.borderColor = newHasContent ? '#10b981' : '#ef4444';
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Correct Answer */}
@@ -629,7 +673,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                     marginBottom: '6px',
                     display: 'block'
                   }}>
-                    คำตอบที่ถูกต้อง *
+                    คำตอบที่ถูกต้อง <span style={{ color: '#10b981' }}>*</span>
                   </label>
                   <select
                     value={question.correctAnswer}

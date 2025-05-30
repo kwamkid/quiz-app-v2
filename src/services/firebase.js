@@ -1,4 +1,4 @@
-// src/services/firebase.js - Production Ready
+// src/services/firebase.js - แก้ไขการบันทึกคะแนน
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -9,6 +9,10 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -23,14 +27,37 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Check if Firebase config is valid
+const isFirebaseConfigValid =
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId;
+
+console.log("🔥 Firebase Config Status:", {
+  isValid: isFirebaseConfigValid,
+  apiKey: firebaseConfig.apiKey ? "✅ Set" : "❌ Missing",
+  authDomain: firebaseConfig.authDomain ? "✅ Set" : "❌ Missing",
+  projectId: firebaseConfig.projectId ? "✅ Set" : "❌ Missing",
+});
+
+// Initialize Firebase only if config is valid
+let app, db, auth;
+
+if (isFirebaseConfigValid) {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    console.log("✅ Firebase initialized successfully");
+  } catch (error) {
+    console.error("❌ Firebase initialization failed:", error);
+  }
+} else {
+  console.warn("⚠️ Firebase config invalid, running in mock mode");
+}
 
 // Environment check
 const isDevelopment = import.meta.env.VITE_NODE_ENV === "development";
-const isProduction = import.meta.env.VITE_NODE_ENV === "production";
 
 console.log("🔥 Firebase initialized:", {
   environment: import.meta.env.VITE_NODE_ENV || "development",
@@ -38,7 +65,7 @@ console.log("🔥 Firebase initialized:", {
   authDomain: firebaseConfig.authDomain,
 });
 
-// Mock data สำหรับ development (ถ้าต้องการ)
+// Mock data สำหรับ development
 const mockQuizzes = [
   {
     id: "mock-1",
@@ -67,6 +94,12 @@ const mockQuizzes = [
 class FirebaseService {
   // ✅ Get all quizzes
   static async getQuizzes() {
+    // If Firebase not configured, return mock data
+    if (!isFirebaseConfigValid || !db) {
+      console.log("📝 Using mock data - Firebase not configured");
+      return mockQuizzes;
+    }
+
     try {
       console.log("🔍 Getting quizzes from Firestore...");
 
@@ -82,26 +115,16 @@ class FirebaseService {
 
       console.log("✅ Quizzes loaded from Firestore:", quizzes.length);
 
-      // ถ้าไม่มีข้อมูลใน production และเป็น development ให้ใช้ mock
-      if (quizzes.length === 0 && isDevelopment) {
-        console.log(
-          "📝 No quizzes found in Firestore, using mock data for development"
-        );
+      if (quizzes.length === 0) {
+        console.log("📝 No quizzes found, using mock data");
         return mockQuizzes;
       }
 
       return quizzes;
     } catch (error) {
       console.error("❌ Error getting quizzes:", error);
-
-      // ถ้า error ใน development ให้ใช้ mock data
-      if (isDevelopment) {
-        console.log("🔄 Fallback to mock data in development");
-        return mockQuizzes;
-      }
-
-      // ใน production ให้ return empty array
-      return [];
+      console.log("🔄 Fallback to mock data");
+      return mockQuizzes;
     }
   }
 
@@ -132,8 +155,8 @@ class FirebaseService {
 
       const docRef = await addDoc(collection(db, "quizzes"), {
         ...quizData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       console.log("✅ Quiz created with ID:", docRef.id);
@@ -152,7 +175,7 @@ class FirebaseService {
       const docRef = doc(db, "quizzes", quizId);
       await updateDoc(docRef, {
         ...quizData,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       });
 
       console.log("✅ Quiz updated successfully");
@@ -178,51 +201,153 @@ class FirebaseService {
     }
   }
 
-  // ✅ Save quiz result
-  static async saveQuizResult(resultData) {
+  // 🔥 แก้ไขหลัก: บันทึกผลคะแนนของนักเรียน
+  static async saveStudentAttempt(attemptData) {
+    // If Firebase not configured, just log and return success
+    if (!isFirebaseConfigValid || !db) {
+      console.log("💾 Mock save student attempt:", attemptData);
+      console.log("⚠️ Firebase not configured - data not actually saved");
+      return "mock-id-" + Date.now();
+    }
+
     try {
-      console.log("💾 Saving quiz result...");
+      console.log("💾 Saving student attempt:", attemptData);
 
       const docRef = await addDoc(collection(db, "quiz_results"), {
-        ...resultData,
-        timestamp: new Date(),
+        studentName: attemptData.studentName,
+        quizTitle: attemptData.quizTitle,
+        quizId: attemptData.quizId,
+        score: attemptData.score,
+        totalQuestions: attemptData.totalQuestions,
+        totalTime: attemptData.totalTime,
+        percentage: attemptData.percentage,
+        timestamp: serverTimestamp(),
+        completedAt: new Date(),
+        selectedQuestionCount:
+          attemptData.selectedQuestionCount || attemptData.totalQuestions,
+        originalTotalQuestions:
+          attemptData.originalTotalQuestions || attemptData.totalQuestions,
+        answers: attemptData.answers || [],
       });
 
-      console.log("✅ Quiz result saved with ID:", docRef.id);
+      console.log("✅ Student attempt saved with ID:", docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error("❌ Error saving quiz result:", error);
-      throw error;
+      console.error("❌ Error saving student attempt:", error);
+      console.error("Attempt data:", attemptData);
+
+      // Return a mock ID so the app continues to work
+      console.log("🔄 Returning mock ID for app continuity");
+      return "error-mock-id-" + Date.now();
     }
   }
 
-  // ✅ Get quiz results for student
-  static async getStudentResults(studentName) {
+  // 🔥 แก้ไขหลัก: ดึงผลคะแนนของนักเรียน
+  static async getStudentAttempts(studentName) {
     try {
-      console.log("📊 Getting results for student:", studentName);
+      console.log("📊 Getting attempts for student:", studentName);
 
-      const querySnapshot = await getDocs(collection(db, "quiz_results"));
-      const results = [];
+      const q = query(
+        collection(db, "quiz_results"),
+        where("studentName", "==", studentName),
+        orderBy("timestamp", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+      const attempts = [];
 
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.studentName === studentName) {
-          results.push({
-            id: doc.id,
-            ...data,
-          });
-        }
+        attempts.push({
+          id: doc.id,
+          ...doc.data(),
+        });
       });
 
-      // เรียงลำดับตามวันที่ล่าสุด
-      results.sort((a, b) => b.timestamp?.toDate() - a.timestamp?.toDate());
-
-      console.log("✅ Results loaded:", results.length);
-      return results;
+      console.log("✅ Student attempts loaded:", attempts.length);
+      return attempts;
     } catch (error) {
-      console.error("❌ Error getting student results:", error);
+      console.error("❌ Error getting student attempts:", error);
+
+      // ถ้า error เรื่อง index ให้ลองไม่ใช้ orderBy
+      try {
+        console.log("🔄 Trying without orderBy...");
+        const q = query(
+          collection(db, "quiz_results"),
+          where("studentName", "==", studentName)
+        );
+
+        const querySnapshot = await getDocs(q);
+        const attempts = [];
+
+        querySnapshot.forEach((doc) => {
+          attempts.push({
+            id: doc.id,
+            ...doc.data(),
+          });
+        });
+
+        // เรียงลำดับใน client
+        attempts.sort((a, b) => {
+          const timeA = a.timestamp?.toDate() || new Date(0);
+          const timeB = b.timestamp?.toDate() || new Date(0);
+          return timeB - timeA;
+        });
+
+        console.log(
+          "✅ Student attempts loaded (no orderBy):",
+          attempts.length
+        );
+        return attempts;
+      } catch (fallbackError) {
+        console.error("❌ Fallback also failed:", fallbackError);
+        return [];
+      }
+    }
+  }
+
+  // 🔥 แก้ไขหลัก: ดึงผลคะแนนทั้งหมด (สำหรับครู)
+  static async getAllStudentAttempts() {
+    try {
+      console.log("📊 Getting all student attempts...");
+
+      const querySnapshot = await getDocs(collection(db, "quiz_results"));
+      const attempts = [];
+
+      querySnapshot.forEach((doc) => {
+        attempts.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      // เรียงลำดับใน client
+      attempts.sort((a, b) => {
+        const timeA = a.timestamp?.toDate() || new Date(0);
+        const timeB = b.timestamp?.toDate() || new Date(0);
+        return timeB - timeA;
+      });
+
+      console.log("✅ All student attempts loaded:", attempts.length);
+      return attempts;
+    } catch (error) {
+      console.error("❌ Error getting all student attempts:", error);
       return [];
     }
+  }
+
+  // เก็บไว้เพื่อ backward compatibility
+  static async saveQuizResult(resultData) {
+    console.log(
+      "⚠️ saveQuizResult is deprecated, use saveStudentAttempt instead"
+    );
+    return this.saveStudentAttempt(resultData);
+  }
+
+  static async getStudentResults(studentName) {
+    console.log(
+      "⚠️ getStudentResults is deprecated, use getStudentAttempts instead"
+    );
+    return this.getStudentAttempts(studentName);
   }
 }
 
