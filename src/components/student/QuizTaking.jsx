@@ -1,8 +1,8 @@
-// src/components/student/QuizTaking.jsx - เพิ่มเพลงตอนทำข้อสอบ
+// src/components/student/QuizTaking.jsx - แก้ไขเพลงให้เล่นต่อเนื่อง
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
-import musicService from '../../services/musicService'; // ✅ เพิ่ม music service
+import musicService from '../../services/musicService';
 import { getTimerColor, calculatePercentage } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
 
@@ -15,6 +15,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   const [timeLeft, setTimeLeft] = useState(QUIZ_SETTINGS.TIME_PER_QUESTION);
   const [quizStartTime] = useState(Date.now());
   const [answers, setAnswers] = useState([]);
+  const [musicWasPlaying, setMusicWasPlaying] = useState(false);
 
   // คำถามถูกสุ่มแล้วจาก QuizList
   const questions = quiz.questions || [];
@@ -22,17 +23,28 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   const originalTotalQuestions = quiz.originalTotalQuestions || totalQuestions;
   const selectedQuestionCount = quiz.selectedQuestionCount || totalQuestions;
 
-  // ✅ เริ่มเพลงเมื่อเริ่มทำข้อสอบ
+  // ✅ ตรวจสอบและเล่นเพลงต่อจากที่เล่นอยู่
   useEffect(() => {
-    const startQuizMusic = async () => {
-      await musicService.playQuizMusic();
+    const initializeMusic = async () => {
+      // ตรวจสอบว่าเพลงกำลังเล่นอยู่หรือไม่ก่อนเข้ามาทำข้อสอบ
+      const wasPlaying = musicService.isCurrentlyPlaying();
+      setMusicWasPlaying(wasPlaying);
+      
+      console.log('🎵 Quiz started - Music was playing:', wasPlaying);
+      
+      if (wasPlaying) {
+        // ถ้าเพลงกำลังเล่นอยู่ ให้เล่นต่อไป (ไม่หยุด)
+        console.log('🎵 Continuing music during quiz...');
+      } else {
+        // ถ้าไม่มีเพลง ก็ไม่ต้องเริ่มเล่น
+        console.log('🔇 No music was playing, keeping silent');
+      }
     };
-    startQuizMusic();
 
-    // Cleanup เมื่อออกจาก component
-    return () => {
-      musicService.stop();
-    };
+    initializeMusic();
+
+    // ✅ ไม่ cleanup เพลงเมื่อออกจาก component แล้ว
+    // เพราะต้องการให้เพลงเล่นต่อเนื่อง
   }, []);
 
   // Timer countdown
@@ -94,7 +106,6 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     }
   };
 
-  // 🔥 แก้ไขหลัก: ปรับการส่งข้อมูลผลลัพธ์
   const handleNextQuestion = async () => {
     await audioService.navigation();
     
@@ -104,37 +115,28 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       setShowFeedback(false);
       setTimeLeft(QUIZ_SETTINGS.TIME_PER_QUESTION);
     } else {
+      // ✅ จบข้อสอบแล้ว - เล่นเสียงเฉลิมฉลองแต่ไม่หยุดเพลง
       await audioService.quizComplete();
-      musicService.stop(); // ✅ หยุดเพลงเมื่อจบข้อสอบ
+      
+      // ✅ ไม่หยุดเพลงเมื่อจบข้อสอบ ให้เล่นต่อไป
+      console.log('🏆 Quiz completed - keeping music playing');
       
       const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
       const maxScore = totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION;
       const percentage = Math.round((score / maxScore) * 100);
       
-      // 🔥 ข้อมูลที่ครบถ้วนสำหรับบันทึก
       const results = {
-        // ข้อมูลพื้นฐาน
         quizId: quiz.id || 'unknown',
         quizTitle: quiz.title,
         studentName: studentName,
-        
-        // คะแนน
         score: score,
         totalQuestions: totalQuestions,
         percentage: percentage,
-        
-        // เวลา
         totalTime: totalTime,
         completedAt: new Date(),
-        
-        // ข้อมูลการเลือกคำถาม
         selectedQuestionCount: selectedQuestionCount,
         originalTotalQuestions: originalTotalQuestions,
-        
-        // รายละเอียดคำตอบ
         answers: answers,
-        
-        // ข้อมูลเพิ่มเติม
         difficulty: quiz.difficulty || 'ง่าย',
         emoji: quiz.emoji || '📚'
       };
@@ -148,7 +150,16 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     const confirmExit = confirm('🚪 คุณแน่ใจหรือไม่ว่าต้องการออกจากข้อสอบ? ผลคะแนนจะไม่ถูกบันทึก');
     if (confirmExit) {
       await audioService.navigation();
-      musicService.stop(); // ✅ หยุดเพลงเมื่อออกจากข้อสอบ
+      
+      // ✅ ถ้าเพลงไม่ได้เล่นตั้งแต่แรก ให้หยุดเพลง
+      // ถ้าเพลงเล่นอยู่ตั้งแต่แรก ให้เล่นต่อไป
+      if (!musicWasPlaying && musicService.isCurrentlyPlaying()) {
+        console.log('🔇 Stopping music on quiz exit (was not playing before)');
+        musicService.stop();
+      } else {
+        console.log('🎵 Keeping music playing on quiz exit (was playing before)');
+      }
+      
       onBack();
     }
   };

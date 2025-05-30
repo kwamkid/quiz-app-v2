@@ -1,4 +1,4 @@
-// src/components/layout/LandingPage.jsx
+// src/components/layout/LandingPage.jsx - เพิ่ม Codelab Logo
 import React, { useEffect } from 'react';
 import { User, Settings } from 'lucide-react';
 import Button from '../common/Button';
@@ -88,35 +88,47 @@ const LandingPage = ({ onSelectRole }) => {
         }}>
           {/* Header */}
           <div style={{ marginBottom: '48px' }}>
+            {/* Quiz App Icon with Codelab Logo - ขยายขนาด */}
             <div style={{
               position: 'relative',
               marginBottom: '24px',
               display: 'inline-block'
             }}>
               <div style={{
-                background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                background: 'linear-gradient(135deg, #ff4757, #ff3742)',
                 borderRadius: '50%',
-                padding: '20px',
-                width: '80px',
-                height: '80px',
+                padding: '30px',
+                width: '120px',
+                height: '120px',
                 margin: '0 auto',
-                boxShadow: '0 15px 30px rgba(251, 191, 36, 0.3)',
+                boxShadow: '0 20px 40px rgba(255, 71, 87, 0.4)',
                 animation: 'glow 2s ease-in-out infinite alternate',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <div style={{
-                  fontSize: '2rem',
-                  animation: 'bounce 2s infinite'
-                }}>🎮</div>
+                <img 
+                  src="/Logo-Horizontal-White.png" 
+                  alt="Codelab"
+                  style={{
+                    width: '60px',
+                    height: 'auto',
+                    filter: 'brightness(1.2) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+                    animation: 'bounce 2s infinite'
+                  }}
+                  onError={(e) => {
+                    // Fallback ถ้าไฟล์ไม่พบ ใช้ icon แทน
+                    e.target.style.display = 'none';
+                    e.target.parentNode.innerHTML = '<div style="color: white; font-size: 2.5rem; font-weight: bold; animation: bounce 2s infinite;">CL</div>';
+                  }}
+                />
               </div>
               
               <div style={{
                 position: 'absolute',
                 top: '-8px',
                 right: '-8px',
-                fontSize: '2rem',
+                fontSize: '2.5rem',
                 animation: 'spin 3s linear infinite'
               }}>✨</div>
             </div>
@@ -233,7 +245,7 @@ const LandingPage = ({ onSelectRole }) => {
               }}>
                 <Settings size={24} />
               </div>
-              <span>⚙️ ฉันเป็นครู</span>
+              <span>⚙️ ฉันเป็นครูคนดี</span>
             </button>
           </div>
           
@@ -242,7 +254,8 @@ const LandingPage = ({ onSelectRole }) => {
             display: 'flex',
             justifyContent: 'center',
             gap: '8px',
-            animation: 'slideUp 0.8s ease-out 1s both'
+            animation: 'slideUp 0.8s ease-out 1s both',
+            marginBottom: '32px'
           }}>
             <div style={{
               width: '12px',
@@ -265,6 +278,41 @@ const LandingPage = ({ onSelectRole }) => {
               borderRadius: '50%',
               animation: 'pulse 2s infinite 0.4s'
             }}></div>
+          </div>
+
+          {/* Powered by Codelab */}
+          <div style={{
+            textAlign: 'center',
+            animation: 'slideUp 0.8s ease-out 1.2s both'
+          }}>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '0.9rem',
+              marginBottom: '8px'
+            }}>
+              Powered by
+            </p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
+              <img 
+                src="/Logo-Horizontal-White.png" 
+                alt="Codelab"
+                style={{
+                  height: '24px',
+                  width: 'auto',
+                  opacity: 0.8,
+                  filter: 'brightness(1.2)'
+                }}
+                onError={(e) => {
+                  // Fallback text ถ้าไม่มี logo
+                  e.target.parentNode.innerHTML = '<span style="color: rgba(255, 255, 255, 0.6); font-weight: 600;">CODELAB</span>';
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -308,10 +356,10 @@ const LandingPage = ({ onSelectRole }) => {
         
         @keyframes glow {
           from {
-            box-shadow: 0 15px 30px rgba(251, 191, 36, 0.3);
+            box-shadow: 0 20px 40px rgba(255, 71, 87, 0.4);
           }
           to {
-            box-shadow: 0 15px 40px rgba(251, 191, 36, 0.6);
+            box-shadow: 0 25px 50px rgba(255, 71, 87, 0.7);
           }
         }
         

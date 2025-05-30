@@ -26,10 +26,23 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
       
       // Load quizzes
       const quizzesData = await FirebaseService.getQuizzes();
-      setQuizzes(quizzesData);
+      
+      // ✅ เรียงตามวันที่แก้ไขล่าสุด (updatedAt หรือ createdAt)
+      const sortedQuizzes = quizzesData.sort((a, b) => {
+        const dateA = a.updatedAt || a.createdAt || new Date(0);
+        const dateB = b.updatedAt || b.createdAt || new Date(0);
+        
+        // แปลง Firestore timestamp เป็น Date object ถ้าจำเป็น
+        const timestampA = dateA.toDate ? dateA.toDate() : new Date(dateA);
+        const timestampB = dateB.toDate ? dateB.toDate() : new Date(dateB);
+        
+        return timestampB - timestampA; // เรียงจากใหม่ไปเก่า
+      });
+      
+      setQuizzes(sortedQuizzes);
       
       // Calculate stats
-      const totalQuestions = quizzesData.reduce((sum, quiz) => sum + (quiz.questions?.length || 0), 0);
+      const totalQuestions = sortedQuizzes.reduce((sum, quiz) => sum + (quiz.questions?.length || 0), 0);
       
       // Load attempts for stats (simplified for demo)
       let totalAttempts = 0;
@@ -41,10 +54,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
       }
       
       setStats({
-        totalQuizzes: quizzesData.length,
+        totalQuizzes: sortedQuizzes.length,
         totalQuestions,
         totalAttempts
       });
+      
+      console.log('✅ Quizzes loaded and sorted by last modified:', sortedQuizzes.length);
       
     } catch (error) {
       console.error('Error loading admin data:', error);

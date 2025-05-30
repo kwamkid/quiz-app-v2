@@ -1,10 +1,10 @@
-// src/components/student/QuizList.jsx - เพิ่ม Music Control
+// src/components/student/QuizList.jsx - แก้ไขเพลงให้เล่นต่อเนื่อง
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trophy, Music, VolumeX, Volume2 } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
-import musicService from '../../services/musicService'; // ✅ เพิ่ม music service
+import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 
 const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
@@ -16,7 +16,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
   // ✅ ใช้ useEffect แบบที่ไม่ทำให้เกิด infinite loop
   useEffect(() => {
-    let isMounted = true; // flag เพื่อป้องกัน memory leak
+    let isMounted = true;
     
     const loadQuizzes = async () => {
       try {
@@ -24,7 +24,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
         setLoading(true);
         const quizzesData = await FirebaseService.getQuizzes();
         
-        // ✅ ตรวจสอบว่า component ยัง mount อยู่หรือไม่
         if (isMounted) {
           setQuizzes(quizzesData);
           console.log('✅ Quizzes loaded:', quizzesData.length);
@@ -40,23 +39,24 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
     loadQuizzes();
 
-    // ✅ Cleanup function
     return () => {
       isMounted = false;
     };
-  }, []); // ✅ Empty dependency array - จะรันแค่ครั้งเดียวตอน mount
+  }, []);
 
-  // ✅ เริ่มเพลงเมื่อ component mount
+  // ✅ ตรวจสอบสถานะเพลงเมื่อ component mount
   useEffect(() => {
     const initializeMusic = async () => {
       await musicService.initialize();
+      
+      // ตรวจสอบว่าเพลงกำลังเล่นอยู่หรือไม่
+      const isPlaying = musicService.isCurrentlyPlaying();
+      setMusicEnabled(isPlaying);
+      
+      console.log('🎵 Music status on QuizList mount:', isPlaying);
     };
+    
     initializeMusic();
-
-    // Cleanup เมื่อออกจาก component
-    return () => {
-      musicService.stop();
-    };
   }, []);
 
   const handleQuizClick = async (quiz) => {
@@ -87,7 +87,10 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
       
       setShowQuizModal(false);
       setSelectedQuiz(null);
-      musicService.stop(); // ✅ หยุดเพลงเมนูก่อนไปทำข้อสอบ
+      
+      // ✅ ไม่หยุดเพลงเมื่อเริ่มทำข้อสอบ
+      console.log('🎮 Starting quiz - keeping music status:', musicService.isCurrentlyPlaying());
+      
       onStartQuiz(quizWithSelectedQuestions);
     }
   };
@@ -100,43 +103,84 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
   const handleLogout = async () => {
     await audioService.navigation();
-    musicService.stop(); // ✅ หยุดเพลงเมื่อออก
+    
+    // ✅ หยุดเพลงเมื่อออกจากระบบ
+    if (musicService.isCurrentlyPlaying()) {
+      musicService.stop();
+      console.log('🔇 Music stopped on logout');
+    }
+    
     onLogout();
   };
 
   const handleViewHistory = async () => {
     await audioService.buttonClick();
-    onViewHistory(); // ✅ เรียกฟังก์ชันจาก props เพื่อไปหน้า history
+    onViewHistory();
   };
 
-  // ✅ ปรับปรุงฟังก์ชันควบคุมเพลง
+  // ✅ ปรับปรุงฟังก์ชันควบคุมเพลงให้ทำงานได้ดีขึ้น
   const toggleMusic = async () => {
     await audioService.buttonClick();
     
     if (musicEnabled) {
+      // หยุดเพลง
       musicService.stop();
       setMusicEnabled(false);
-      console.log('🔇 Music stopped');
+      console.log('🔇 Music stopped by user');
     } else {
+      // เริ่มเพลง
+      console.log('🎵 Attempting to start music...');
+      
       // ตรวจสอบไฟล์เพลงก่อน
-      console.log('🎵 Checking music file...');
       const fileExists = await musicService.checkMusicFile();
       
       if (!fileExists) {
-        alert(`🎵 ไม่พบไฟล์เพลง!\n\nกรุณาทำดังนี้:\n1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"\n2. วางไฟล์ในโฟลเดอร์ public/\n3. รีเฟรชหน้าใหม่\n\nโครงสร้างที่ถูกต้อง:\npublic/\n  quiz-music.mp3`);
+        alert(`🎵 ไม่พบไฟล์เพลง!
+
+กรุณาทำดังนี้:
+1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
+2. วางไฟล์ในโฟลเดอร์ public/
+3. รีเฟรชหน้าใหม่
+
+โครงสร้างที่ถูกต้อง:
+public/
+  quiz-music.mp3`);
         return;
       }
       
       const success = await musicService.playMenuMusic();
       if (success) {
         setMusicEnabled(true);
-        console.log('🎵 Music started');
+        console.log('🎵 Music started successfully');
       } else {
         console.log('❌ Failed to start music');
-        alert(`🎵 ไม่สามารถเล่นเพลงได้\n\nสาเหตุที่เป็นไปได้:\n• เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ\n• รูปแบบไฟล์ไม่รองรับ\n• ไฟล์เสียหาย\n\nลองกดปุ่มเพลงอีกครั้งหลังจากมีการโต้ตอบกับหน้าเว็บ`);
+        alert(`🎵 ไม่สามารถเล่นเพลงได้
+
+สาเหตุที่เป็นไปได้:
+• เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
+• รูปแบบไฟล์ไม่รองรับ
+• ไฟล์เสียหาย
+
+ลองกดปุ่มเพลงอีกครั้งหลังจากมีการโต้ตอบกับหน้าเว็บ`);
       }
     }
   };
+
+  // ✅ เพิ่มฟังก์ชันสำหรับอัพเดทสถานะเพลงแบบ real-time
+  useEffect(() => {
+    const checkMusicStatus = () => {
+      const isPlaying = musicService.isCurrentlyPlaying();
+      if (isPlaying !== musicEnabled) {
+        setMusicEnabled(isPlaying);
+        console.log('🎵 Music status updated:', isPlaying);
+      }
+    };
+
+    // ตรวจสอบสถานะเพลงทุก 1 วินาที
+    const interval = setInterval(checkMusicStatus, 1000);
+
+    return () => clearInterval(interval);
+  }, [musicEnabled]);
 
   if (loading) {
     return <LoadingSpinner message="กำลังโหลดข้อสอบ..." />;
@@ -224,7 +268,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                เลือกข้อสอบที่ต้องการทำ 🎮
+                เลือกข้อสอบที่ต้องการทำ 🎮 {musicEnabled && '🎵'}
               </p>
             </div>
             
@@ -494,11 +538,11 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
         )}
       </div>
 
-      {/* ✅ ส่ง quizzes และ selectedQuiz ไปให้ QuizSelectionModal แทนที่จะให้ modal โหลดเอง */}
+      {/* Quiz Selection Modal */}
       <QuizSelectionModal
         isOpen={showQuizModal}
         quiz={selectedQuiz}
-        allQuizzes={quizzes} // ✅ เพิ่มบรรทัดนี้
+        allQuizzes={quizzes}
         onClose={handleCloseModal}
         onStart={handleStartQuiz}
       />
