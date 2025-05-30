@@ -1,4 +1,4 @@
-// src/services/firebase.js
+// src/services/firebase.js - กลับไปเป็นเหมือนเดิม แต่เพิ่มการป้องกัน
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
-// Firebase Configuration - ใส่ config ของคุณตรงนี้
+// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBl0DIY-zL87ML70QQahY9vre9dniL5G2g",
   authDomain: "quizwhiz-225ab.firebaseapp.com",
@@ -41,7 +41,6 @@ export class FirebaseService {
       return result.user;
     } catch (error) {
       console.error("❌ Error signing in anonymously:", error);
-      // Fallback for demo
       return { uid: "demo-user-" + Date.now() };
     }
   }
@@ -78,7 +77,7 @@ export class FirebaseService {
   static getDemoQuizzes() {
     return [
       {
-        id: "1",
+        id: "demo-1",
         title: "🧮 คณิตศาสตร์ ป.6",
         emoji: "🧮",
         difficulty: "ง่าย",
@@ -117,7 +116,7 @@ export class FirebaseService {
         createdAt: { seconds: Date.now() / 1000 },
       },
       {
-        id: "2",
+        id: "demo-2",
         title: "🌟 วิทยาศาสตร์",
         emoji: "🔬",
         difficulty: "ปานกลาง",
@@ -144,24 +143,26 @@ export class FirebaseService {
         createdAt: { seconds: Date.now() / 1000 },
       },
       {
-        id: "3",
+        id: "demo-3",
         title: "🇬🇧 ภาษาอังกฤษ",
         emoji: "🇬🇧",
         difficulty: "ยาก",
-        questions: [
-          {
-            question: "What is the capital of Thailand?",
-            options: ["Bangkok", "Chiang Mai", "Phuket", "Pattaya"],
-            correctAnswer: 0,
-            points: 10,
-          },
-          {
-            question: 'How do you say "สวัสดี" in English?',
-            options: ["Goodbye", "Hello", "Thank you", "Sorry"],
-            correctAnswer: 1,
-            points: 10,
-          },
-        ],
+        questions: Array.from({ length: 25 }, (_, i) => ({
+          question: `English Question ${
+            i + 1
+          }: What is the capital of Thailand?`,
+          options: ["Bangkok", "Chiang Mai", "Phuket", "Pattaya"],
+          correctAnswer: 0,
+          points: 10,
+        })),
+        createdAt: { seconds: Date.now() / 1000 },
+      },
+      {
+        id: "demo-4",
+        title: "🎨 ศิลปะ",
+        emoji: "🎨",
+        difficulty: "ง่าย",
+        questions: [],
         createdAt: { seconds: Date.now() / 1000 },
       },
     ];
@@ -176,6 +177,10 @@ export class FirebaseService {
         updatedAt: new Date(),
       });
       console.log("✅ Quiz created with ID:", docRef.id);
+
+      // Clear cache เพื่อให้โหลดข้อมูลใหม่
+      this.clearQuizzesCache();
+
       return docRef.id;
     } catch (error) {
       console.error("Error creating quiz:", error);
@@ -192,6 +197,9 @@ export class FirebaseService {
         updatedAt: new Date(),
       });
       console.log("✅ Quiz updated:", quizId);
+
+      // Clear cache เพื่อให้โหลดข้อมูลใหม่
+      this.clearQuizzesCache();
     } catch (error) {
       console.error("Error updating quiz:", error);
       throw error;
@@ -203,6 +211,9 @@ export class FirebaseService {
     try {
       await deleteDoc(doc(db, "quizzes", quizId));
       console.log("✅ Quiz deleted:", quizId);
+
+      // Clear cache เพื่อให้โหลดข้อมูลใหม่
+      this.clearQuizzesCache();
     } catch (error) {
       console.error("Error deleting quiz:", error);
       throw error;

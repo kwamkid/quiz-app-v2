@@ -1,9 +1,8 @@
-// src/components/student/QuizTaking.jsx
+// src/components/student/QuizTaking.jsx - อัพเดตให้รองรับคำถามที่ถูกสุ่มแล้ว
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
-// import Button from '../common/Button'; // ไม่ได้ถูกใช้งานในโค้ดที่ให้มา อาจลบออกได้ถ้าไม่ใช้
 import audioService from '../../services/simpleAudio';
-import { shuffleArray, getTimerColor } from '../../utils/helpers';
+import { getTimerColor } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
 
 const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
@@ -12,17 +11,15 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   const [score, setScore] = useState(0);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
-  const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [timeLeft, setTimeLeft] = useState(QUIZ_SETTINGS.TIME_PER_QUESTION);
   const [quizStartTime] = useState(Date.now());
-  const [answers, setAnswers] = useState([]); // เก็บคำตอบทั้งหมด
+  const [answers, setAnswers] = useState([]);
 
-  // Shuffle questions when component mounts
-  useEffect(() => {
-    const shuffled = shuffleArray([...quiz.questions]);
-    setShuffledQuestions(shuffled);
-    console.log('🎯 Quiz started:', quiz.title, 'Questions:', shuffled.length);
-  }, [quiz.questions]);
+  // คำถามถูกสุ่มแล้วจาก QuizList
+  const questions = quiz.questions || [];
+  const totalQuestions = questions.length;
+  const originalTotalQuestions = quiz.originalTotalQuestions || totalQuestions;
+  const selectedQuestionCount = quiz.selectedQuestionCount || totalQuestions;
 
   // Timer countdown
   useEffect(() => {
@@ -45,7 +42,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     }
   }, [timeLeft, showFeedback]);
 
-  const currentQuestion = shuffledQuestions[currentQuestionIndex];
+  const currentQuestion = questions[currentQuestionIndex];
 
   const handleAnswerSelect = async (answerIndex) => {
     if (showFeedback) return;
@@ -86,7 +83,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   const handleNextQuestion = async () => {
     await audioService.navigation();
     
-    if (currentQuestionIndex < shuffledQuestions.length - 1) {
+    if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
       setShowFeedback(false);
@@ -98,13 +95,15 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       const results = {
         quizId: quiz.id,
         score,
-        totalQuestions: shuffledQuestions.length,
+        totalQuestions: totalQuestions,
         totalTime,
         quizTitle: quiz.title,
         studentName,
         completedAt: new Date(),
-        answers: answers, // ใส่ answers เข้าไปใน results
-        percentage: Math.round((score / (shuffledQuestions.length * QUIZ_SETTINGS.POINTS_PER_QUESTION)) * 100)
+        answers: answers,
+        percentage: Math.round((score / (totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION)) * 100),
+        selectedQuestionCount: selectedQuestionCount,
+        originalTotalQuestions: originalTotalQuestions
       };
       
       console.log('🏆 Quiz completed:', results);
@@ -121,10 +120,10 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   };
 
   const getProgressPercentage = () => {
-    return ((currentQuestionIndex + 1) / shuffledQuestions.length) * 100;
+    return ((currentQuestionIndex + 1) / totalQuestions) * 100;
   };
 
-  if (shuffledQuestions.length === 0) {
+  if (questions.length === 0) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -141,7 +140,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
           textAlign: 'center'
         }}>
           <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🎯</div>
-          <p style={{ color: 'white', fontSize: '1.2rem' }}>กำลังเตรียมข้อสอบ...</p>
+          <p style={{ color: 'white', fontSize: '1.2rem' }}>ไม่พบคำถาม...</p>
         </div>
       </div>
     );
@@ -223,6 +222,15 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
               }}>
                 สวัสดี {studentName}! 🎮
               </p>
+              {selectedQuestionCount < originalTotalQuestions && (
+                <p style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.9rem',
+                  marginTop: '4px'
+                }}>
+                  📊 ทำ {selectedQuestionCount} ข้อ จากทั้งหมด {originalTotalQuestions} ข้อ (สุ่มแล้ว)
+                </p>
+              )}
             </div>
             
             <button
@@ -265,7 +273,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '0.9rem'
               }}>
-                ข้อ {currentQuestionIndex + 1} จาก {shuffledQuestions.length}
+                ข้อ {currentQuestionIndex + 1} จาก {totalQuestions}
               </span>
               <span style={{
                 color: 'rgba(255, 255, 255, 0.8)',
@@ -352,10 +360,8 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             marginBottom: '32px'
           }}>
             {currentQuestion.options.map((option, index) => {
-              // ================== START OF CHANGE ==================
-              // ตรวจสอบว่าตัวเลือกมีข้อความ (ไม่ใช่สตริงว่าง) หรือไม่
+              // ตรวจสอบว่าตัวเลือกมีข้อความหรือไม่
               if (option && option.trim() !== "") {
-              // =================== END OF CHANGE ===================
                 let buttonStyle = {
                   width: '100%',
                   padding: '20px 24px',
@@ -436,10 +442,8 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     <span style={{ flex: 1 }}>{option}</span>
                   </button>
                 );
-              // ================== START OF CHANGE ==================
               }
-              return null; // ถ้าตัวเลือกเป็นสตริงว่าง ก็ไม่ต้องแสดงผลอะไร
-              // =================== END OF CHANGE ===================
+              return null;
             })}
           </div>
 
@@ -527,7 +531,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
                   }}
                 >
-                  {currentQuestionIndex < shuffledQuestions.length - 1 ? (
+                  {currentQuestionIndex < totalQuestions - 1 ? (
                     <>
                       <ArrowLeft style={{ transform: 'rotate(180deg)' }} size={20} />
                       ข้อถัดไป

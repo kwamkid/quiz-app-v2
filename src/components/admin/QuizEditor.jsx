@@ -1,12 +1,14 @@
-// src/components/admin/QuizEditor.jsx - แก้ไขใหม่สมบูรณ์
+// src/components/admin/QuizEditor.jsx - เพิ่มฟีเจอร์ Import
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
+import QuizImport from './QuizImport';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 
 const QuizEditor = ({ quiz = null, onSave, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [showImportModal, setShowImportModal] = useState(false);
   
   // Quiz data
   const [quizData, setQuizData] = useState({
@@ -32,7 +34,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
         difficulty: quiz.difficulty || 'ง่าย',
         questions: quiz.questions?.length > 0 ? quiz.questions.map(q => ({
           ...q,
-          options: [...(q.options || []), '', '', '', ''].slice(0, 4) // ให้แน่ใจว่ามี 4 ตัวเลือก
+          options: [...(q.options || []), '', '', '', ''].slice(0, 4)
         })) : [
           {
             question: '',
@@ -62,13 +64,11 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
         errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
       }
       
-      // ตรวจสอบตัวเลือกบังคับ (A และ B)
       const requiredOptions = question.options?.slice(0, 2).filter(opt => opt?.trim()).length || 0;
       if (requiredOptions < 2) {
         errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือก A และ B (บังคับ)`);
       }
 
-      // ตรวจสอบคำตอบที่ถูกต้อง
       const filledOptions = question.options?.filter(opt => opt?.trim()) || [];
       if (question.correctAnswer >= filledOptions.length) {
         errors.push(`คำถามข้อ ${index + 1}: คำตอบที่เลือกไม่ถูกต้อง กรุณาเลือกจากตัวเลือกที่มีข้อความ`);
@@ -139,13 +139,22 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     }
   };
 
+  // ฟีเจอร์ใหม่: Import คำถาม
+  const handleImportQuestions = (importedQuestions) => {
+    setQuizData(prev => ({
+      ...prev,
+      questions: importedQuestions
+    }));
+    setShowImportModal(false);
+    alert(`🎉 นำเข้าคำถามเรียบร้อยแล้ว! รวม ${importedQuestions.length} ข้อ`);
+  };
+
   const handleSave = async () => {
     setIsLoading(true);
     setErrors([]);
     
     await audioService.buttonClick();
     
-    // Validate quiz data
     const validationErrors = validateQuiz(quizData);
     
     if (validationErrors.length > 0) {
@@ -159,13 +168,11 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
       let savedQuizId;
       
       if (quiz && quiz.id) {
-        // Update existing quiz
         await FirebaseService.updateQuiz(quiz.id, quizData);
         savedQuizId = quiz.id;
         await audioService.correctAnswer();
         alert('✅ บันทึกการแก้ไขเรียบร้อยแล้ว!');
       } else {
-        // Create new quiz
         savedQuizId = await FirebaseService.createQuiz(quizData);
         await audioService.achievement();
         alert('🎉 สร้างข้อสอบใหม่เรียบร้อยแล้ว!');
@@ -258,6 +265,42 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
             >
               <ArrowLeft size={16} />
               กลับ
+            </button>
+          </div>
+          
+          {/* Import Button */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '16px'
+          }}>
+            <button
+              onClick={() => setShowImportModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '12px 24px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
+              }}
+            >
+              <Upload size={16} />
+              📊 นำเข้าคำถามจาก Excel
             </button>
           </div>
           
@@ -651,7 +694,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
             </div>
           ))}
 
-          {/* Add Question Button - ย้ายมาล่างสุด */}
+          {/* Add Question Button */}
           <div style={{ textAlign: 'center', marginTop: '24px' }}>
             <button
               onClick={addQuestion}
@@ -686,7 +729,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
           </div>
         </div>
 
-        {/* Save Button - ย้ายมาล่างสุด */}
+        {/* Save Button */}
         <div style={{
           textAlign: 'center',
           marginTop: '32px',
@@ -747,6 +790,16 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
           </button>
         </div>
       </div>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <QuizImport
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImportQuestions}
+          existingQuestions={quizData.questions}
+        />
+      )}
 
       <style>{`
         @keyframes spin {

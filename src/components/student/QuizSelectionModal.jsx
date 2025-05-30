@@ -1,4 +1,4 @@
-// src/components/student/QuizList.jsx - กลับไปใช้ Firebase แต่แก้ infinite loop
+// src/components/student/QuizList.jsx - อัพเดตให้รองรับ Quiz Selection
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trophy, Music, VolumeX } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
@@ -15,32 +15,15 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
   useEffect(() => {
     loadQuizzes();
-  }, []); // Empty dependency array
+  }, []);
 
   const loadQuizzes = async () => {
     try {
       setLoading(true);
-      console.log('📚 Loading quizzes from QuizList...');
-      
       const quizzesData = await FirebaseService.getQuizzes();
       setQuizzes(quizzesData);
-      
-      console.log('✅ QuizList loaded:', quizzesData.length, 'quizzes');
     } catch (error) {
-      console.error('❌ QuizList error:', error);
-      // Fallback data
-      setQuizzes([
-        {
-          id: '1',
-          title: '🧮 คณิตศาสตร์ ป.6',
-          emoji: '🧮',
-          difficulty: 'ง่าย',
-          questions: [
-            { question: '5 + 3 = ?', options: ['6', '7', '8', '9'], correctAnswer: 2, points: 10 },
-            { question: '12 ÷ 4 = ?', options: ['2', '3', '4', '6'], correctAnswer: 1, points: 10 }
-          ]
-        }
-      ]);
+      console.error('Error loading quizzes:', error);
     } finally {
       setLoading(false);
     }
@@ -49,20 +32,8 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
   const handleQuizClick = async (quiz) => {
     if (quiz.questions?.length > 0) {
       await audioService.buttonClick();
-      // ถ้ามีคำถามน้อยกว่าหรือเท่ากับ 20 ข้อ ให้ทำทั้งหมดเลย
-      if (quiz.questions.length <= 20) {
-        const quizWithAllQuestions = {
-          ...quiz,
-          questions: [...quiz.questions].sort(() => Math.random() - 0.5), // สุ่มลำดับ
-          originalTotalQuestions: quiz.questions.length,
-          selectedQuestionCount: quiz.questions.length
-        };
-        onStartQuiz(quizWithAllQuestions);
-      } else {
-        // ถ้ามีมากกว่า 20 ข้อ ให้เลือกจำนวน
-        setSelectedQuiz(quiz);
-        setShowQuizModal(true);
-      }
+      setSelectedQuiz(quiz);
+      setShowQuizModal(true);
     } else {
       await audioService.wrongAnswer();
       alert('❌ ข้อสอบนี้ยังไม่มีคำถาม กรุณาติดต่อครูเพื่อเพิ่มคำถาม');
@@ -104,7 +75,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
   const handleViewHistory = async () => {
     await audioService.buttonClick();
-    console.log('🏆 Navigating to score history...');
     onViewHistory();
   };
 
@@ -432,13 +402,13 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                   transition: 'all 0.3s ease'
                 }}>
                   {quiz.questions?.length > 0 ? (
-                    quiz.questions.length <= 20 ? (
-                      <>▶️ ทำข้อสอบ ({quiz.questions.length} ข้อ)</>
-                    ) : (
-                      <>🎯 ทำข้อสอบ (เลือกจำนวนข้อ)</>
-                    )
+                    <>
+                      ▶️ เลือกจำนวนข้อ
+                    </>
                   ) : (
-                    <>🚫 ยังไม่มีคำถาม</>
+                    <>
+                      🚫 ยังไม่มีคำถาม
+                    </>
                   )}
                 </div>
               </div>
