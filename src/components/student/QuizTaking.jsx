@@ -1,7 +1,8 @@
-// src/components/student/QuizTaking.jsx - แก้ไขการส่งข้อมูลคะแนน
+// src/components/student/QuizTaking.jsx - เพิ่มเพลงตอนทำข้อสอบ
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
+import musicService from '../../services/musicService'; // ✅ เพิ่ม music service
 import { getTimerColor, calculatePercentage } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
 
@@ -20,6 +21,19 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   const totalQuestions = questions.length;
   const originalTotalQuestions = quiz.originalTotalQuestions || totalQuestions;
   const selectedQuestionCount = quiz.selectedQuestionCount || totalQuestions;
+
+  // ✅ เริ่มเพลงเมื่อเริ่มทำข้อสอบ
+  useEffect(() => {
+    const startQuizMusic = async () => {
+      await musicService.playQuizMusic();
+    };
+    startQuizMusic();
+
+    // Cleanup เมื่อออกจาก component
+    return () => {
+      musicService.stop();
+    };
+  }, []);
 
   // Timer countdown
   useEffect(() => {
@@ -91,6 +105,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       setTimeLeft(QUIZ_SETTINGS.TIME_PER_QUESTION);
     } else {
       await audioService.quizComplete();
+      musicService.stop(); // ✅ หยุดเพลงเมื่อจบข้อสอบ
       
       const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
       const maxScore = totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION;
@@ -133,6 +148,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
     const confirmExit = confirm('🚪 คุณแน่ใจหรือไม่ว่าต้องการออกจากข้อสอบ? ผลคะแนนจะไม่ถูกบันทึก');
     if (confirmExit) {
       await audioService.navigation();
+      musicService.stop(); // ✅ หยุดเพลงเมื่อออกจากข้อสอบ
       onBack();
     }
   };
@@ -238,7 +254,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1rem'
               }}>
-                สวัสดี {studentName}! 🎮
+                สวัสดี {studentName}! 🎮 {musicService.isCurrentlyPlaying() && '🎵'}
               </p>
               {selectedQuestionCount < originalTotalQuestions && (
                 <p style={{

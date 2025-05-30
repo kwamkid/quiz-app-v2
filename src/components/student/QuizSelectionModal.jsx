@@ -1,10 +1,10 @@
-// src/components/student/QuizSelectionModal.jsx - แก้ไขปัญหา infinite loop
+// src/components/student/QuizSelectionModal.jsx - แก้ไขตัวเลือกเป็น 20,30,40,50 ข้อ
 import React, { useState, useEffect } from 'react';
 import { X, Play, AlertCircle } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 
 const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
-  const [selectedQuestionCount, setSelectedQuestionCount] = useState(10);
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState(20);
   const [isStarting, setIsStarting] = useState(false);
 
   // ✅ ใช้ allQuizzes ที่ส่งมาจาก props แทนการโหลดเอง
@@ -14,10 +14,12 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
   useEffect(() => {
     if (quiz && quiz.questions) {
       const totalQuestions = quiz.questions.length;
-      if (totalQuestions <= 10) {
+      if (totalQuestions < 20) {
+        // ถ้าน้อยกว่า 20 ข้อ ให้เลือกทำหมดเลย
         setSelectedQuestionCount(totalQuestions);
       } else {
-        setSelectedQuestionCount(10);
+        // ถ้ามี 20 ข้อขึ้นไป ให้เริ่มต้นที่ 20 ข้อ
+        setSelectedQuestionCount(20);
       }
     }
   }, [quiz]);
@@ -56,20 +58,26 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
     const totalQuestions = quiz.questions.length;
     const options = [];
     
-    // ถ้ามีคำถามน้อยกว่า 10 ข้อ ให้เลือกได้แค่จำนวนที่มี
-    if (totalQuestions <= 10) {
-      for (let i = 1; i <= totalQuestions; i++) {
-        options.push(i);
-      }
+    // ถ้ามีคำถามน้อยกว่า 20 ข้อ ให้ทำหมดเลย
+    if (totalQuestions < 20) {
+      options.push(totalQuestions);
     } else {
-      // ถ้ามีมากกว่า 10 ข้อ ให้เลือกได้ 5, 10, 15, 20, หรือทั้งหมด
-      options.push(5, 10, 15, 20);
-      if (totalQuestions > 20) {
-        options.push(totalQuestions); // ทั้งหมด
-      }
+      // ถ้ามี 20 ข้อขึ้นไป ให้เลือกได้ 20, 30, 40, 50
+      const fixedOptions = [20, 30, 40, 50];
+      
+      fixedOptions.forEach(option => {
+        if (option <= totalQuestions) {
+          options.push(option);
+        }
+      });
+      
+      // ถ้าต้องการให้เลือกทำทั้งหมดได้ด้วย (optional)
+      // if (totalQuestions > 50) {
+      //   options.push(totalQuestions);
+      // }
     }
     
-    return options.filter(option => option <= totalQuestions);
+    return options;
   };
 
   if (!isOpen || !quiz) return null;
@@ -121,12 +129,12 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             transition: 'all 0.3s ease'
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(239, 68, 68, 0.2)';
-            e.target.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
           }}
         >
           <X size={20} />
@@ -167,12 +175,14 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             marginBottom: '16px',
             textAlign: 'center'
           }}>
-            🎯 เลือกจำนวนข้อที่ต้องการทำ
+            🎯 {totalQuestions < 20 ? 'จำนวนข้อสอบ' : 'เลือกจำนวนข้อที่ต้องการทำ'}
           </h3>
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
+            gridTemplateColumns: totalQuestions < 20 
+              ? '1fr' 
+              : 'repeat(auto-fit, minmax(80px, 1fr))',
             gap: '12px',
             marginBottom: '20px'
           }}>
@@ -183,6 +193,7 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
                   await audioService.buttonClick();
                   setSelectedQuestionCount(count);
                 }}
+                disabled={totalQuestions < 20} // ถ้าน้อยกว่า 20 ให้ปิดการเลือก
                 style={{
                   background: selectedQuestionCount === count
                     ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
@@ -193,27 +204,28 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
                   color: 'white',
                   padding: '16px 12px',
                   borderRadius: '16px',
-                  cursor: 'pointer',
+                  cursor: totalQuestions < 20 ? 'default' : 'pointer',
                   fontWeight: 'bold',
                   fontSize: '1.1rem',
                   transition: 'all 0.3s ease',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  opacity: totalQuestions < 20 ? 0.8 : 1
                 }}
                 onMouseEnter={(e) => {
-                  if (selectedQuestionCount !== count) {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.transform = 'translateY(-2px)';
+                  if (selectedQuestionCount !== count && totalQuestions >= 20) {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (selectedQuestionCount !== count) {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                    e.target.style.transform = 'translateY(0)';
+                  if (selectedQuestionCount !== count && totalQuestions >= 20) {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.transform = 'translateY(0)';
                   }
                 }}
               >
                 {count} ข้อ
-                {count === totalQuestions && totalQuestions > 20 && (
+                {totalQuestions < 20 && (
                   <div style={{
                     fontSize: '0.7rem',
                     opacity: 0.8,
@@ -238,8 +250,15 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
           }}>
             <AlertCircle size={20} color="#60a5fa" />
             <div style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.95rem' }}>
-              <strong>💡 เคล็ดลับ:</strong> คำถามจะถูกสุ่มใหม่ทุกครั้ง 
-              แต่ละข้อได้ 10 คะแนน
+              {totalQuestions < 20 ? (
+                <>
+                  <strong>📝 หมายเหตุ:</strong> ข้อสอบนี้มี {totalQuestions} ข้อ จึงต้องทำทั้งหมด
+                </>
+              ) : (
+                <>
+                  <strong>💡 เคล็ดลับ:</strong> คำถามจะถูกสุ่มใหม่ทุกครั้ง แต่ละข้อได้ 10 คะแนน
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -264,12 +283,12 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
               transition: 'all 0.3s ease'
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-              e.target.style.color = 'white';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.color = 'white';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.target.style.color = 'rgba(255, 255, 255, 0.8)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
             }}
           >
             ยกเลิก
@@ -299,14 +318,14 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             }}
             onMouseEnter={(e) => {
               if (!isStarting) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
               }
             }}
             onMouseLeave={(e) => {
               if (!isStarting) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
               }
             }}
           >
@@ -325,7 +344,10 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             ) : (
               <>
                 <Play size={20} />
-                🚀 เริ่มทำข้อสอบ ({selectedQuestionCount} ข้อ)
+                <div style={{ textAlign: 'center', lineHeight: '1.2' }}>
+                  <div>🚀 เริ่มทำข้อสอบ</div>
+                  <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>({selectedQuestionCount} ข้อ)</div>
+                </div>
               </>
             )}
           </button>
@@ -348,6 +370,12 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             🎯 คะแนนเต็ม: <strong style={{ color: 'white' }}>{selectedQuestionCount * 10}</strong> คะแนน
             <br />
             ⏱️ เวลาทำ: <strong style={{ color: 'white' }}>{selectedQuestionCount * 30}</strong> วินาที
+            {totalQuestions >= 20 && (
+              <>
+                <br />
+                📊 สุ่มจาก: <strong style={{ color: 'white' }}>{totalQuestions}</strong> ข้อ
+              </>
+            )}
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-// src/components/admin/QuizEditor.jsx - แก้ไข validation UI (Fixed)
+// src/components/admin/QuizEditor.jsx - แก้ไข validation UI (แก้สีตาม requirement)
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
 import QuizImport from './QuizImport';
@@ -630,11 +630,9 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                             ? '2px solid #22c55e' 
                             : isRequired 
                               ? hasContent 
-                                ? '2px solid #10b981'
+                                ? '1px solid rgba(255, 255, 255, 0.3)'
                                 : '2px solid #ef4444'
-                              : hasContent
-                                ? '1px solid #10b981'
-                                : '1px solid rgba(255, 255, 255, 0.2)',
+                              : '1px solid rgba(255, 255, 255, 0.2)',
                           borderRadius: '10px',
                           color: 'white',
                           fontSize: '0.9rem',
@@ -649,8 +647,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                         }}
                         onBlur={(e) => {
                           const newHasContent = e.target.value && e.target.value.trim() !== '';
-                          if (isRequired) {
-                            e.target.style.borderColor = newHasContent ? '#10b981' : '#ef4444';
+                          if (isRequired && !newHasContent) {
+                            e.target.style.borderColor = '#ef4444';
+                          } else if (question.correctAnswer === index) {
+                            e.target.style.borderColor = '#22c55e';
+                          } else {
+                            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                           }
                         }}
                       />

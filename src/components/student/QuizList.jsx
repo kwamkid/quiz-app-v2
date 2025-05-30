@@ -1,9 +1,10 @@
-// src/components/student/QuizList.jsx - แก้ไขปัญหา infinite loop
+// src/components/student/QuizList.jsx - เพิ่ม Music Control
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trophy, Music, VolumeX } from 'lucide-react';
+import { ArrowLeft, Trophy, Music, VolumeX, Volume2 } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
+import musicService from '../../services/musicService'; // ✅ เพิ่ม music service
 import FirebaseService from '../../services/firebase';
 
 const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
@@ -45,6 +46,19 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     };
   }, []); // ✅ Empty dependency array - จะรันแค่ครั้งเดียวตอน mount
 
+  // ✅ เริ่มเพลงเมื่อ component mount
+  useEffect(() => {
+    const initializeMusic = async () => {
+      await musicService.initialize();
+    };
+    initializeMusic();
+
+    // Cleanup เมื่อออกจาก component
+    return () => {
+      musicService.stop();
+    };
+  }, []);
+
   const handleQuizClick = async (quiz) => {
     if (quiz.questions?.length > 0) {
       await audioService.buttonClick();
@@ -73,6 +87,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
       
       setShowQuizModal(false);
       setSelectedQuiz(null);
+      musicService.stop(); // ✅ หยุดเพลงเมนูก่อนไปทำข้อสอบ
       onStartQuiz(quizWithSelectedQuestions);
     }
   };
@@ -85,7 +100,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
 
   const handleLogout = async () => {
     await audioService.navigation();
-    audioService.stopBackgroundMusic();
+    musicService.stop(); // ✅ หยุดเพลงเมื่อออก
     onLogout();
   };
 
@@ -94,12 +109,33 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     onViewHistory(); // ✅ เรียกฟังก์ชันจาก props เพื่อไปหน้า history
   };
 
+  // ✅ ปรับปรุงฟังก์ชันควบคุมเพลง
   const toggleMusic = async () => {
     await audioService.buttonClick();
-    await audioService.initialize();
-    const newState = audioService.toggleBackgroundMusic();
-    setMusicEnabled(newState);
-    console.log('🎵 Music toggled:', newState ? 'ON' : 'OFF');
+    
+    if (musicEnabled) {
+      musicService.stop();
+      setMusicEnabled(false);
+      console.log('🔇 Music stopped');
+    } else {
+      // ตรวจสอบไฟล์เพลงก่อน
+      console.log('🎵 Checking music file...');
+      const fileExists = await musicService.checkMusicFile();
+      
+      if (!fileExists) {
+        alert(`🎵 ไม่พบไฟล์เพลง!\n\nกรุณาทำดังนี้:\n1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"\n2. วางไฟล์ในโฟลเดอร์ public/\n3. รีเฟรชหน้าใหม่\n\nโครงสร้างที่ถูกต้อง:\npublic/\n  quiz-music.mp3`);
+        return;
+      }
+      
+      const success = await musicService.playMenuMusic();
+      if (success) {
+        setMusicEnabled(true);
+        console.log('🎵 Music started');
+      } else {
+        console.log('❌ Failed to start music');
+        alert(`🎵 ไม่สามารถเล่นเพลงได้\n\nสาเหตุที่เป็นไปได้:\n• เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ\n• รูปแบบไฟล์ไม่รองรับ\n• ไฟล์เสียหาย\n\nลองกดปุ่มเพลงอีกครั้งหลังจากมีการโต้ตอบกับหน้าเว็บ`);
+      }
+    }
   };
 
   if (loading) {
@@ -222,7 +258,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 }}
                 title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
               >
-                {musicEnabled ? <Music size={20} /> : <VolumeX size={20} />}
+                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
               </button>
 
               {/* Logout Button */}
