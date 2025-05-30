@@ -1,10 +1,54 @@
-// src/components/student/QuizList.jsx - กลับไปใช้ Firebase แต่แก้ infinite loop
+// src/components/student/QuizList.jsx - ใช้ Mock Data เพื่อ Debug
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trophy, Music, VolumeX } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
-import FirebaseService from '../../services/firebase';
+// import FirebaseService from '../../services/firebase'; // ปิดการใช้ Firebase ชั่วคราว
+
+// Mock Data สำหรับทดสอบ
+const MOCK_QUIZZES = [
+  {
+    id: 'mock-1',
+    title: '🧮 คณิตศาสตร์ ป.6',
+    emoji: '🧮',
+    difficulty: 'ง่าย',
+    questions: [
+      { question: '5 + 3 = ?', options: ['6', '7', '8', '9'], correctAnswer: 2, points: 10 },
+      { question: '12 ÷ 4 = ?', options: ['2', '3', '4', '6'], correctAnswer: 1, points: 10 },
+      { question: '7 × 8 = ?', options: ['54', '56', '58', '60'], correctAnswer: 1, points: 10 }
+    ]
+  },
+  {
+    id: 'mock-2',
+    title: '🌟 วิทยาศาสตร์',
+    emoji: '🔬',
+    difficulty: 'ปานกลาง',
+    questions: [
+      { question: 'โลกมีดวงจันทร์กี่ดวง?', options: ['1 ดวง', '2 ดวง', '3 ดวง', '4 ดวง'], correctAnswer: 0, points: 10 },
+      { question: 'น้ำเดือดที่กี่องศาเซลเซียส?', options: ['90°C', '100°C', '110°C', '120°C'], correctAnswer: 1, points: 10 }
+    ]
+  },
+  {
+    id: 'mock-3',
+    title: '🇬🇧 ภาษาอังกฤษ',
+    emoji: '🇬🇧',
+    difficulty: 'ยาก',
+    questions: Array.from({ length: 25 }, (_, i) => ({
+      question: `English Question ${i + 1}: What is the capital of Thailand?`,
+      options: ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya'],
+      correctAnswer: 0,
+      points: 10
+    }))
+  },
+  {
+    id: 'mock-4',
+    title: '🎨 ศิลปะ',
+    emoji: '🎨',
+    difficulty: 'ง่าย',
+    questions: [] // Empty quiz for testing
+  }
+];
 
 const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
   const [quizzes, setQuizzes] = useState([]);
@@ -14,52 +58,45 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
   const [showQuizModal, setShowQuizModal] = useState(false);
 
   useEffect(() => {
-    loadQuizzes();
-  }, []); // Empty dependency array
+    console.log('🧪 QuizList useEffect triggered');
+    
+    // จำลองการโหลดข้อมูล
+    const mockLoadQuizzes = async () => {
+      try {
+        setLoading(true);
+        console.log('📚 Mock loading quizzes...');
+        
+        // จำลอง delay การโหลด
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setQuizzes(MOCK_QUIZZES);
+        console.log('✅ Mock quizzes loaded:', MOCK_QUIZZES.length, 'items');
+      } catch (error) {
+        console.error('❌ Mock loading error:', error);
+      } finally {
+        setLoading(false);
+        console.log('🏁 Mock loading completed');
+      }
+    };
 
-  const loadQuizzes = async () => {
-    try {
-      setLoading(true);
-      console.log('📚 Loading quizzes from QuizList...');
-      
-      const quizzesData = await FirebaseService.getQuizzes();
-      setQuizzes(quizzesData);
-      
-      console.log('✅ QuizList loaded:', quizzesData.length, 'quizzes');
-    } catch (error) {
-      console.error('❌ QuizList error:', error);
-      // Fallback data
-      setQuizzes([
-        {
-          id: '1',
-          title: '🧮 คณิตศาสตร์ ป.6',
-          emoji: '🧮',
-          difficulty: 'ง่าย',
-          questions: [
-            { question: '5 + 3 = ?', options: ['6', '7', '8', '9'], correctAnswer: 2, points: 10 },
-            { question: '12 ÷ 4 = ?', options: ['2', '3', '4', '6'], correctAnswer: 1, points: 10 }
-          ]
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    mockLoadQuizzes();
+  }, []); // Empty dependency
 
   const handleQuizClick = async (quiz) => {
+    console.log('🎯 Quiz clicked:', quiz.title);
+    
     if (quiz.questions?.length > 0) {
       await audioService.buttonClick();
-      // ถ้ามีคำถามน้อยกว่าหรือเท่ากับ 20 ข้อ ให้ทำทั้งหมดเลย
+      
       if (quiz.questions.length <= 20) {
         const quizWithAllQuestions = {
           ...quiz,
-          questions: [...quiz.questions].sort(() => Math.random() - 0.5), // สุ่มลำดับ
+          questions: [...quiz.questions].sort(() => Math.random() - 0.5),
           originalTotalQuestions: quiz.questions.length,
           selectedQuestionCount: quiz.questions.length
         };
         onStartQuiz(quizWithAllQuestions);
       } else {
-        // ถ้ามีมากกว่า 20 ข้อ ให้เลือกจำนวน
         setSelectedQuiz(quiz);
         setShowQuizModal(true);
       }
@@ -73,7 +110,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     if (selectedQuiz) {
       await audioService.correctAnswer();
       
-      // สุ่มคำถามและเลือกจำนวนที่ต้องการ
       const shuffledQuestions = [...selectedQuiz.questions].sort(() => Math.random() - 0.5);
       const selectedQuestions = shuffledQuestions.slice(0, questionCount);
       
@@ -116,8 +152,10 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     console.log('🎵 Music toggled:', newState ? 'ON' : 'OFF');
   };
 
+  console.log('🔄 QuizList render - quizzes:', quizzes.length, 'loading:', loading);
+
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อสอบ..." />;
+    return <LoadingSpinner message="กำลังโหลดข้อสอบ... (Mock)" />;
   }
 
   return (
@@ -129,6 +167,21 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
       overflow: 'auto',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
     }}>
+      {/* Debug Info */}
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        right: '10px',
+        background: 'rgba(0, 0, 0, 0.8)',
+        color: 'white',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        fontSize: '0.8rem',
+        zIndex: 1000
+      }}>
+        🧪 Mock Mode | Quizzes: {quizzes.length}
+      </div>
+
       {/* Floating Background Elements */}
       <div style={{
         position: 'absolute',
@@ -202,7 +255,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                เลือกข้อสอบที่ต้องการทำ 🎮
+                เลือกข้อสอบที่ต้องการทำ 🎮 (Mock Data)
               </p>
             </div>
             
@@ -228,12 +281,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                   alignItems: 'center',
                   gap: '8px'
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                }}
                 title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
               >
                 {musicEnabled ? <Music size={20} /> : <VolumeX size={20} />}
@@ -254,14 +301,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                   alignItems: 'center',
                   gap: '8px',
                   fontSize: '0.9rem'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.color = 'white';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 <ArrowLeft size={16} />
@@ -291,14 +330,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
               }}
             >
               <Trophy size={18} />
@@ -331,14 +362,6 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
                 animation: `slideUp 0.8s ease-out ${0.2 + index * 0.1}s both`
               }}
               onClick={() => handleQuizClick(quiz)}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-5px) scale(1.02)';
-                e.target.style.boxShadow = '0 20px 45px rgba(0, 0, 0, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.1)';
-              }}
             >
               {/* Background Emoji */}
               <div style={{
@@ -460,13 +483,13 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
               marginBottom: '12px',
               fontWeight: 'bold'
             }}>
-              ยังไม่มีข้อสอบให้ทำ
+              ไม่มี Mock Data
             </h3>
             <p style={{
               color: 'rgba(255, 255, 255, 0.7)',
               fontSize: '1.2rem'
             }}>
-              รอครูสร้างข้อสอบก่อนนะ! 🎓
+              ตรวจสอบ MOCK_QUIZZES array
             </p>
           </div>
         )}

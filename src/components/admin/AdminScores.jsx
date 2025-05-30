@@ -1,9 +1,9 @@
-// src/components/admin/AdminScores.jsx - แก้ไข syntax error สมบูรณ์
+// src/components/admin/AdminScores.jsx - ปิด Firebase ชั่วคราว
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
-import FirebaseService from '../../services/firebase';
+// import FirebaseService from '../../services/firebase'; // ปิดชั่วคราว
 import { formatDate } from '../../utils/helpers';
 
 const AdminScores = ({ onBack }) => {
@@ -20,49 +20,82 @@ const AdminScores = ({ onBack }) => {
     topScore: 0
   });
 
-  useEffect(() => {
-    loadAllData();
-  }, []);
+  // Mock data for testing
+  const MOCK_ATTEMPTS = [
+    {
+      id: 'mock-1',
+      studentName: 'นักเรียน A',
+      quizTitle: 'คณิตศาสตร์ ป.6',
+      quizId: 'quiz-1',
+      score: 80,
+      totalQuestions: 10,
+      percentage: 80,
+      totalTime: 120,
+      timestamp: { seconds: Date.now() / 1000 }
+    },
+    {
+      id: 'mock-2', 
+      studentName: 'นักเรียน B',
+      quizTitle: 'วิทยาศาสตร์',
+      quizId: 'quiz-2',
+      score: 90,
+      totalQuestions: 10,
+      percentage: 90,
+      totalTime: 100,
+      timestamp: { seconds: (Date.now() / 1000) - 3600 }
+    }
+  ];
 
-  useEffect(() => {
-    filterAttempts();
-  }, [searchTerm, selectedQuiz, allAttempts]);
+  const MOCK_QUIZZES = [
+    { id: 'quiz-1', title: 'คณิตศาสตร์ ป.6', emoji: '🧮' },
+    { id: 'quiz-2', title: 'วิทยาศาสตร์', emoji: '🔬' }
+  ];
 
-  const loadAllData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load all attempts and quizzes
-      const [attempts, quizzesData] = await Promise.all([
-        FirebaseService.getAllStudentAttempts(),
-        FirebaseService.getQuizzes()
-      ]);
-      
-      setAllAttempts(attempts);
-      setQuizzes(quizzesData);
-      
-      // Calculate stats
-      if (attempts.length > 0) {
-        const uniqueStudents = new Set(attempts.map(attempt => attempt.studentName)).size;
-        const totalScore = attempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
-        const averageScore = Math.round(totalScore / attempts.length);
-        const topScore = Math.max(...attempts.map(attempt => attempt.percentage || 0));
+  // โหลดข้อมูล Mock แทน Firebase
+  useEffect(() => {
+    console.log('🧪 AdminScores useEffect - MOCK MODE');
+    
+    const loadMockData = async () => {
+      try {
+        setLoading(true);
+        console.log('📊 Loading MOCK admin scores data...');
+        
+        // จำลอง delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // ตั้งค่า Mock Data
+        setAllAttempts(MOCK_ATTEMPTS);
+        setFilteredAttempts(MOCK_ATTEMPTS);
+        setQuizzes(MOCK_QUIZZES);
+        
+        // Calculate mock stats
+        const uniqueStudents = new Set(MOCK_ATTEMPTS.map(attempt => attempt.studentName)).size;
+        const totalScore = MOCK_ATTEMPTS.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
+        const averageScore = Math.round(totalScore / MOCK_ATTEMPTS.length);
+        const topScore = Math.max(...MOCK_ATTEMPTS.map(attempt => attempt.percentage || 0));
         
         setStats({
           totalStudents: uniqueStudents,
-          totalAttempts: attempts.length,
+          totalAttempts: MOCK_ATTEMPTS.length,
           averageScore,
           topScore
         });
+        
+        console.log('✅ MOCK admin scores loaded');
+      } catch (error) {
+        console.error('❌ Error loading MOCK admin scores:', error);
+      } finally {
+        setLoading(false);
+        console.log('🏁 MOCK loading completed');
       }
-    } catch (error) {
-      console.error('Error loading admin scores:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
+    loadMockData();
+  }, []); // Empty dependency - โหลดครั้งเดียว
+
+  // Filter function - แยกออกมา
   const filterAttempts = () => {
+    console.log('🔍 Filtering attempts - searchTerm:', searchTerm, 'selectedQuiz:', selectedQuiz);
     let filtered = [...allAttempts];
     
     // Filter by search term (student name)
@@ -85,7 +118,14 @@ const AdminScores = ({ onBack }) => {
     });
     
     setFilteredAttempts(filtered);
+    console.log('✅ Filtered:', filtered.length, 'attempts');
   };
+
+  // Filter เมื่อ search/filter เปลี่ยน
+  useEffect(() => {
+    console.log('🔄 Filter useEffect triggered');
+    filterAttempts();
+  }, [searchTerm, selectedQuiz]); // ไม่ใส่ allAttempts ใน dependency
 
   const handleBack = async () => {
     await audioService.navigation();
@@ -106,8 +146,10 @@ const AdminScores = ({ onBack }) => {
     return '📚';
   };
 
+  console.log('🔄 AdminScores render - loading:', loading, 'attempts:', allAttempts.length);
+
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อมูลคะแนน..." />;
+    return <LoadingSpinner message="กำลังโหลดข้อมูลคะแนน... (Mock)" />;
   }
 
   return (
@@ -119,6 +161,21 @@ const AdminScores = ({ onBack }) => {
       overflow: 'auto',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
     }}>
+      {/* Debug Info */}
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        right: '10px',
+        background: 'rgba(0, 0, 0, 0.8)',
+        color: 'white',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        fontSize: '0.8rem',
+        zIndex: 1000
+      }}>
+        🧪 Admin Mock Mode | Attempts: {allAttempts.length} | Filtered: {filteredAttempts.length}
+      </div>
+
       <div style={{
         padding: '20px',
         maxWidth: '1400px',
@@ -152,7 +209,7 @@ const AdminScores = ({ onBack }) => {
                 gap: '12px',
                 marginBottom: '8px'
               }}>
-                📊 ระบบดูคะแนนนักเรียน
+                📊 ระบบดูคะแนนนักเรียน (Mock)
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
@@ -175,14 +232,6 @@ const AdminScores = ({ onBack }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.color = 'white';
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
               }}
             >
               <ArrowLeft size={18} />
@@ -370,14 +419,6 @@ const AdminScores = ({ onBack }) => {
                     padding: '20px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.target.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.target.style.transform = 'translateY(0)';
                   }}
                 >
                   <div style={{

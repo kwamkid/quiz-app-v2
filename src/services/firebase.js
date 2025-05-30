@@ -1,4 +1,4 @@
-// src/services/firebase.js - กลับไปเป็นเหมือนเดิม แต่เพิ่มการป้องกัน
+// src/services/firebase.js - เพิ่ม Debug Trace เพื่อหาตัวการ
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -45,8 +45,45 @@ export class FirebaseService {
     }
   }
 
-  // Get all quizzes
+  // Get all quizzes - เพิ่ม Debug Trace
   static async getQuizzes() {
+    // 🔍 DEBUG: ดูว่าใครเรียกมา
+    console.log("🚨 getQuizzes() CALLED!");
+    console.log("📍 Call Stack:");
+    console.trace("🔍 WHO IS CALLING getQuizzes?");
+
+    // แสดง Error stack เพื่อดูชื่อไฟล์ที่เรียก
+    const error = new Error("Debug trace");
+    console.log("📂 Caller details:", error.stack);
+
+    console.log("🚫 Firebase getQuizzes() DISABLED - returning mock data only");
+
+    // Return mock data immediately
+    return [
+      {
+        id: "firebase-disabled-1",
+        title: "🧮 คณิตศาสตร์ ป.6 (Mock)",
+        emoji: "🧮",
+        difficulty: "ง่าย",
+        questions: [
+          {
+            question: "5 + 3 = ?",
+            options: ["6", "7", "8", "9"],
+            correctAnswer: 2,
+            points: 10,
+          },
+          {
+            question: "12 ÷ 4 = ?",
+            options: ["2", "3", "4", "6"],
+            correctAnswer: 1,
+            points: 10,
+          },
+        ],
+        createdAt: { seconds: Date.now() / 1000 },
+      },
+    ];
+
+    /* ORIGINAL CODE - DISABLED
     try {
       console.log("📚 Loading quizzes from Firebase...");
       const q = query(collection(db, "quizzes"), orderBy("createdAt", "desc"));
@@ -71,10 +108,14 @@ export class FirebaseService {
       console.log("🔄 Falling back to demo data");
       return this.getDemoQuizzes();
     }
+    */
   }
 
   // Demo data for testing
   static getDemoQuizzes() {
+    console.log("🚨 getDemoQuizzes() CALLED!");
+    console.trace("🔍 WHO IS CALLING getDemoQuizzes?");
+
     return [
       {
         id: "demo-1",
@@ -94,183 +135,55 @@ export class FirebaseService {
             correctAnswer: 1,
             points: 10,
           },
-          {
-            question: "7 × 8 = ?",
-            options: ["54", "56", "58", "60"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "15 - 6 = ?",
-            options: ["8", "9", "10", "11"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "100 ÷ 5 = ?",
-            options: ["15", "20", "25", "30"],
-            correctAnswer: 1,
-            points: 10,
-          },
         ],
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-      {
-        id: "demo-2",
-        title: "🌟 วิทยาศาสตร์",
-        emoji: "🔬",
-        difficulty: "ปานกลาง",
-        questions: [
-          {
-            question: "โลกมีดวงจันทร์กี่ดวง?",
-            options: ["1 ดวง", "2 ดวง", "3 ดวง", "4 ดวง"],
-            correctAnswer: 0,
-            points: 10,
-          },
-          {
-            question: "น้ำเดือดที่กี่องศาเซลเซียส?",
-            options: ["90°C", "100°C", "110°C", "120°C"],
-            correctAnswer: 1,
-            points: 10,
-          },
-          {
-            question: "แสงอาทิตย์เดินทางมาถึงโลกใช้เวลากี่นาที?",
-            options: ["6 นาที", "8 นาที", "10 นาที", "12 นาที"],
-            correctAnswer: 1,
-            points: 10,
-          },
-        ],
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-      {
-        id: "demo-3",
-        title: "🇬🇧 ภาษาอังกฤษ",
-        emoji: "🇬🇧",
-        difficulty: "ยาก",
-        questions: Array.from({ length: 25 }, (_, i) => ({
-          question: `English Question ${
-            i + 1
-          }: What is the capital of Thailand?`,
-          options: ["Bangkok", "Chiang Mai", "Phuket", "Pattaya"],
-          correctAnswer: 0,
-          points: 10,
-        })),
-        createdAt: { seconds: Date.now() / 1000 },
-      },
-      {
-        id: "demo-4",
-        title: "🎨 ศิลปะ",
-        emoji: "🎨",
-        difficulty: "ง่าย",
-        questions: [],
         createdAt: { seconds: Date.now() / 1000 },
       },
     ];
   }
 
-  // Create new quiz
+  // Create new quiz - ปิดการทำงาน
   static async createQuiz(quizData) {
-    try {
-      const docRef = await addDoc(collection(db, "quizzes"), {
-        ...quizData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      console.log("✅ Quiz created with ID:", docRef.id);
-
-      // Clear cache เพื่อให้โหลดข้อมูลใหม่
-      this.clearQuizzesCache();
-
-      return docRef.id;
-    } catch (error) {
-      console.error("Error creating quiz:", error);
-      throw error;
-    }
+    console.log("🚨 createQuiz() CALLED!");
+    console.trace("🔍 WHO IS CALLING createQuiz?");
+    console.log("🚫 Firebase createQuiz() DISABLED");
+    return "mock-quiz-id-" + Date.now();
   }
 
-  // Update quiz
+  // Update quiz - ปิดการทำงาน
   static async updateQuiz(quizId, quizData) {
-    try {
-      const quizRef = doc(db, "quizzes", quizId);
-      await updateDoc(quizRef, {
-        ...quizData,
-        updatedAt: new Date(),
-      });
-      console.log("✅ Quiz updated:", quizId);
-
-      // Clear cache เพื่อให้โหลดข้อมูลใหม่
-      this.clearQuizzesCache();
-    } catch (error) {
-      console.error("Error updating quiz:", error);
-      throw error;
-    }
+    console.log("🚨 updateQuiz() CALLED!");
+    console.trace("🔍 WHO IS CALLING updateQuiz?");
+    console.log("🚫 Firebase updateQuiz() DISABLED");
   }
 
-  // Delete quiz
+  // Delete quiz - ปิดการทำงาน
   static async deleteQuiz(quizId) {
-    try {
-      await deleteDoc(doc(db, "quizzes", quizId));
-      console.log("✅ Quiz deleted:", quizId);
-
-      // Clear cache เพื่อให้โหลดข้อมูลใหม่
-      this.clearQuizzesCache();
-    } catch (error) {
-      console.error("Error deleting quiz:", error);
-      throw error;
-    }
+    console.log("🚨 deleteQuiz() CALLED!");
+    console.trace("🔍 WHO IS CALLING deleteQuiz?");
+    console.log("🚫 Firebase deleteQuiz() DISABLED");
   }
 
-  // Save student attempt
+  // Save student attempt - ปิดการทำงาน
   static async saveStudentAttempt(attemptData) {
-    try {
-      await addDoc(collection(db, "studentAttempts"), {
-        ...attemptData,
-        timestamp: new Date(),
-      });
-      console.log("✅ Student attempt saved");
-    } catch (error) {
-      console.error("Error saving student attempt:", error);
-      // ไม่ throw error เพราะไม่อยากให้ขัดขวางการทำงาน
-    }
+    console.log("🚨 saveStudentAttempt() CALLED!");
+    console.trace("🔍 WHO IS CALLING saveStudentAttempt?");
+    console.log("🚫 Firebase saveStudentAttempt() DISABLED");
   }
 
-  // Get student attempts (for history)
+  // Get student attempts - ปิดการทำงาน
   static async getStudentAttempts(studentName) {
-    try {
-      const q = query(
-        collection(db, "studentAttempts"),
-        where("studentName", "==", studentName),
-        orderBy("timestamp", "desc")
-      );
-      const snapshot = await getDocs(q);
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      console.error("Error getting student attempts:", error);
-      return [];
-    }
+    console.log("🚨 getStudentAttempts() CALLED!");
+    console.trace("🔍 WHO IS CALLING getStudentAttempts?");
+    console.log("🚫 Firebase getStudentAttempts() DISABLED");
+    return [];
   }
 
-  // Get all student attempts (for admin)
+  // Get all student attempts - ปิดการทำงาน
   static async getAllStudentAttempts() {
-    try {
-      const q = query(
-        collection(db, "studentAttempts"),
-        orderBy("timestamp", "desc")
-      );
-      const snapshot = await getDocs(q);
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      console.error("Error getting all student attempts:", error);
-      return [];
-    }
+    console.log("🚨 getAllStudentAttempts() CALLED!");
+    console.trace("🔍 WHO IS CALLING getAllStudentAttempts?");
+    console.log("🚫 Firebase getAllStudentAttempts() DISABLED");
+    return [];
   }
 }
 
