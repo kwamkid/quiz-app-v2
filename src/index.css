@@ -1,3 +1,44 @@
+/* Import Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap");
+
+/* Root font settings */
+:root {
+  font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+/* Reset all elements */
+*,
+*::before,
+*::after {
+  font-family: inherit !important;
+}
+
+/* HTML and Body */
+html,
+body {
+  font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix for iOS */
+@supports (-webkit-touch-callout: none) {
+  body {
+    font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system,
+      system-ui, BlinkMacSystemFont, sans-serif !important;
+  }
+}
+
+/* Fix for Android WebView */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  body {
+    font-family: "IBM Plex Sans Thai", "Noto Sans Thai", "Roboto", sans-serif !important;
+  }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

@@ -1,10 +1,95 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/Favicon-Red.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Quiz Quest - เกมทำข้อสอบออนไลน์ | Codelab Thailand</title>
+
+    <!-- Preconnect to Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Load Google Fonts with display=swap -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Critical CSS for font loading -->
+    <style>
+      /* Font Face Declarations */
+      @font-face {
+        font-family: "IBM Plex Sans Thai";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url(https://fonts.gstatic.com/s/ibmplexsansthai/v10/m8JNje1VVIzcq1HzJq2AEdo2Tj_qvLqEatYlR8ZKUdaGpg.woff2)
+          format("woff2");
+      }
+
+      /* Base Font Settings */
+      * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      html {
+        font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system,
+          BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system,
+          BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+        -webkit-text-size-adjust: 100%;
+        text-rendering: optimizeLegibility;
+        touch-action: manipulation;
+      }
+
+      /* Force font on all elements */
+      body * {
+        font-family: inherit !important;
+      }
+
+      /* Specific for buttons and inputs */
+      button,
+      input,
+      select,
+      textarea {
+        font-family: "IBM Plex Sans Thai", "Noto Sans Thai", -apple-system,
+          BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+      }
+    </style>
+
+    <!-- Web Font Loader as backup -->
+    <script>
+      WebFontConfig = {
+        google: {
+          families: [
+            "IBM Plex Sans Thai:300,400,500,600,700",
+            "Noto Sans Thai:300,400,500,600,700",
+          ],
+        },
+        active: function () {
+          console.log("Thai fonts loaded successfully");
+          // Force re-render after fonts load
+          document.body.style.fontFamily =
+            "'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif";
+        },
+        inactive: function () {
+          console.log("Failed to load Thai fonts, using fallback");
+        },
+      };
+    </script>
+    <script
+      src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"
+      async
+    ></script>
   </head>
   <body>
     <div id="root"></div>

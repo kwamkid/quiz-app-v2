@@ -1,4 +1,4 @@
-// src/components/student/QuizTaking.jsx - แก้ไขเพลงให้เล่นต่อเนื่อง
+// src/components/student/QuizTaking.jsx - แก้ไขเพลงให้เล่นต่อเนื่อง และปรับ UI สำหรับมือถือ
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
@@ -194,50 +194,63 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   return (
     <div style={{
       minHeight: '100vh',
+      minHeight: '100dvh', // ใช้ dynamic viewport height สำหรับมือถือ
       width: '100vw',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
       position: 'relative',
-      overflow: 'auto',
-      fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
+      overflow: 'hidden', // เปลี่ยนเป็น hidden เพื่อไม่ให้ scroll
+      fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif',
+      display: 'flex',
+      flexDirection: 'column'
     }}>
+      {/* Floating elements - ซ่อนบนมือถือ */}
       <div style={{
         position: 'absolute',
         top: '5%',
         left: '3%',
-        fontSize: '3rem',
+        fontSize: window.innerWidth < 768 ? '2rem' : '3rem',
         opacity: '0.1',
-        animation: 'pulse 3s infinite'
+        animation: 'pulse 3s infinite',
+        display: window.innerWidth < 768 ? 'none' : 'block'
       }}>🎯</div>
       
       <div style={{
         position: 'absolute',
         top: '10%',
         right: '5%',
-        fontSize: '2.5rem',
+        fontSize: window.innerWidth < 768 ? '1.5rem' : '2.5rem',
         opacity: '0.2',
-        animation: 'bounce 4s infinite'
+        animation: 'bounce 4s infinite',
+        display: window.innerWidth < 768 ? 'none' : 'block'
       }}>⚡</div>
       
       <div style={{
         position: 'absolute',
         bottom: '10%',
         left: '2%',
-        fontSize: '4rem',
+        fontSize: window.innerWidth < 768 ? '2.5rem' : '4rem',
         opacity: '0.15',
-        animation: 'pulse 5s infinite 1s'
+        animation: 'pulse 5s infinite 1s',
+        display: window.innerWidth < 768 ? 'none' : 'block'
       }}>🚀</div>
 
       <div style={{
-        padding: '20px',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: window.innerWidth < 768 ? '10px' : '20px',
         maxWidth: '1000px',
-        margin: '0 auto'
+        width: '100%',
+        margin: '0 auto',
+        overflow: 'hidden'
       }}>
+        {/* Header - ทำให้กะทัดรัดขึ้น */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          padding: '24px',
-          marginBottom: '24px',
+          borderRadius: window.innerWidth < 768 ? '16px' : '24px',
+          padding: window.innerWidth < 768 ? '12px' : '24px',
+          marginBottom: window.innerWidth < 768 ? '12px' : '24px',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
         }}>
@@ -245,37 +258,31 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '16px',
-            marginBottom: '20px'
+            gap: '12px',
+            marginBottom: window.innerWidth < 768 ? '12px' : '20px'
           }}>
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h1 style={{
-                fontSize: '1.8rem',
+                fontSize: window.innerWidth < 768 ? '1.2rem' : '1.8rem',
                 fontWeight: 'bold',
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                marginBottom: '4px'
+                gap: '8px',
+                marginBottom: '4px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}>
                 {quiz.emoji} {quiz.title}
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '1rem'
+                fontSize: window.innerWidth < 768 ? '0.8rem' : '1rem',
+                display: window.innerWidth < 768 ? 'none' : 'block'
               }}>
                 สวัสดี {studentName}! 🎮 {musicService.isCurrentlyPlaying() && '🎵'}
               </p>
-              {selectedQuestionCount < originalTotalQuestions && (
-                <p style={{
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  fontSize: '0.9rem',
-                  marginTop: '4px'
-                }}>
-                  📊 ทำ {selectedQuestionCount} ข้อ จากทั้งหมด {originalTotalQuestions} ข้อ (สุ่มแล้ว)
-                </p>
-              )}
             </div>
             
             <button
@@ -284,14 +291,15 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                 background: 'rgba(255, 255, 255, 0.1)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 color: 'rgba(255, 255, 255, 0.7)',
-                padding: '8px 16px',
+                padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                fontSize: '0.9rem'
+                fontSize: window.innerWidth < 768 ? '0.8rem' : '0.9rem',
+                whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => {
                 e.target.style.color = 'white';
@@ -307,7 +315,8 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             </button>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          {/* Progress และ Timer */}
+          <div style={{ marginBottom: window.innerWidth < 768 ? '12px' : '20px' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -316,13 +325,13 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             }}>
               <span style={{
                 color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '0.9rem'
+                fontSize: window.innerWidth < 768 ? '0.8rem' : '0.9rem'
               }}>
-                ข้อ {currentQuestionIndex + 1} จาก {totalQuestions}
+                ข้อ {currentQuestionIndex + 1}/{totalQuestions}
               </span>
               <span style={{
                 color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '0.9rem'
+                fontSize: window.innerWidth < 768 ? '0.8rem' : '0.9rem'
               }}>
                 คะแนน: {score}
               </span>
@@ -331,7 +340,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
               width: '100%',
               background: 'rgba(255, 255, 255, 0.2)',
               borderRadius: '10px',
-              height: '8px',
+              height: '6px',
               overflow: 'hidden'
             }}>
               <div 
@@ -350,48 +359,43 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             textAlign: 'center'
           }}>
             <div style={{
-              fontSize: '2.5rem',
+              fontSize: window.innerWidth < 768 ? '1.8rem' : '2.5rem',
               fontWeight: 'bold',
               color: getTimerColor(timeLeft),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '12px',
+              gap: '8px',
               animation: timeLeft <= 5 ? 'shake 0.5s infinite' : 'none'
             }}>
-              <Clock size={32} className={timeLeft <= 10 ? 'animate-pulse' : ''} />
+              <Clock size={window.innerWidth < 768 ? 24 : 32} className={timeLeft <= 10 ? 'animate-pulse' : ''} />
               <span className={timeLeft <= 5 ? 'animate-pulse' : ''}>{timeLeft}s</span>
             </div>
-            {timeLeft <= 10 && (
-              <div style={{
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: '0.9rem',
-                marginTop: '8px',
-                animation: 'pulse 1s infinite'
-              }}>
-                {timeLeft <= 5 ? '⚡ รีบตอบ!' : '⏳ เวลาใกล้หมดแล้ว'}
-              </div>
-            )}
           </div>
         </div>
 
+        {/* Question Card - ปรับให้พอดีหน้าจอ */}
         <div style={{
+          flex: 1,
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          padding: '32px',
+          borderRadius: window.innerWidth < 768 ? '16px' : '24px',
+          padding: window.innerWidth < 768 ? '16px' : '32px',
           border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}>
+          {/* คำถาม */}
           <div style={{
             textAlign: 'center',
-            marginBottom: '32px'
+            marginBottom: window.innerWidth < 768 ? '20px' : '32px'
           }}>
             <h2 style={{
-              fontSize: '2rem',
+              fontSize: window.innerWidth < 768 ? '1.3rem' : '2rem',
               fontWeight: 'bold',
               color: 'white',
-              marginBottom: '16px',
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
               lineHeight: '1.4'
             }}>
@@ -399,27 +403,33 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             </h2>
           </div>
 
+          {/* ตัวเลือก - ปรับขนาดให้พอดีหน้าจอ */}
           <div style={{
-            display: 'grid',
-            gap: '16px',
-            marginBottom: '32px'
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: window.innerWidth < 768 ? '10px' : '16px',
+            marginBottom: window.innerWidth < 768 ? '20px' : '32px',
+            overflowY: 'auto',
+            maxHeight: window.innerWidth < 768 ? 'calc(100vh - 380px)' : 'auto'
           }}>
             {currentQuestion.options.map((option, index) => {
               // ตรวจสอบว่าตัวเลือกมีข้อความหรือไม่
               if (option && option.trim() !== "") {
                 let buttonStyle = {
                   width: '100%',
-                  padding: '20px 24px',
-                  borderRadius: '16px',
-                  fontSize: '1.1rem',
+                  padding: window.innerWidth < 768 ? '14px 16px' : '20px 24px',
+                  borderRadius: window.innerWidth < 768 ? '12px' : '16px',
+                  fontSize: window.innerWidth < 768 ? '0.95rem' : '1.1rem',
                   fontWeight: '500',
                   cursor: showFeedback ? 'default' : 'pointer',
                   transition: 'all 0.3s ease',
                   border: '2px solid transparent',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  textAlign: 'left'
+                  gap: window.innerWidth < 768 ? '12px' : '16px',
+                  textAlign: 'left',
+                  minHeight: window.innerWidth < 768 ? '50px' : '60px'
                 };
                 
                 if (showFeedback) {
@@ -456,14 +466,14 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     disabled={showFeedback}
                     style={buttonStyle}
                     onMouseEnter={(e) => {
-                      if (!showFeedback && selectedAnswer !== index) {
+                      if (!showFeedback && selectedAnswer !== index && window.innerWidth >= 768) {
                         e.target.style.background = 'rgba(255, 255, 255, 0.2)';
                         e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                         e.target.style.transform = 'translateY(-2px)';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!showFeedback && selectedAnswer !== index) {
+                      if (!showFeedback && selectedAnswer !== index && window.innerWidth >= 768) {
                         e.target.style.background = 'rgba(255, 255, 255, 0.1)';
                         e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                         e.target.style.transform = 'translateY(0)';
@@ -471,20 +481,24 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     }}
                   >
                     <div style={{
-                      width: '32px',
-                      height: '32px',
+                      width: window.innerWidth < 768 ? '28px' : '32px',
+                      height: window.innerWidth < 768 ? '28px' : '32px',
                       borderRadius: '50%',
                       background: 'rgba(255, 255, 255, 0.2)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 'bold',
-                      fontSize: '1rem',
+                      fontSize: window.innerWidth < 768 ? '0.85rem' : '1rem',
                       flexShrink: 0
                     }}>
                       {String.fromCharCode(65 + index)}
                     </div>
-                    <span style={{ flex: 1 }}>{option}</span>
+                    <span style={{ 
+                      flex: 1,
+                      wordBreak: 'break-word',
+                      lineHeight: '1.3'
+                    }}>{option}</span>
                   </button>
                 );
               }
@@ -492,6 +506,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             })}
           </div>
 
+          {/* ปุ่มตอบ/ถัดไป */}
           <div style={{ textAlign: 'center' }}>
             {!showFeedback ? (
               <button
@@ -503,9 +518,9 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     : 'rgba(255, 255, 255, 0.1)',
                   color: selectedAnswer !== null ? 'white' : 'rgba(255, 255, 255, 0.5)',
                   border: 'none',
-                  borderRadius: '16px',
-                  padding: '16px 32px',
-                  fontSize: '1.2rem',
+                  borderRadius: window.innerWidth < 768 ? '12px' : '16px',
+                  padding: window.innerWidth < 768 ? '14px 28px' : '16px 32px',
+                  fontSize: window.innerWidth < 768 ? '1rem' : '1.2rem',
                   fontWeight: 'bold',
                   cursor: selectedAnswer !== null ? 'pointer' : 'not-allowed',
                   transition: 'all 0.3s ease',
@@ -517,13 +532,13 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                   boxShadow: selectedAnswer !== null ? '0 8px 20px rgba(236, 72, 153, 0.3)' : 'none'
                 }}
                 onMouseEnter={(e) => {
-                  if (selectedAnswer !== null) {
+                  if (selectedAnswer !== null && window.innerWidth >= 768) {
                     e.target.style.transform = 'translateY(-2px) scale(1.02)';
                     e.target.style.boxShadow = '0 12px 25px rgba(236, 72, 153, 0.4)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (selectedAnswer !== null) {
+                  if (selectedAnswer !== null && window.innerWidth >= 768) {
                     e.target.style.transform = 'translateY(0) scale(1)';
                     e.target.style.boxShadow = '0 8px 20px rgba(236, 72, 153, 0.3)';
                   }
@@ -535,16 +550,16 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             ) : (
               <div style={{ textAlign: 'center' }}>
                 <div style={{
-                  fontSize: '1.8rem',
+                  fontSize: window.innerWidth < 768 ? '1.2rem' : '1.8rem',
                   fontWeight: 'bold',
                   color: isCorrect ? '#22c55e' : '#ef4444',
-                  marginBottom: '24px',
+                  marginBottom: window.innerWidth < 768 ? '16px' : '24px',
                   animation: 'slideUp 0.5s ease-out'
                 }}>
                   {isCorrect ? (
                     <>🎉 ถูกต้อง! +{currentQuestion.points || QUIZ_SETTINGS.POINTS_PER_QUESTION} คะแนน</>
                   ) : (
-                    <>❌ ผิด! คำตอบที่ถูกคือ {String.fromCharCode(65 + currentQuestion.correctAnswer)}</>
+                    <>❌ ผิด! คำตอบคือ {String.fromCharCode(65 + currentQuestion.correctAnswer)}</>
                   )}
                 </div>
                 
@@ -554,9 +569,9 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '16px',
-                    padding: '16px 32px',
-                    fontSize: '1.2rem',
+                    borderRadius: window.innerWidth < 768 ? '12px' : '16px',
+                    padding: window.innerWidth < 768 ? '14px 28px' : '16px 32px',
+                    fontSize: window.innerWidth < 768 ? '1rem' : '1.2rem',
                     fontWeight: 'bold',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
@@ -568,12 +583,16 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                     boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                    e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+                    if (window.innerWidth >= 768) {
+                      e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                      e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0) scale(1)';
-                    e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+                    if (window.innerWidth >= 768) {
+                      e.target.style.transform = 'translateY(0) scale(1)';
+                      e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+                    }
                   }}
                 >
                   {currentQuestionIndex < totalQuestions - 1 ? (
