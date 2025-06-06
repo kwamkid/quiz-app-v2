@@ -1,4 +1,4 @@
-// src/components/admin/QuizEditor.jsx - แก้ไข validation UI (แก้สีตาม requirement)
+// src/components/admin/QuizEditor.jsx - แก้ไข validation UI และเพิ่มการดึงหมวดหมู่จาก Firebase
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
 import QuizImport from './QuizImport';
@@ -9,6 +9,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [categories, setCategories] = useState([]);
   
   // Quiz data
   const [quizData, setQuizData] = useState({
@@ -25,6 +26,11 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
       }
     ]
   });
+
+  // Load categories when component mounts
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   // Load quiz data if editing
   useEffect(() => {
@@ -49,35 +55,56 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     }
   }, [quiz]);
 
+  const loadCategories = async () => {
+    try {
+      const categoriesData = await FirebaseService.getAllCategories();
+      setCategories(categoriesData);
+      console.log('✅ Categories loaded:', categoriesData.length);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      // ใช้ default categories หากโหลดไม่สำเร็จ
+      setCategories([
+        { id: 'math', name: '🧮 คณิตศาสตร์' },
+        { id: 'science', name: '🔬 วิทยาศาสตร์' },
+        { id: 'thai', name: '📚 ภาษาไทย' },
+        { id: 'english', name: '🇬🇧 ภาษาอังกฤษ' },
+        { id: 'art', name: '🎨 ศิลปะ' },
+        { id: 'music', name: '🎵 ดนตรี' },
+        { id: 'pe', name: '⚽ พลศึกษา' },
+        { id: 'uncategorized', name: '📖 อื่นๆ' }
+      ]);
+    }
+  };
+
   // Simple validation
-  const validateQuiz = (quiz) => {
-    const errors = [];
+  const validateQuiz = (quizToValidate) => {
+    const validationErrors = [];
     
-    if (!quiz.title?.trim()) {
-      errors.push('กรุณาใส่ชื่อข้อสอบ');
+    if (!quizToValidate.title?.trim()) {
+      validationErrors.push('กรุณาใส่ชื่อข้อสอบ');
     }
     
-    if (!quiz.questions || quiz.questions.length === 0) {
-      errors.push('กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อ');
+    if (!quizToValidate.questions || quizToValidate.questions.length === 0) {
+      validationErrors.push('กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อ');
     }
     
-    quiz.questions?.forEach((question, index) => {
+    quizToValidate.questions?.forEach((question, index) => {
       if (!question.question?.trim()) {
-        errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
+        validationErrors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
       }
       
       const requiredOptions = question.options?.slice(0, 2).filter(opt => opt?.trim()).length || 0;
       if (requiredOptions < 2) {
-        errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือก A และ B (บังคับ)`);
+        validationErrors.push(`คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือก A และ B (บังคับ)`);
       }
 
       const filledOptions = question.options?.filter(opt => opt?.trim()) || [];
       if (question.correctAnswer >= filledOptions.length) {
-        errors.push(`คำถามข้อ ${index + 1}: คำตอบที่เลือกไม่ถูกต้อง กรุณาเลือกจากตัวเลือกที่มีข้อความ`);
+        validationErrors.push(`คำถามข้อ ${index + 1}: คำตอบที่เลือกไม่ถูกต้อง กรุณาเลือกจากตัวเลือกที่มีข้อความ`);
       }
     });
     
-    return errors;
+    return validationErrors;
   };
 
   const handleQuizInfoChange = (field, value) => {
@@ -196,16 +223,6 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
 
   const emojiOptions = ['📚', '🧮', '🔬', '🌟', '🇬🇧', '🎯', '💡', '🎨'];
   const difficultyOptions = ['ง่าย', 'ปานกลาง', 'ยาก'];
-  const categoryOptions = [
-    { id: 'math', name: '🧮 คณิตศาสตร์' },
-    { id: 'science', name: '🔬 วิทยาศาสตร์' },
-    { id: 'thai', name: '📚 ภาษาไทย' },
-    { id: 'english', name: '🇬🇧 ภาษาอังกฤษ' },
-    { id: 'art', name: '🎨 ศิลปะ' },
-    { id: 'music', name: '🎵 ดนตรี' },
-    { id: 'pe', name: '⚽ พลศึกษา' },
-    { id: 'uncategorized', name: '📖 อื่นๆ' }
-  ];
 
   return (
     <div style={{
@@ -487,6 +504,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 ))}
               </select>
             </div>
+
             {/* Category */}
             <div>
               <label style={{
@@ -514,7 +532,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                   fontFamily: 'inherit'
                 }}
               >
-                {categoryOptions.map((category) => (
+                {categories.map((category) => (
                   <option key={category.id} value={category.id} style={{ background: '#374151', color: 'white' }}>
                     {category.name}
                   </option>

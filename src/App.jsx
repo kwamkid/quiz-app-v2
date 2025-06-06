@@ -13,6 +13,8 @@ import QuizEditor from './components/admin/QuizEditor';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import FirebaseService from './services/firebase';
 import { loadFromLocalStorage, saveToLocalStorage, clearLocalStorage } from './utils/helpers';
+import CategoryManager from './components/admin/CategoryManager';
+
 
 function App() {
   const [view, setView] = useState('landing');
@@ -42,6 +44,14 @@ function App() {
     } else {
       setView('adminLogin');
     }
+  };
+
+  const handleManageCategories = () => {
+    setView('categoryManager');
+  };
+
+  const handleBackFromCategories = () => {
+    setView('adminDashboard');
   };
 
   const handleNameSubmit = (name) => {
@@ -255,8 +265,9 @@ function App() {
         <AdminDashboard
           onCreateQuiz={handleCreateQuiz}
           onEditQuiz={handleEditQuiz}
-          onDeleteQuiz={() => {}} // จะใช้ฟังก์ชันใน component เอง
+          onDeleteQuiz={() => {}}
           onViewScores={handleAdminViewScores}
+          onManageCategories={handleManageCategories} // เพิ่มบรรทัดนี้
           onBack={handleBack}
           onLogout={handleAdminLogout}
         />
@@ -266,6 +277,12 @@ function App() {
       {view === 'adminScores' && isAdminLoggedIn && (
         <AdminScores
           onBack={handleBackFromAdminScores}
+        />
+      )}
+
+      {view === 'categoryManager' && isAdminLoggedIn && (
+        <CategoryManager
+          onBack={handleBackFromCategories}
         />
       )}
 

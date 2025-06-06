@@ -92,6 +92,7 @@ const LandingPage = ({ onSelectRole }) => {
     
     title: {
       fontSize: isMobile ? '2.2rem' : '3rem',
+      padding: '20px 0 0 0',
       fontWeight: 'bold',
       color: 'white',
       marginBottom: isMobile ? '6px' : '12px',
@@ -220,6 +221,7 @@ const LandingPage = ({ onSelectRole }) => {
             <p style={styles.subtitle}>
               เกมทำข้อสอบสุดมันส์!
             </p>
+            
           </div>
           
           {/* Buttons Section */}

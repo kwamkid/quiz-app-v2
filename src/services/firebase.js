@@ -450,6 +450,176 @@ class FirebaseService {
     );
     return this.getStudentAttempts(studentName);
   }
+
+  // เพิ่ม methods เหล่านี้ใน FirebaseService class ในไฟล์ src/services/firebase.js
+
+  // ✅ Get all categories (for management)
+  static async getAllCategories() {
+    try {
+      console.log("🔍 Getting all categories...");
+
+      // ถ้าไม่มี Firebase ให้ใช้ default categories
+      if (!isFirebaseConfigValid || !db) {
+        return this.getDefaultCategories();
+      }
+
+      // ดึงหมวดหมู่จาก Firestore
+      const categoriesSnapshot = await getDocs(collection(db, "categories"));
+      const categories = [];
+
+      categoriesSnapshot.forEach((doc) => {
+        categories.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      // ถ้าไม่มีหมวดหมู่ในฐานข้อมูล ให้สร้าง default categories
+      if (categories.length === 0) {
+        console.log("📝 No categories found, creating defaults...");
+        const defaults = this.getDefaultCategories();
+
+        // สร้าง default categories ใน Firestore
+        for (const category of defaults) {
+          await this.createCategory(category);
+        }
+
+        return defaults;
+      }
+
+      // นับจำนวนข้อสอบในแต่ละหมวด
+      const quizSnapshot = await getDocs(collection(db, "quizzes"));
+      const categoryCounts = {};
+
+      quizSnapshot.forEach((doc) => {
+        const quiz = doc.data();
+        const categoryId = quiz.categoryId || "uncategorized";
+        categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
+      });
+
+      // เพิ่ม quizCount ในแต่ละหมวด
+      const categoriesWithCount = categories.map((cat) => ({
+        ...cat,
+        quizCount: categoryCounts[cat.id] || 0,
+      }));
+
+      console.log("✅ Categories loaded:", categoriesWithCount.length);
+      return categoriesWithCount;
+    } catch (error) {
+      console.error("❌ Error getting categories:", error);
+      return this.getDefaultCategories();
+    }
+  }
+
+  // ✅ Create new category
+  static async createCategory(categoryData) {
+    try {
+      console.log("➕ Creating category:", categoryData.name);
+
+      const docRef = await addDoc(collection(db, "categories"), {
+        ...categoryData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log("✅ Category created with ID:", docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error("❌ Error creating category:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Update category
+  static async updateCategory(categoryId, categoryData) {
+    try {
+      console.log("📝 Updating category:", categoryId);
+
+      const docRef = doc(db, "categories", categoryId);
+      await updateDoc(docRef, {
+        ...categoryData,
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log("✅ Category updated successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error updating category:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Delete category
+  static async deleteCategory(categoryId) {
+    try {
+      console.log("🗑️ Deleting category:", categoryId);
+
+      // ตรวจสอบว่ามีข้อสอบในหมวดนี้หรือไม่
+      const q = query(
+        collection(db, "quizzes"),
+        where("categoryId", "==", categoryId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        throw new Error("Cannot delete category with existing quizzes");
+      }
+
+      await deleteDoc(doc(db, "categories", categoryId));
+
+      console.log("✅ Category deleted successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error deleting category:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Helper: Get default categories
+  static getDefaultCategories() {
+    return [
+      {
+        id: "math",
+        name: "🧮 คณิตศาสตร์",
+        emoji: "🧮",
+        description: "บวก ลบ คูณ หาร และอื่นๆ",
+        color: "from-purple-400 to-pink-400",
+        iconType: "math",
+      },
+      {
+        id: "science",
+        name: "🔬 วิทยาศาสตร์",
+        emoji: "🔬",
+        description: "สำรวจโลกและธรรมชาติ",
+        color: "from-green-400 to-blue-400",
+        iconType: "science",
+      },
+      {
+        id: "thai",
+        name: "📚 ภาษาไทย",
+        emoji: "📚",
+        description: "อ่าน เขียน และไวยากรณ์",
+        color: "from-orange-400 to-red-400",
+        iconType: "thai",
+      },
+      {
+        id: "english",
+        name: "🇬🇧 ภาษาอังกฤษ",
+        emoji: "🇬🇧",
+        description: "English vocabulary and grammar",
+        color: "from-blue-400 to-cyan-400",
+        iconType: "english",
+      },
+      {
+        id: "uncategorized",
+        name: "📖 อื่นๆ",
+        emoji: "📖",
+        description: "หมวดหมู่อื่นๆ",
+        color: "from-gray-400 to-gray-500",
+        iconType: "default",
+      },
+    ];
+  }
 }
 
 export default FirebaseService;
