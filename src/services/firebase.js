@@ -93,7 +93,8 @@ const mockQuizzes = [
 
 class FirebaseService {
   // ✅ Get all quizzes
-  static async getQuizzes() {
+  // ✅ Get all quizzes
+  static async getQuizzes(categoryId = null) {
     // If Firebase not configured, return mock data
     if (!isFirebaseConfigValid || !db) {
       console.log("📝 Using mock data - Firebase not configured");
@@ -103,7 +104,19 @@ class FirebaseService {
     try {
       console.log("🔍 Getting quizzes from Firestore...");
 
-      const querySnapshot = await getDocs(collection(db, "quizzes"));
+      let q;
+      if (categoryId && categoryId !== "all") {
+        // Get quizzes by category
+        q = query(
+          collection(db, "quizzes"),
+          where("categoryId", "==", categoryId)
+        );
+      } else {
+        // Get all quizzes
+        q = collection(db, "quizzes");
+      }
+
+      const querySnapshot = await getDocs(q);
       const quizzes = [];
 
       querySnapshot.forEach((doc) => {
@@ -113,11 +126,15 @@ class FirebaseService {
         });
       });
 
-      console.log("✅ Quizzes loaded from Firestore:", quizzes.length);
+      console.log(
+        `✅ Quizzes loaded from Firestore: ${quizzes.length} ${
+          categoryId ? `(category: ${categoryId})` : "(all)"
+        }`
+      );
 
-      if (quizzes.length === 0) {
-        console.log("📝 No quizzes found, using mock data");
-        return mockQuizzes;
+      if (quizzes.length === 0 && categoryId) {
+        console.log("📝 No quizzes found for category, returning empty array");
+        return [];
       }
 
       return quizzes;
@@ -125,6 +142,90 @@ class FirebaseService {
       console.error("❌ Error getting quizzes:", error);
       console.log("🔄 Fallback to mock data");
       return mockQuizzes;
+    }
+  }
+
+  // ✅ Get categories
+  static async getCategories() {
+    try {
+      console.log("🔍 Getting categories...");
+
+      // Get all quizzes to count per category
+      const quizSnapshot = await getDocs(collection(db, "quizzes"));
+      const categoryCounts = {};
+      let totalQuizzes = 0;
+
+      quizSnapshot.forEach((doc) => {
+        const quiz = doc.data();
+        const categoryId = quiz.categoryId || "uncategorized";
+        categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
+        totalQuizzes++;
+      });
+
+      // Return predefined categories with counts
+      const categories = [
+        {
+          id: "math",
+          name: "🧮 คณิตศาสตร์",
+          emoji: "🧮",
+          description: "บวก ลบ คูณ หาร และอื่นๆ",
+          color: "from-purple-400 to-pink-400",
+          iconType: "math",
+          quizCount: categoryCounts["math"] || 0,
+        },
+        {
+          id: "science",
+          name: "🔬 วิทยาศาสตร์",
+          emoji: "🔬",
+          description: "สำรวจโลกและธรรมชาติ",
+          color: "from-green-400 to-blue-400",
+          iconType: "science",
+          quizCount: categoryCounts["science"] || 0,
+        },
+        {
+          id: "thai",
+          name: "📚 ภาษาไทย",
+          emoji: "📚",
+          description: "อ่าน เขียน และไวยากรณ์",
+          color: "from-orange-400 to-red-400",
+          iconType: "thai",
+          quizCount: categoryCounts["thai"] || 0,
+        },
+        {
+          id: "english",
+          name: "🇬🇧 ภาษาอังกฤษ",
+          emoji: "🇬🇧",
+          description: "English vocabulary and grammar",
+          color: "from-blue-400 to-cyan-400",
+          iconType: "english",
+          quizCount: categoryCounts["english"] || 0,
+        },
+        {
+          id: "all",
+          name: "📖 ทุกวิชา",
+          emoji: "📖",
+          description: "ดูข้อสอบทั้งหมด",
+          color: "from-gray-400 to-gray-500",
+          iconType: "default",
+          quizCount: totalQuizzes,
+        },
+      ];
+
+      return categories;
+    } catch (error) {
+      console.error("❌ Error getting categories:", error);
+      // Return default categories
+      return [
+        {
+          id: "all",
+          name: "📖 ทุกวิชา",
+          emoji: "📖",
+          description: "ดูข้อสอบทั้งหมด",
+          color: "from-gray-400 to-gray-500",
+          iconType: "default",
+          quizCount: 0,
+        },
+      ];
     }
   }
 

@@ -1,7 +1,8 @@
-// src/App.jsx - แก้ไขการบันทึกคะแนน
+// src/App.jsx - แก้ไขการบันทึกคะแนน และเพิ่ม Category
 import React, { useState, useEffect } from 'react';
 import LandingPage from './components/layout/LandingPage';
 import StudentLogin from './components/student/StudentLogin';
+import CategorySelection from './components/student/CategorySelection';
 import QuizList from './components/student/QuizList';
 import QuizTaking from './components/student/QuizTaking';
 import ScoreHistory from './components/student/ScoreHistory';
@@ -16,6 +17,7 @@ import { loadFromLocalStorage, saveToLocalStorage, clearLocalStorage } from './u
 function App() {
   const [view, setView] = useState('landing');
   const [studentName, setStudentName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
@@ -33,7 +35,7 @@ function App() {
   const handleSelectRole = (role) => {
     if (role === 'student') {
       if (studentName) {
-        setView('quizList');
+        setView('categorySelection');
       } else {
         setView('studentLogin');
       }
@@ -45,6 +47,11 @@ function App() {
   const handleNameSubmit = (name) => {
     setStudentName(name);
     saveToLocalStorage('studentName', name);
+    setView('categorySelection');
+  };
+
+  const handleSelectCategory = (category) => {
+    setSelectedCategory(category);
     setView('quizList');
   };
 
@@ -113,11 +120,17 @@ function App() {
     clearLocalStorage('studentName');
     setCurrentQuiz(null);
     setQuizResults(null);
+    setSelectedCategory(null);
     setView('landing');
   };
 
   const handleBack = () => {
     setView('landing');
+  };
+
+  const handleBackToCategories = () => {
+    setCurrentQuiz(null);
+    setView('categorySelection');
   };
 
   const handleBackToQuizList = () => {
@@ -201,11 +214,22 @@ function App() {
         />
       )}
       
+      {view === 'categorySelection' && (
+        <CategorySelection
+          studentName={studentName}
+          onSelectCategory={handleSelectCategory}
+          onLogout={handleLogout}
+        />
+      )}
+      
       {view === 'quizList' && (
         <QuizList
           studentName={studentName}
+          categoryId={selectedCategory?.id}
+          categoryName={selectedCategory?.name}
           onStartQuiz={handleStartQuiz}
           onViewHistory={handleViewHistory}
+          onBackToCategories={handleBackToCategories}
           onLogout={handleLogout}
         />
       )}

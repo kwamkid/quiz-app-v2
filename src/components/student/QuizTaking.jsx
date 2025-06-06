@@ -193,16 +193,15 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      minHeight: '100dvh', // ใช้ dynamic viewport height สำหรับมือถือ
-      width: '100vw',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-      position: 'relative',
-      overflow: 'hidden', // เปลี่ยนเป็น hidden เพื่อไม่ให้ scroll
-      fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+        minHeight: '100dvh', // ใช้แค่ dvh อย่างเดียว
+        width: '100vw',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
       {/* Floating elements - ซ่อนบนมือถือ */}
       <div style={{
         position: 'absolute',

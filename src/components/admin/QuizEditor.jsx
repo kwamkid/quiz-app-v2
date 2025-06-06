@@ -15,6 +15,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     title: '',
     emoji: '📚',
     difficulty: 'ง่าย',
+    categoryId: 'uncategorized',
     questions: [
       {
         question: '',
@@ -32,6 +33,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
         title: quiz.title || '',
         emoji: quiz.emoji || '📚',
         difficulty: quiz.difficulty || 'ง่าย',
+        categoryId: quiz.categoryId || 'uncategorized',
         questions: quiz.questions?.length > 0 ? quiz.questions.map(q => ({
           ...q,
           options: [...(q.options || []), '', '', '', ''].slice(0, 4)
@@ -194,6 +196,16 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
 
   const emojiOptions = ['📚', '🧮', '🔬', '🌟', '🇬🇧', '🎯', '💡', '🎨'];
   const difficultyOptions = ['ง่าย', 'ปานกลาง', 'ยาก'];
+  const categoryOptions = [
+    { id: 'math', name: '🧮 คณิตศาสตร์' },
+    { id: 'science', name: '🔬 วิทยาศาสตร์' },
+    { id: 'thai', name: '📚 ภาษาไทย' },
+    { id: 'english', name: '🇬🇧 ภาษาอังกฤษ' },
+    { id: 'art', name: '🎨 ศิลปะ' },
+    { id: 'music', name: '🎵 ดนตรี' },
+    { id: 'pe', name: '⚽ พลศึกษา' },
+    { id: 'uncategorized', name: '📖 อื่นๆ' }
+  ];
 
   return (
     <div style={{
@@ -475,6 +487,41 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 ))}
               </select>
             </div>
+            {/* Category */}
+            <div>
+              <label style={{
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '1rem',
+                fontWeight: '500',
+                marginBottom: '8px',
+                display: 'block'
+              }}>
+                หมวดหมู่วิชา <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>*</span>
+              </label>
+              <select
+                value={quizData.categoryId}
+                onChange={(e) => handleQuizInfoChange('categoryId', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                {categoryOptions.map((category) => (
+                  <option key={category.id} value={category.id} style={{ background: '#374151', color: 'white' }}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
           </div>
         </div>
 

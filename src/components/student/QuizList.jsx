@@ -7,7 +7,7 @@ import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 
-const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
+const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout, onViewHistory, onBackToCategories }) => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(false);
@@ -20,9 +20,9 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     
     const loadQuizzes = async () => {
       try {
-        console.log('🔄 Loading quizzes...');
+        console.log('🔄 Loading quizzes for category:', categoryId);
         setLoading(true);
-        const quizzesData = await FirebaseService.getQuizzes();
+        const quizzesData = await FirebaseService.getQuizzes(categoryId);
         
         if (isMounted) {
           setQuizzes(quizzesData);
@@ -42,7 +42,7 @@ const QuizList = ({ studentName, onStartQuiz, onLogout, onViewHistory }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [categoryId]);
 
   // ✅ ตรวจสอบสถานะเพลงเมื่อ component mount
   useEffect(() => {
@@ -157,9 +157,9 @@ public/
         alert(`🎵 ไม่สามารถเล่นเพลงได้
 
 สาเหตุที่เป็นไปได้:
-• เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
-• รูปแบบไฟล์ไม่รองรับ
-• ไฟล์เสียหาย
+- เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
+- รูปแบบไฟล์ไม่รองรับ
+- ไฟล์เสียหาย
 
 ลองกดปุ่มเพลงอีกครั้งหลังจากมีการโต้ตอบกับหน้าเว็บ`);
       }
@@ -268,7 +268,7 @@ public/
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                เลือกข้อสอบที่ต้องการทำ 🎮 {musicEnabled && '🎵'}
+                {categoryName ? `หมวด: ${categoryName}` : 'เลือกข้อสอบที่ต้องการทำ'} 🎮 {musicEnabled && '🎵'}
               </p>
             </div>
             
@@ -277,6 +277,40 @@ public/
               gap: '12px',
               alignItems: 'center'
             }}>
+              {/* Back to Categories Button */}
+              {onBackToCategories && (
+                <button
+                  onClick={async () => {
+                    await audioService.navigation();
+                    onBackToCategories();
+                  }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.9rem'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = 'white';
+                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = 'rgba(255, 255, 255, 0.7)';
+                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  หมวดหมู่
+                </button>
+              )}
+
               {/* Music Toggle */}
               <button
                 onClick={toggleMusic}
