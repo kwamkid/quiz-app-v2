@@ -1,4 +1,4 @@
-// src/services/firebase.js - แก้ไขการบันทึกคะแนน
+// src/services/firebase.js - แก้ไขการบันทึกคะแนน และ setDoc
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -6,6 +6,7 @@ import {
   getDocs,
   doc,
   getDoc,
+  setDoc, // ✅ เพิ่ม import setDoc
   addDoc,
   updateDoc,
   deleteDoc,
@@ -93,7 +94,6 @@ const mockQuizzes = [
 
 class FirebaseService {
   // ✅ Get all quizzes
-  // ✅ Get all quizzes
   static async getQuizzes(categoryId = null) {
     // If Firebase not configured, return mock data
     if (!isFirebaseConfigValid || !db) {
@@ -149,6 +149,11 @@ class FirebaseService {
   static async getCategories() {
     try {
       console.log("🔍 Getting categories...");
+
+      // ถ้าไม่มี Firebase ให้ใช้ default categories
+      if (!isFirebaseConfigValid || !db) {
+        return this.getDefaultCategories();
+      }
 
       // Get all quizzes to count per category
       const quizSnapshot = await getDocs(collection(db, "quizzes"));
@@ -451,8 +456,6 @@ class FirebaseService {
     return this.getStudentAttempts(studentName);
   }
 
-  // เพิ่ม methods เหล่านี้ใน FirebaseService class ในไฟล์ src/services/firebase.js
-
   // ✅ Get all categories (for management)
   static async getAllCategories() {
     try {
@@ -511,26 +514,38 @@ class FirebaseService {
     }
   }
 
-  // ✅ Create new category
+  // ✅ Create new category - แก้ไขจุดที่ 1
   static async createCategory(categoryData) {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("⚠️ Firebase not configured - category creation skipped");
+      return "mock-category-id";
+    }
+
     try {
       console.log("➕ Creating category:", categoryData.name);
 
-      const docRef = await addDoc(collection(db, "categories"), {
+      // ใช้ setDoc แทน addDoc เพื่อกำหนด ID เอง
+      const categoryId =
+        categoryData.id ||
+        categoryData.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const docRef = doc(db, "categories", categoryId);
+
+      await setDoc(docRef, {
         ...categoryData,
+        id: categoryId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      console.log("✅ Category created with ID:", docRef.id);
-      return docRef.id;
+      console.log("✅ Category created with ID:", categoryId);
+      return categoryId;
     } catch (error) {
       console.error("❌ Error creating category:", error);
       throw error;
     }
   }
 
-  // ✅ Update category
+  // ✅ Update category - แก้ไขจุดที่ 2, 3, 4
   static async updateCategory(categoryId, categoryData) {
     // If Firebase not configured, just log and return
     if (!isFirebaseConfigValid || !db) {
@@ -543,39 +558,32 @@ class FirebaseService {
 
       const docRef = doc(db, "categories", categoryId);
 
-      // ลองใช้ setDoc แบบ merge แทน
-      await setDoc(
-        docRef,
-        {
+      // ตรวจสอบว่า document มีอยู่หรือไม่
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        // ถ้ามีอยู่แล้ว ใช้ updateDoc
+        await updateDoc(docRef, {
           ...categoryData,
           updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+        });
+        console.log("✅ Category updated successfully");
+      } else {
+        // ถ้าไม่มี ใช้ setDoc สร้างใหม่
+        console.log("📝 Document not found, creating new one...");
+        await setDoc(docRef, {
+          ...categoryData,
+          id: categoryId,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        console.log("✅ Category created successfully");
+      }
 
-      console.log("✅ Category updated successfully");
       return true;
     } catch (error) {
       console.error("❌ Error updating category:", error);
       console.error("Category data:", categoryData);
-
-      // ถ้า error เป็นเพราะไม่มี document ให้สร้างใหม่
-      if (error.code === "not-found") {
-        try {
-          console.log("📝 Document not found, creating new one...");
-          await setDoc(docRef, {
-            ...categoryData,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-          console.log("✅ Category created successfully");
-          return true;
-        } catch (createError) {
-          console.error("❌ Error creating category:", createError);
-          throw createError;
-        }
-      }
-
       throw error;
     }
   }
@@ -651,6 +659,46 @@ class FirebaseService {
       },
     ];
   }
+
+  // ✅ Initialize default categories in Firestore
+  static async initializeDefaultCategories() {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("⚠️ Firebase not configured - cannot initialize categories");
+      return;
+    }
+
+    try {
+      console.log("🔄 Checking and initializing default categories...");
+
+      const categoriesSnapshot = await getDocs(collection(db, "categories"));
+
+      if (categoriesSnapshot.empty) {
+        console.log("📝 No categories found, creating defaults...");
+        const defaults = this.getDefaultCategories();
+
+        for (const category of defaults) {
+          const docRef = doc(db, "categories", category.id);
+          await setDoc(docRef, {
+            ...category,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          console.log(`✅ Created category: ${category.name}`);
+        }
+
+        console.log("✅ Default categories initialized");
+      } else {
+        console.log("✅ Categories already exist");
+      }
+    } catch (error) {
+      console.error("❌ Error initializing categories:", error);
+    }
+  }
+}
+
+// Initialize default categories when the app starts
+if (isFirebaseConfigValid && db) {
+  FirebaseService.initializeDefaultCategories().catch(console.error);
 }
 
 export default FirebaseService;
