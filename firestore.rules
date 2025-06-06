@@ -29,14 +29,25 @@ service cloud.firestore {
       allow read, write: if true; // TODO: เพิ่ม proper authentication
     }
     
-    // ✅ Teachers/Admins Collection (สำหรับอนาคต)
+   // ✅ Teachers/Admins Collection (สำหรับอนาคต)
     match /teachers/{teacherId} {
       allow read, write: if true; // TODO: เพิ่ม admin-only access
+    }
+    
+    // ✅ Categories Collection
+    match /categories/{categoryId} {
+      // อ่านได้ทุกคน
+      allow read: if true;
+      
+      // เขียน/แก้ไข/ลบได้เฉพาะ admin (ตอนนี้ยังไม่มี auth)
+      allow write: if true; // TODO: เปลี่ยนเป็น admin only เมื่อมี authentication
     }
     
     // ❌ ปิดกั้น collection อื่นๆ
     match /{document=**} {
       allow read, write: if false;
     }
+
+    
   }
 }

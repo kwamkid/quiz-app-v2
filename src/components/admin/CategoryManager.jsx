@@ -96,14 +96,24 @@ const CategoryManager = ({ onBack }) => {
       setLoading(true);
       await audioService.correctAnswer();
       
-      await FirebaseService.updateCategory(editingCategory.id, editingCategory);
+      // ถ้าเป็น default category ให้บันทึกด้วย ID เดิม
+      const categoryToUpdate = {
+        id: editingCategory.id,
+        name: editingCategory.name,
+        emoji: editingCategory.emoji,
+        description: editingCategory.description,
+        color: editingCategory.color,
+        iconType: editingCategory.iconType || 'default'
+      };
+      
+      await FirebaseService.updateCategory(editingCategory.id, categoryToUpdate);
       
       setEditingCategory(null);
       await loadCategories();
       alert('✅ แก้ไขหมวดหมู่เรียบร้อยแล้ว');
     } catch (error) {
       console.error('Error updating category:', error);
-      alert('❌ เกิดข้อผิดพลาดในการแก้ไขหมวดหมู่');
+      alert(`❌ เกิดข้อผิดพลาดในการแก้ไขหมวดหมู่\n\n${error.message || 'กรุณาลองใหม่อีกครั้ง'}`);
     } finally {
       setLoading(false);
     }
@@ -336,6 +346,7 @@ const CategoryManager = ({ onBack }) => {
                   {emojiOptions.map((emoji) => (
                     <button
                       key={emoji}
+                      type="button"
                       onClick={() => setNewCategory({...newCategory, emoji})}
                       style={{
                         background: newCategory.emoji === emoji 

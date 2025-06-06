@@ -532,19 +532,50 @@ class FirebaseService {
 
   // ✅ Update category
   static async updateCategory(categoryId, categoryData) {
+    // If Firebase not configured, just log and return
+    if (!isFirebaseConfigValid || !db) {
+      console.log("⚠️ Firebase not configured - category update skipped");
+      return true;
+    }
+
     try {
       console.log("📝 Updating category:", categoryId);
 
       const docRef = doc(db, "categories", categoryId);
-      await updateDoc(docRef, {
-        ...categoryData,
-        updatedAt: serverTimestamp(),
-      });
+
+      // ลองใช้ setDoc แบบ merge แทน
+      await setDoc(
+        docRef,
+        {
+          ...categoryData,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
       console.log("✅ Category updated successfully");
       return true;
     } catch (error) {
       console.error("❌ Error updating category:", error);
+      console.error("Category data:", categoryData);
+
+      // ถ้า error เป็นเพราะไม่มี document ให้สร้างใหม่
+      if (error.code === "not-found") {
+        try {
+          console.log("📝 Document not found, creating new one...");
+          await setDoc(docRef, {
+            ...categoryData,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          console.log("✅ Category created successfully");
+          return true;
+        } catch (createError) {
+          console.error("❌ Error creating category:", createError);
+          throw createError;
+        }
+      }
+
       throw error;
     }
   }
