@@ -96,9 +96,8 @@ const CategoryManager = ({ onBack }) => {
       setLoading(true);
       await audioService.correctAnswer();
       
-      // ถ้าเป็น default category ให้บันทึกด้วย ID เดิม
+      // เตรียมข้อมูลสำหรับอัพเดท
       const categoryToUpdate = {
-        id: editingCategory.id,
         name: editingCategory.name,
         emoji: editingCategory.emoji,
         description: editingCategory.description,
@@ -106,10 +105,16 @@ const CategoryManager = ({ onBack }) => {
         iconType: editingCategory.iconType || 'default'
       };
       
+      console.log('📝 Updating category:', editingCategory.id, categoryToUpdate);
+      
       await FirebaseService.updateCategory(editingCategory.id, categoryToUpdate);
       
+      // รีเซ็ต editing state
       setEditingCategory(null);
+      
+      // โหลดข้อมูลใหม่เพื่อให้แน่ใจว่าข้อมูลอัพเดทแล้ว
       await loadCategories();
+      
       alert('✅ แก้ไขหมวดหมู่เรียบร้อยแล้ว');
     } catch (error) {
       console.error('Error updating category:', error);

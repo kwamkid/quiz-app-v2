@@ -471,9 +471,11 @@ class FirebaseService {
       const categories = [];
 
       categoriesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log(`📂 Category ${doc.id}:`, data);
         categories.push({
           id: doc.id,
-          ...doc.data(),
+          ...data,
         });
       });
 
@@ -507,6 +509,7 @@ class FirebaseService {
       }));
 
       console.log("✅ Categories loaded:", categoriesWithCount.length);
+      console.log("📋 Categories data:", categoriesWithCount);
       return categoriesWithCount;
     } catch (error) {
       console.error("❌ Error getting categories:", error);
@@ -554,35 +557,83 @@ class FirebaseService {
     }
 
     try {
-      console.log("📝 Updating category:", categoryId);
+      console.log("📝 Updating category with ID:", categoryId);
+      console.log("📝 Category data to update:", categoryData);
 
-      const docRef = doc(db, "categories", categoryId);
+      // ตรวจสอบว่าเป็น default category หรือไม่
+      const defaultCategories = [
+        "math",
+        "science",
+        "thai",
+        "english",
+        "art",
+        "music",
+        "pe",
+        "uncategorized",
+      ];
+      let actualDocId = categoryId;
 
-      // ตรวจสอบว่า document มีอยู่หรือไม่
-      const docSnap = await getDoc(docRef);
+      // ถ้าไม่ใช่ default category ID ให้ค้นหาจากชื่อ
+      if (!defaultCategories.includes(categoryId)) {
+        console.log(
+          "🔍 Not a default category ID, searching by document ID..."
+        );
 
-      if (docSnap.exists()) {
-        // ถ้ามีอยู่แล้ว ใช้ updateDoc
-        await updateDoc(docRef, {
-          ...categoryData,
-          updatedAt: serverTimestamp(),
-        });
-        console.log("✅ Category updated successfully");
+        // ลองค้นหา document ด้วย ID จริงๆ
+        const docRef = doc(db, "categories", categoryId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          console.log("✅ Found document with ID:", categoryId);
+          // อัพเดท document ที่มีอยู่
+          await updateDoc(docRef, {
+            name: categoryData.name,
+            emoji: categoryData.emoji,
+            description: categoryData.description,
+            color: categoryData.color,
+            iconType: categoryData.iconType || "default",
+            updatedAt: serverTimestamp(),
+          });
+          console.log("✅ Category updated successfully");
+          return true;
+        } else {
+          console.log("❌ Document not found with ID:", categoryId);
+          throw new Error("Category not found");
+        }
       } else {
-        // ถ้าไม่มี ใช้ setDoc สร้างใหม่
-        console.log("📝 Document not found, creating new one...");
-        await setDoc(docRef, {
-          ...categoryData,
-          id: categoryId,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-        console.log("✅ Category created successfully");
-      }
+        // สำหรับ default categories
+        const docRef = doc(db, "categories", actualDocId);
+        const docSnap = await getDoc(docRef);
 
-      return true;
+        if (docSnap.exists()) {
+          console.log("✅ Updating existing default category");
+          await updateDoc(docRef, {
+            name: categoryData.name,
+            emoji: categoryData.emoji,
+            description: categoryData.description,
+            color: categoryData.color,
+            iconType: categoryData.iconType || "default",
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          console.log("📝 Creating default category that doesn't exist yet");
+          await setDoc(docRef, {
+            id: actualDocId,
+            name: categoryData.name,
+            emoji: categoryData.emoji,
+            description: categoryData.description,
+            color: categoryData.color,
+            iconType: categoryData.iconType || "default",
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+        console.log("✅ Category updated/created successfully");
+        return true;
+      }
     } catch (error) {
       console.error("❌ Error updating category:", error);
+      console.error("Category ID:", categoryId);
       console.error("Category data:", categoryData);
       throw error;
     }
@@ -670,25 +721,30 @@ class FirebaseService {
     try {
       console.log("🔄 Checking and initializing default categories...");
 
-      const categoriesSnapshot = await getDocs(collection(db, "categories"));
+      const defaults = this.getDefaultCategories();
+      let created = 0;
 
-      if (categoriesSnapshot.empty) {
-        console.log("📝 No categories found, creating defaults...");
-        const defaults = this.getDefaultCategories();
+      for (const category of defaults) {
+        const docRef = doc(db, "categories", category.id);
+        const docSnap = await getDoc(docRef);
 
-        for (const category of defaults) {
-          const docRef = doc(db, "categories", category.id);
+        if (!docSnap.exists()) {
+          console.log(
+            `📝 Creating default category: ${category.name} with ID: ${category.id}`
+          );
           await setDoc(docRef, {
             ...category,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-          console.log(`✅ Created category: ${category.name}`);
+          created++;
         }
+      }
 
-        console.log("✅ Default categories initialized");
+      if (created > 0) {
+        console.log(`✅ Created ${created} default categories`);
       } else {
-        console.log("✅ Categories already exist");
+        console.log("✅ All default categories already exist");
       }
     } catch (error) {
       console.error("❌ Error initializing categories:", error);

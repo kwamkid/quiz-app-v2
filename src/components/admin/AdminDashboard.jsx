@@ -9,7 +9,10 @@ import { formatDate } from '../../utils/helpers';
 
 const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, onManageCategories, onBack, onLogout }) => {
   const [quizzes, setQuizzes] = useState([]);
+  const [filteredQuizzes, setFilteredQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({
     totalQuizzes: 0,
     totalQuestions: 0,
