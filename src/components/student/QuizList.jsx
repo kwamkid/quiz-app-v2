@@ -277,6 +277,35 @@ public/
               gap: '12px',
               alignItems: 'center'
             }}>
+
+              {/* Music Toggle */}
+              <button
+                onClick={toggleMusic}
+                style={{
+                  background: musicEnabled 
+                    ? 'linear-gradient(135deg, #10b981, #059669)' 
+                    : 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: 'white',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
+                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
+              >
+                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </button>
+              
               {/* Back to Categories Button */}
               {onBackToCategories && (
                 <button
@@ -311,33 +340,7 @@ public/
                 </button>
               )}
 
-              {/* Music Toggle */}
-              <button
-                onClick={toggleMusic}
-                style={{
-                  background: musicEnabled 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                }}
-                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
-              >
-                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-              </button>
+              
 
               {/* Logout Button */}
               <button

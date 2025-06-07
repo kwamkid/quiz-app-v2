@@ -1,9 +1,9 @@
 // src/components/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, BarChart3, ArrowLeft, Target, Calendar, Users, BookOpen } from 'lucide-react';
-import Button from '../common/Button';
+import { Plus, Edit, Trash2, BarChart3, ArrowLeft, Target, Calendar, Users, BookOpen, Filter, Tag, Volume2, VolumeX } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
+import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 import { formatDate } from '../../utils/helpers';
 
@@ -18,14 +18,36 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
     totalQuestions: 0,
     totalAttempts: 0
   });
+  const [musicEnabled, setMusicEnabled] = useState(false);
 
   useEffect(() => {
     loadData();
+    initializeMusic();
   }, []);
+
+  const initializeMusic = async () => {
+    await musicService.initialize();
+    const isPlaying = musicService.isCurrentlyPlaying();
+    setMusicEnabled(isPlaying);
+  };
+
+  // Filter quizzes เมื่อ category หรือ quizzes เปลี่ยน
+  useEffect(() => {
+    if (selectedCategory === 'all') {
+      setFilteredQuizzes(quizzes);
+    } else {
+      const filtered = quizzes.filter(quiz => quiz.categoryId === selectedCategory);
+      setFilteredQuizzes(filtered);
+    }
+  }, [selectedCategory, quizzes]);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // Load categories
+      const categoriesData = await FirebaseService.getAllCategories();
+      setCategories(categoriesData);
       
       // Load quizzes
       const quizzesData = await FirebaseService.getQuizzes();
@@ -43,6 +65,7 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
       });
       
       setQuizzes(sortedQuizzes);
+      setFilteredQuizzes(sortedQuizzes);
       
       // Calculate stats
       const totalQuestions = sortedQuizzes.reduce((sum, quiz) => sum + (quiz.questions?.length || 0), 0);
@@ -69,6 +92,27 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCategoryFilter = async (categoryId) => {
+    await audioService.buttonClick();
+    setSelectedCategory(categoryId);
+  };
+
+  const getCategoryInfo = (categoryId) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category) {
+      return {
+        name: category.name,
+        emoji: category.emoji,
+        color: category.color
+      };
+    }
+    return {
+      name: '📖 อื่นๆ',
+      emoji: '📖',
+      color: 'from-gray-400 to-gray-500'
+    };
   };
 
   const handleCreateQuiz = async () => {
@@ -129,7 +173,54 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
     
     const confirmed = confirm('🚪 คุณต้องการออกจากระบบหรือไม่?');
     if (confirmed) {
+      // หยุดเพลงเมื่อออกจากระบบ
+      if (musicService.isCurrentlyPlaying()) {
+        musicService.stop();
+      }
       onLogout();
+    }
+  };
+
+  const toggleMusic = async () => {
+    await audioService.buttonClick();
+    
+    if (musicEnabled) {
+      // หยุดเพลง
+      musicService.stop();
+      setMusicEnabled(false);
+      console.log('🔇 Music stopped by admin');
+    } else {
+      // เริ่มเพลง
+      const fileExists = await musicService.checkMusicFile();
+      
+      if (!fileExists) {
+        alert(`🎵 ไม่พบไฟล์เพลง!
+
+กรุณาทำดังนี้:
+1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
+2. วางไฟล์ในโฟลเดอร์ public/
+3. รีเฟรชหน้าใหม่
+
+โครงสร้างที่ถูกต้อง:
+public/
+  quiz-music.mp3`);
+        return;
+      }
+      
+      const success = await musicService.playMenuMusic();
+      if (success) {
+        setMusicEnabled(true);
+        console.log('🎵 Music started successfully');
+      } else {
+        alert(`🎵 ไม่สามารถเล่นเพลงได้
+
+สาเหตุที่เป็นไปได้:
+- เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
+- รูปแบบไฟล์ไม่รองรับ
+- ไฟล์เสียหาย
+
+ลองกดปุ่มเพลงอีกครั้ง`);
+      }
     }
   };
 
@@ -219,7 +310,7 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                 color: 'rgba(255, 255, 255, 0.7)',
                 fontSize: '1.2rem'
               }}>
-                จัดการข้อสอบและติดตามความก้าวหน้า
+                จัดการข้อสอบและติดตามความก้าวหน้า {musicEnabled && '🎵'}
               </p>
             </div>
             
@@ -228,6 +319,40 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
               gap: '12px',
               alignItems: 'center'
             }}>
+              {/* Music Toggle Button */}
+              <button
+                onClick={toggleMusic}
+                style={{
+                  background: musicEnabled 
+                    ? 'linear-gradient(135deg, #10b981, #059669)' 
+                    : 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: 'white',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  if (!musicEnabled) {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  if (!musicEnabled) {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  }
+                }}
+                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
+              >
+                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </button>
+
               <button
                 onClick={handleLogout}
                 style={{
@@ -244,12 +369,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                   fontSize: '0.9rem'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.color = 'white';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 🚪 ออกจากระบบ
@@ -271,12 +396,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                   fontSize: '0.9rem'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.color = 'white';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
                 <ArrowLeft size={16} />
@@ -309,12 +434,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                 boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                e.target.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
               }}
             >
               <Plus size={20} />
@@ -339,12 +464,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                 boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
               }}
             >
               <BarChart3 size={20} />
@@ -370,12 +495,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                   boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                  e.target.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0) scale(1)';
-                  e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
                 }}
               >
                 <BookOpen size={20} />
@@ -497,6 +622,113 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
             }}>{stats.totalAttempts}</div>
           </div>
         </div>
+
+        {/* Category Filter */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '20px',
+          padding: '20px',
+          marginBottom: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          animation: 'slideUp 0.8s ease-out 0.7s both'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '16px'
+          }}>
+            <Filter size={20} color="white" />
+            <h3 style={{
+              color: 'white',
+              fontSize: '1.2rem',
+              fontWeight: 'bold'
+            }}>
+              กรองตามหมวดหมู่
+            </h3>
+          </div>
+          
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }}>
+            {/* All Categories Button */}
+            <button
+              onClick={() => handleCategoryFilter('all')}
+              style={{
+                background: selectedCategory === 'all' 
+                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                  : 'rgba(255, 255, 255, 0.1)',
+                border: selectedCategory === 'all'
+                  ? '2px solid #60a5fa'
+                  : '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontWeight: selectedCategory === 'all' ? 'bold' : 'normal',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedCategory !== 'all') {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedCategory !== 'all') {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                }
+              }}
+            >
+              📚 ทั้งหมด ({quizzes.length})
+            </button>
+
+            {/* Category Buttons */}
+            {categories.map((category) => {
+              const quizCount = quizzes.filter(q => q.categoryId === category.id).length;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryFilter(category.id)}
+                  style={{
+                    background: selectedCategory === category.id 
+                      ? `linear-gradient(135deg, ${category.color})`
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: selectedCategory === category.id
+                      ? '2px solid rgba(255, 255, 255, 0.4)'
+                      : '1px solid rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontWeight: selectedCategory === category.id ? 'bold' : 'normal',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedCategory !== category.id) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedCategory !== category.id) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    }
+                  }}
+                >
+                  {category.emoji} {category.name} ({quizCount})
+                </button>
+              );
+            })}
+          </div>
+        </div>
         
         {/* Quiz List */}
         <div style={{
@@ -511,7 +743,7 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
             alignItems: 'center',
             gap: '12px'
           }}>
-            📚 ข้อสอบทั้งหมด
+            📚 ข้อสอบ{selectedCategory !== 'all' && `ในหมวด ${getCategoryInfo(selectedCategory).name}`} ({filteredQuizzes.length} ชุด)
           </h2>
           
           <div style={{
@@ -519,7 +751,7 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
             flexDirection: 'column',
             gap: '16px'
           }}>
-            {quizzes.length === 0 ? (
+            {filteredQuizzes.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '60px 20px',
@@ -534,7 +766,7 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                   marginBottom: '12px',
                   fontWeight: 'bold'
                 }}>
-                  ยังไม่มีข้อสอบ
+                  {selectedCategory === 'all' ? 'ยังไม่มีข้อสอบ' : `ยังไม่มีข้อสอบในหมวด ${getCategoryInfo(selectedCategory).name}`}
                 </h3>
                 <p style={{
                   color: 'rgba(255, 255, 255, 0.7)',
@@ -566,145 +798,169 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
                 </button>
               </div>
             ) : (
-              quizzes.map((quiz) => (
-                <div 
-                  key={quiz.id} 
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '20px',
-                    padding: '24px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1)',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 20px 45px rgba(0, 0, 0, 0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.1)';
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '16px'
-                  }}>
+              filteredQuizzes.map((quiz) => {
+                const categoryInfo = getCategoryInfo(quiz.categoryId);
+                return (
+                  <div 
+                    key={quiz.id} 
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '20px',
+                      padding: '24px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      boxShadow: '0 15px 35px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 20px 45px rgba(0, 0, 0, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.1)';
+                    }}
+                  >
                     <div style={{
                       display: 'flex',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      gap: '20px',
-                      flex: 1,
-                      minWidth: '300px'
+                      flexWrap: 'wrap',
+                      gap: '16px'
                     }}>
-                      <div style={{ 
-                        fontSize: '3rem',
-                        animation: 'bounce 3s infinite'
-                      }}>{quiz.emoji}</div>
-                      <div>
-                        <h3 style={{
-                          fontSize: '1.5rem',
-                          fontWeight: 'bold',
-                          color: 'white',
-                          marginBottom: '8px'
-                        }}>{quiz.title}</h3>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          flexWrap: 'wrap'
-                        }}>
-                          <span style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '20px',
+                        flex: 1,
+                        minWidth: '300px'
+                      }}>
+                        <div style={{ 
+                          fontSize: '3rem',
+                          animation: 'bounce 3s infinite'
+                        }}>{quiz.emoji}</div>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{
+                            fontSize: '1.5rem',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            marginBottom: '8px'
+                          }}>{quiz.title}</h3>
+                          
+                          {/* Category Badge */}
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: `linear-gradient(135deg, ${categoryInfo.color})`,
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            marginBottom: '8px'
+                          }}>
+                            <Tag size={14} color="white" />
+                            <span style={{
+                              color: 'white',
+                              fontSize: '0.85rem',
+                              fontWeight: '600'
+                            }}>
+                              {categoryInfo.name}
+                            </span>
+                          </div>
+                          
+                          <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '16px',
+                            flexWrap: 'wrap'
                           }}>
-                            <Target size={16} />
-                            {quiz.questions?.length || 0} คำถาม
-                          </span>
-                          <span style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}>
-                            <Calendar size={16} />
-                            {formatDate(quiz.createdAt)}
-                          </span>
+                            <span style={{
+                              color: 'rgba(255, 255, 255, 0.7)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <Target size={16} />
+                              {quiz.questions?.length || 0} คำถาม
+                            </span>
+                            <span style={{
+                              color: 'rgba(255, 255, 255, 0.7)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}>
+                              <Calendar size={16} />
+                              {formatDate(quiz.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div style={{
-                      display: 'flex',
-                      gap: '12px'
-                    }}>
-                      <button
-                        onClick={() => handleEditQuiz(quiz)}
-                        style={{
-                          background: 'rgba(251, 191, 36, 0.2)',
-                          border: '1px solid rgba(251, 191, 36, 0.3)',
-                          color: '#fbbf24',
-                          padding: '12px 20px',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontWeight: '500'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = 'rgba(251, 191, 36, 0.3)';
-                          e.target.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = 'rgba(251, 191, 36, 0.2)';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        <Edit size={16} />
-                        แก้ไข
-                      </button>
                       
-                      <button
-                        onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.2)',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
-                          color: '#ef4444',
-                          padding: '12px 20px',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontWeight: '500'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = 'rgba(239, 68, 68, 0.3)';
-                          e.target.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = 'rgba(239, 68, 68, 0.2)';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        <Trash2 size={16} />
-                        ลบ
-                      </button>
+                      <div style={{
+                        display: 'flex',
+                        gap: '12px'
+                      }}>
+                        <button
+                          onClick={() => handleEditQuiz(quiz)}
+                          style={{
+                            background: 'rgba(251, 191, 36, 0.2)',
+                            border: '1px solid rgba(251, 191, 36, 0.3)',
+                            color: '#fbbf24',
+                            padding: '12px 20px',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: '500'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(251, 191, 36, 0.3)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(251, 191, 36, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <Edit size={16} />
+                          แก้ไข
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteQuiz(quiz.id, quiz.title)}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#ef4444',
+                            padding: '12px 20px',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: '500'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <Trash2 size={16} />
+                          ลบ
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -729,11 +985,11 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
         
         @keyframes pulse {
           0%, 100% {
-            opacity: 0.5;
+            opacity: 0.1;
             transform: scale(1);
           }
           50% {
-            opacity: 1;
+            opacity: 0.2;
             transform: scale(1.05);
           }
         }
