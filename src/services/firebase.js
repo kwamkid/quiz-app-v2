@@ -1,4 +1,4 @@
-// src/services/firebase.js - แก้ไขการบันทึกคะแนน และ setDoc
+// src/services/firebase.js - เพิ่มระบบจัดการโรงเรียนและรองรับ 2 ภาษา
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -6,7 +6,7 @@ import {
   getDocs,
   doc,
   getDoc,
-  setDoc, // ✅ เพิ่ม import setDoc
+  setDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -71,18 +71,28 @@ const mockQuizzes = [
   {
     id: "mock-1",
     title: "🧮 คณิตศาสตร์ ป.6",
+    titleTh: "คณิตศาสตร์ ป.6",
+    titleEn: "Mathematics Grade 6",
     emoji: "🧮",
     difficulty: "ง่าย",
     questions: [
       {
         question: "5 + 3 = ?",
+        questionTh: "5 + 3 = ?",
+        questionEn: "5 + 3 = ?",
         options: ["6", "7", "8", "9"],
+        optionsTh: ["6", "7", "8", "9"],
+        optionsEn: ["6", "7", "8", "9"],
         correctAnswer: 2,
         points: 10,
       },
       {
         question: "12 ÷ 4 = ?",
+        questionTh: "12 ÷ 4 = ?",
+        questionEn: "12 ÷ 4 = ?",
         options: ["2", "3", "4", "6"],
+        optionsTh: ["2", "3", "4", "6"],
+        optionsEn: ["2", "3", "4", "6"],
         correctAnswer: 1,
         points: 10,
       },
@@ -93,9 +103,8 @@ const mockQuizzes = [
 ];
 
 class FirebaseService {
-  // ✅ Get all quizzes
+  // ✅ Get all quizzes (รองรับ 2 ภาษา)
   static async getQuizzes(categoryId = null) {
-    // If Firebase not configured, return mock data
     if (!isFirebaseConfigValid || !db) {
       console.log("📝 Using mock data - Firebase not configured");
       return mockQuizzes;
@@ -106,13 +115,11 @@ class FirebaseService {
 
       let q;
       if (categoryId && categoryId !== "all") {
-        // Get quizzes by category
         q = query(
           collection(db, "quizzes"),
           where("categoryId", "==", categoryId)
         );
       } else {
-        // Get all quizzes
         q = collection(db, "quizzes");
       }
 
@@ -120,9 +127,13 @@ class FirebaseService {
       const quizzes = [];
 
       querySnapshot.forEach((doc) => {
+        const data = doc.data();
         quizzes.push({
           id: doc.id,
-          ...doc.data(),
+          ...data,
+          // รองรับทั้ง format เก่าและใหม่
+          titleTh: data.titleTh || data.title,
+          titleEn: data.titleEn || data.title,
         });
       });
 
@@ -132,30 +143,410 @@ class FirebaseService {
         }`
       );
 
-      if (quizzes.length === 0 && categoryId) {
-        console.log("📝 No quizzes found for category, returning empty array");
-        return [];
-      }
-
       return quizzes;
     } catch (error) {
       console.error("❌ Error getting quizzes:", error);
-      console.log("🔄 Fallback to mock data");
       return mockQuizzes;
     }
   }
 
-  // ✅ Get categories
-  static async getCategories() {
+  // ✅ Get single quiz
+  static async getQuiz(quizId) {
     try {
-      console.log("🔍 Getting categories...");
+      console.log("🔍 Getting quiz:", quizId);
 
-      // ถ้าไม่มี Firebase ให้ใช้ default categories
+      const docRef = doc(db, "quizzes", quizId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          titleTh: data.titleTh || data.title,
+          titleEn: data.titleEn || data.title,
+        };
+      } else {
+        console.log("❌ Quiz not found:", quizId);
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error getting quiz:", error);
+      return null;
+    }
+  }
+
+  // ✅ Create new quiz (รองรับ 2 ภาษา)
+  static async createQuiz(quizData) {
+    try {
+      console.log("➕ Creating quiz:", quizData.titleTh || quizData.title);
+
+      const docRef = await addDoc(collection(db, "quizzes"), {
+        ...quizData,
+        titleTh: quizData.titleTh || quizData.title,
+        titleEn: quizData.titleEn || quizData.title,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log("✅ Quiz created with ID:", docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error("❌ Error creating quiz:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Update quiz (รองรับ 2 ภาษา)
+  static async updateQuiz(quizId, quizData) {
+    try {
+      console.log("📝 Updating quiz:", quizId);
+
+      const docRef = doc(db, "quizzes", quizId);
+      await updateDoc(docRef, {
+        ...quizData,
+        titleTh: quizData.titleTh || quizData.title,
+        titleEn: quizData.titleEn || quizData.title,
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log("✅ Quiz updated successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error updating quiz:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Delete quiz
+  static async deleteQuiz(quizId) {
+    try {
+      console.log("🗑️ Deleting quiz:", quizId);
+      await deleteDoc(doc(db, "quizzes", quizId));
+      console.log("✅ Quiz deleted successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error deleting quiz:", error);
+      throw error;
+    }
+  }
+
+  // ✅ School Management Functions
+  static async getAllSchools() {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("📝 Using mock schools - Firebase not configured");
+      return [
+        {
+          id: "school-1",
+          nameTh: "โรงเรียนสาธิต",
+          nameEn: "Demonstration School",
+          province: "กรุงเทพมหานคร",
+          district: "เขตจตุจักร",
+          studentCount: 500,
+        },
+      ];
+    }
+
+    try {
+      console.log("🔍 Getting all schools...");
+      const schoolsSnapshot = await getDocs(collection(db, "schools"));
+      const schools = [];
+
+      schoolsSnapshot.forEach((doc) => {
+        schools.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      console.log("✅ Schools loaded:", schools.length);
+      return schools;
+    } catch (error) {
+      console.error("❌ Error getting schools:", error);
+      return [];
+    }
+  }
+
+  static async createSchool(schoolData) {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("⚠️ Firebase not configured - school creation skipped");
+      return "mock-school-id";
+    }
+
+    try {
+      console.log("➕ Creating school:", schoolData.nameTh);
+
+      const schoolId =
+        schoolData.id ||
+        schoolData.nameTh.toLowerCase().replace(/[^a-z0-9ก-ฮ]/g, "");
+      const docRef = doc(db, "schools", schoolId);
+
+      await setDoc(docRef, {
+        ...schoolData,
+        id: schoolId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log("✅ School created with ID:", schoolId);
+      return schoolId;
+    } catch (error) {
+      console.error("❌ Error creating school:", error);
+      throw error;
+    }
+  }
+
+  static async updateSchool(schoolId, schoolData) {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("⚠️ Firebase not configured - school update skipped");
+      return true;
+    }
+
+    try {
+      console.log("📝 Updating school:", schoolId);
+
+      const docRef = doc(db, "schools", schoolId);
+      await updateDoc(docRef, {
+        ...schoolData,
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log("✅ School updated successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error updating school:", error);
+      throw error;
+    }
+  }
+
+  static async deleteSchool(schoolId) {
+    try {
+      console.log("🗑️ Deleting school:", schoolId);
+
+      // ตรวจสอบว่ามีนักเรียนในโรงเรียนนี้หรือไม่
+      const q = query(
+        collection(db, "quiz_results"),
+        where("schoolId", "==", schoolId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        throw new Error("Cannot delete school with existing students");
+      }
+
+      await deleteDoc(doc(db, "schools", schoolId));
+
+      console.log("✅ School deleted successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error deleting school:", error);
+      throw error;
+    }
+  }
+
+  // ✅ อัพเดท saveStudentAttempt เพื่อเก็บ schoolId
+  static async saveStudentAttempt(attemptData) {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("💾 Mock save student attempt:", attemptData);
+      console.log("⚠️ Firebase not configured - data not actually saved");
+      return "mock-id-" + Date.now();
+    }
+
+    try {
+      console.log("💾 Saving student attempt:", attemptData);
+
+      const docRef = await addDoc(collection(db, "quiz_results"), {
+        studentName: attemptData.studentName,
+        schoolId: attemptData.schoolId || null, // เพิ่ม schoolId
+        quizTitle: attemptData.quizTitle,
+        quizId: attemptData.quizId,
+        score: attemptData.score,
+        totalQuestions: attemptData.totalQuestions,
+        totalTime: attemptData.totalTime,
+        percentage: attemptData.percentage,
+        timestamp: serverTimestamp(),
+        completedAt: new Date(),
+        selectedQuestionCount:
+          attemptData.selectedQuestionCount || attemptData.totalQuestions,
+        originalTotalQuestions:
+          attemptData.originalTotalQuestions || attemptData.totalQuestions,
+        answers: attemptData.answers || [],
+      });
+
+      console.log("✅ Student attempt saved with ID:", docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error("❌ Error saving student attempt:", error);
+      console.error("Attempt data:", attemptData);
+      console.log("🔄 Returning mock ID for app continuity");
+      return "error-mock-id-" + Date.now();
+    }
+  }
+
+  // ✅ ดึงผลคะแนนของนักเรียน (รองรับการกรองตามโรงเรียน)
+  static async getStudentAttempts(studentName, schoolId = null) {
+    try {
+      console.log("📊 Getting attempts for student:", studentName);
+
+      let q;
+      if (schoolId) {
+        q = query(
+          collection(db, "quiz_results"),
+          where("studentName", "==", studentName),
+          where("schoolId", "==", schoolId)
+        );
+      } else {
+        q = query(
+          collection(db, "quiz_results"),
+          where("studentName", "==", studentName)
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      const attempts = [];
+
+      querySnapshot.forEach((doc) => {
+        attempts.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      // เรียงลำดับใน client
+      attempts.sort((a, b) => {
+        const timeA = a.timestamp?.toDate() || new Date(0);
+        const timeB = b.timestamp?.toDate() || new Date(0);
+        return timeB - timeA;
+      });
+
+      console.log("✅ Student attempts loaded:", attempts.length);
+      return attempts;
+    } catch (error) {
+      console.error("❌ Error getting student attempts:", error);
+      return [];
+    }
+  }
+
+  // ✅ ดึงผลคะแนนทั้งหมด (สำหรับครู - รองรับการกรองตามโรงเรียน)
+  static async getAllStudentAttempts(schoolId = null) {
+    try {
+      console.log("📊 Getting all student attempts...");
+
+      let q;
+      if (schoolId) {
+        q = query(
+          collection(db, "quiz_results"),
+          where("schoolId", "==", schoolId)
+        );
+      } else {
+        q = collection(db, "quiz_results");
+      }
+
+      const querySnapshot = await getDocs(q);
+      const attempts = [];
+
+      querySnapshot.forEach((doc) => {
+        attempts.push({
+          id: doc.id,
+          ...doc.data(),
+        });
+      });
+
+      // เรียงลำดับใน client
+      attempts.sort((a, b) => {
+        const timeA = a.timestamp?.toDate() || new Date(0);
+        const timeB = b.timestamp?.toDate() || new Date(0);
+        return timeB - timeA;
+      });
+
+      console.log("✅ All student attempts loaded:", attempts.length);
+      return attempts;
+    } catch (error) {
+      console.error("❌ Error getting all student attempts:", error);
+      return [];
+    }
+  }
+
+  // เก็บไว้เพื่อ backward compatibility
+  static async saveQuizResult(resultData) {
+    console.log(
+      "⚠️ saveQuizResult is deprecated, use saveStudentAttempt instead"
+    );
+    return this.saveStudentAttempt(resultData);
+  }
+
+  static async getStudentResults(studentName) {
+    console.log(
+      "⚠️ getStudentResults is deprecated, use getStudentAttempts instead"
+    );
+    return this.getStudentAttempts(studentName);
+  }
+
+  // ✅ Get all categories (สำหรับการจัดการ)
+  static async getAllCategories() {
+    try {
+      console.log("🔍 Getting all categories...");
+
       if (!isFirebaseConfigValid || !db) {
         return this.getDefaultCategories();
       }
 
-      // Get all quizzes to count per category
+      const categoriesSnapshot = await getDocs(collection(db, "categories"));
+      const categories = [];
+
+      categoriesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log(`📂 Category ${doc.id}:`, data);
+        categories.push({
+          id: doc.id,
+          ...data,
+        });
+      });
+
+      if (categories.length === 0) {
+        console.log("📝 No categories found, creating defaults...");
+        const defaults = this.getDefaultCategories();
+
+        for (const category of defaults) {
+          await this.createCategory(category);
+        }
+
+        return defaults;
+      }
+
+      // นับจำนวนข้อสอบในแต่ละหมวด
+      const quizSnapshot = await getDocs(collection(db, "quizzes"));
+      const categoryCounts = {};
+
+      quizSnapshot.forEach((doc) => {
+        const quiz = doc.data();
+        const categoryId = quiz.categoryId || "uncategorized";
+        categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
+      });
+
+      const categoriesWithCount = categories.map((cat) => ({
+        ...cat,
+        quizCount: categoryCounts[cat.id] || 0,
+      }));
+
+      console.log("✅ Categories loaded:", categoriesWithCount.length);
+      console.log("📋 Categories data:", categoriesWithCount);
+      return categoriesWithCount;
+    } catch (error) {
+      console.error("❌ Error getting categories:", error);
+      return this.getDefaultCategories();
+    }
+  }
+
+  // ✅ Get categories (สำหรับการแสดงผล)
+  static async getCategories() {
+    try {
+      console.log("🔍 Getting categories...");
+
+      if (!isFirebaseConfigValid || !db) {
+        return this.getDefaultCategories();
+      }
+
       const quizSnapshot = await getDocs(collection(db, "quizzes"));
       const categoryCounts = {};
       let totalQuizzes = 0;
@@ -167,7 +558,6 @@ class FirebaseService {
         totalQuizzes++;
       });
 
-      // Return predefined categories with counts
       const categories = [
         {
           id: "math",
@@ -219,7 +609,6 @@ class FirebaseService {
       return categories;
     } catch (error) {
       console.error("❌ Error getting categories:", error);
-      // Return default categories
       return [
         {
           id: "all",
@@ -234,290 +623,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Get single quiz
-  static async getQuiz(quizId) {
-    try {
-      console.log("🔍 Getting quiz:", quizId);
-
-      const docRef = doc(db, "quizzes", quizId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-      } else {
-        console.log("❌ Quiz not found:", quizId);
-        return null;
-      }
-    } catch (error) {
-      console.error("❌ Error getting quiz:", error);
-      return null;
-    }
-  }
-
-  // ✅ Create new quiz
-  static async createQuiz(quizData) {
-    try {
-      console.log("➕ Creating quiz:", quizData.title);
-
-      const docRef = await addDoc(collection(db, "quizzes"), {
-        ...quizData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      console.log("✅ Quiz created with ID:", docRef.id);
-      return docRef.id;
-    } catch (error) {
-      console.error("❌ Error creating quiz:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Update quiz
-  static async updateQuiz(quizId, quizData) {
-    try {
-      console.log("📝 Updating quiz:", quizId);
-
-      const docRef = doc(db, "quizzes", quizId);
-      await updateDoc(docRef, {
-        ...quizData,
-        updatedAt: serverTimestamp(),
-      });
-
-      console.log("✅ Quiz updated successfully");
-      return true;
-    } catch (error) {
-      console.error("❌ Error updating quiz:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Delete quiz
-  static async deleteQuiz(quizId) {
-    try {
-      console.log("🗑️ Deleting quiz:", quizId);
-
-      await deleteDoc(doc(db, "quizzes", quizId));
-
-      console.log("✅ Quiz deleted successfully");
-      return true;
-    } catch (error) {
-      console.error("❌ Error deleting quiz:", error);
-      throw error;
-    }
-  }
-
-  // 🔥 แก้ไขหลัก: บันทึกผลคะแนนของนักเรียน
-  static async saveStudentAttempt(attemptData) {
-    // If Firebase not configured, just log and return success
-    if (!isFirebaseConfigValid || !db) {
-      console.log("💾 Mock save student attempt:", attemptData);
-      console.log("⚠️ Firebase not configured - data not actually saved");
-      return "mock-id-" + Date.now();
-    }
-
-    try {
-      console.log("💾 Saving student attempt:", attemptData);
-
-      const docRef = await addDoc(collection(db, "quiz_results"), {
-        studentName: attemptData.studentName,
-        quizTitle: attemptData.quizTitle,
-        quizId: attemptData.quizId,
-        score: attemptData.score,
-        totalQuestions: attemptData.totalQuestions,
-        totalTime: attemptData.totalTime,
-        percentage: attemptData.percentage,
-        timestamp: serverTimestamp(),
-        completedAt: new Date(),
-        selectedQuestionCount:
-          attemptData.selectedQuestionCount || attemptData.totalQuestions,
-        originalTotalQuestions:
-          attemptData.originalTotalQuestions || attemptData.totalQuestions,
-        answers: attemptData.answers || [],
-      });
-
-      console.log("✅ Student attempt saved with ID:", docRef.id);
-      return docRef.id;
-    } catch (error) {
-      console.error("❌ Error saving student attempt:", error);
-      console.error("Attempt data:", attemptData);
-
-      // Return a mock ID so the app continues to work
-      console.log("🔄 Returning mock ID for app continuity");
-      return "error-mock-id-" + Date.now();
-    }
-  }
-
-  // 🔥 แก้ไขหลัก: ดึงผลคะแนนของนักเรียน
-  static async getStudentAttempts(studentName) {
-    try {
-      console.log("📊 Getting attempts for student:", studentName);
-
-      const q = query(
-        collection(db, "quiz_results"),
-        where("studentName", "==", studentName),
-        orderBy("timestamp", "desc")
-      );
-
-      const querySnapshot = await getDocs(q);
-      const attempts = [];
-
-      querySnapshot.forEach((doc) => {
-        attempts.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
-      console.log("✅ Student attempts loaded:", attempts.length);
-      return attempts;
-    } catch (error) {
-      console.error("❌ Error getting student attempts:", error);
-
-      // ถ้า error เรื่อง index ให้ลองไม่ใช้ orderBy
-      try {
-        console.log("🔄 Trying without orderBy...");
-        const q = query(
-          collection(db, "quiz_results"),
-          where("studentName", "==", studentName)
-        );
-
-        const querySnapshot = await getDocs(q);
-        const attempts = [];
-
-        querySnapshot.forEach((doc) => {
-          attempts.push({
-            id: doc.id,
-            ...doc.data(),
-          });
-        });
-
-        // เรียงลำดับใน client
-        attempts.sort((a, b) => {
-          const timeA = a.timestamp?.toDate() || new Date(0);
-          const timeB = b.timestamp?.toDate() || new Date(0);
-          return timeB - timeA;
-        });
-
-        console.log(
-          "✅ Student attempts loaded (no orderBy):",
-          attempts.length
-        );
-        return attempts;
-      } catch (fallbackError) {
-        console.error("❌ Fallback also failed:", fallbackError);
-        return [];
-      }
-    }
-  }
-
-  // 🔥 แก้ไขหลัก: ดึงผลคะแนนทั้งหมด (สำหรับครู)
-  static async getAllStudentAttempts() {
-    try {
-      console.log("📊 Getting all student attempts...");
-
-      const querySnapshot = await getDocs(collection(db, "quiz_results"));
-      const attempts = [];
-
-      querySnapshot.forEach((doc) => {
-        attempts.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-
-      // เรียงลำดับใน client
-      attempts.sort((a, b) => {
-        const timeA = a.timestamp?.toDate() || new Date(0);
-        const timeB = b.timestamp?.toDate() || new Date(0);
-        return timeB - timeA;
-      });
-
-      console.log("✅ All student attempts loaded:", attempts.length);
-      return attempts;
-    } catch (error) {
-      console.error("❌ Error getting all student attempts:", error);
-      return [];
-    }
-  }
-
-  // เก็บไว้เพื่อ backward compatibility
-  static async saveQuizResult(resultData) {
-    console.log(
-      "⚠️ saveQuizResult is deprecated, use saveStudentAttempt instead"
-    );
-    return this.saveStudentAttempt(resultData);
-  }
-
-  static async getStudentResults(studentName) {
-    console.log(
-      "⚠️ getStudentResults is deprecated, use getStudentAttempts instead"
-    );
-    return this.getStudentAttempts(studentName);
-  }
-
-  // ✅ Get all categories (for management)
-  static async getAllCategories() {
-    try {
-      console.log("🔍 Getting all categories...");
-
-      // ถ้าไม่มี Firebase ให้ใช้ default categories
-      if (!isFirebaseConfigValid || !db) {
-        return this.getDefaultCategories();
-      }
-
-      // ดึงหมวดหมู่จาก Firestore
-      const categoriesSnapshot = await getDocs(collection(db, "categories"));
-      const categories = [];
-
-      categoriesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        console.log(`📂 Category ${doc.id}:`, data);
-        categories.push({
-          id: doc.id,
-          ...data,
-        });
-      });
-
-      // ถ้าไม่มีหมวดหมู่ในฐานข้อมูล ให้สร้าง default categories
-      if (categories.length === 0) {
-        console.log("📝 No categories found, creating defaults...");
-        const defaults = this.getDefaultCategories();
-
-        // สร้าง default categories ใน Firestore
-        for (const category of defaults) {
-          await this.createCategory(category);
-        }
-
-        return defaults;
-      }
-
-      // นับจำนวนข้อสอบในแต่ละหมวด
-      const quizSnapshot = await getDocs(collection(db, "quizzes"));
-      const categoryCounts = {};
-
-      quizSnapshot.forEach((doc) => {
-        const quiz = doc.data();
-        const categoryId = quiz.categoryId || "uncategorized";
-        categoryCounts[categoryId] = (categoryCounts[categoryId] || 0) + 1;
-      });
-
-      // เพิ่ม quizCount ในแต่ละหมวด
-      const categoriesWithCount = categories.map((cat) => ({
-        ...cat,
-        quizCount: categoryCounts[cat.id] || 0,
-      }));
-
-      console.log("✅ Categories loaded:", categoriesWithCount.length);
-      console.log("📋 Categories data:", categoriesWithCount);
-      return categoriesWithCount;
-    } catch (error) {
-      console.error("❌ Error getting categories:", error);
-      return this.getDefaultCategories();
-    }
-  }
-
-  // ✅ Create new category - แก้ไขจุดที่ 1
+  // ✅ Create new category
   static async createCategory(categoryData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("⚠️ Firebase not configured - category creation skipped");
@@ -527,7 +633,6 @@ class FirebaseService {
     try {
       console.log("➕ Creating category:", categoryData.name);
 
-      // ใช้ setDoc แทน addDoc เพื่อกำหนด ID เอง
       const categoryId =
         categoryData.id ||
         categoryData.name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -548,9 +653,8 @@ class FirebaseService {
     }
   }
 
-  // ✅ Update category - แก้ไขจุดที่ 2, 3, 4
+  // ✅ Update category
   static async updateCategory(categoryId, categoryData) {
-    // If Firebase not configured, just log and return
     if (!isFirebaseConfigValid || !db) {
       console.log("⚠️ Firebase not configured - category update skipped");
       return true;
@@ -560,7 +664,6 @@ class FirebaseService {
       console.log("📝 Updating category with ID:", categoryId);
       console.log("📝 Category data to update:", categoryData);
 
-      // ตรวจสอบว่าเป็น default category หรือไม่
       const defaultCategories = [
         "math",
         "science",
@@ -573,19 +676,16 @@ class FirebaseService {
       ];
       let actualDocId = categoryId;
 
-      // ถ้าไม่ใช่ default category ID ให้ค้นหาจากชื่อ
       if (!defaultCategories.includes(categoryId)) {
         console.log(
           "🔍 Not a default category ID, searching by document ID..."
         );
 
-        // ลองค้นหา document ด้วย ID จริงๆ
         const docRef = doc(db, "categories", categoryId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           console.log("✅ Found document with ID:", categoryId);
-          // อัพเดท document ที่มีอยู่
           await updateDoc(docRef, {
             name: categoryData.name,
             emoji: categoryData.emoji,
@@ -601,7 +701,6 @@ class FirebaseService {
           throw new Error("Category not found");
         }
       } else {
-        // สำหรับ default categories
         const docRef = doc(db, "categories", actualDocId);
         const docSnap = await getDoc(docRef);
 
@@ -644,7 +743,6 @@ class FirebaseService {
     try {
       console.log("🗑️ Deleting category:", categoryId);
 
-      // ตรวจสอบว่ามีข้อสอบในหมวดนี้หรือไม่
       const q = query(
         collection(db, "quizzes"),
         where("categoryId", "==", categoryId)

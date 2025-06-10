@@ -1,9 +1,10 @@
-// src/components/admin/QuizImport.jsx
+// src/components/admin/QuizImport.jsx - รองรับ 2 ภาษา
 import React, { useState } from 'react';
-import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, Download, FileText, AlertCircle, CheckCircle, X, Globe } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { t } from '../../translations';
 
-const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
+const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [], supportBilingual = false, currentLanguage = 'th' }) => {
   const [importedQuestions, setImportedQuestions] = useState([]);
   const [errors, setErrors] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -11,44 +12,100 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
 
   // Template สำหรับดาวน์โหลด
   const downloadTemplate = () => {
-    const templateData = [
-      {
-        'คำถาม': 'ตัวอย่างคำถาม: 2 + 2 = ?',
-        'ตัวเลือก A': '3',
-        'ตัวเลือก B': '4',
-        'ตัวเลือก C': '5',
-        'ตัวเลือก D': '6',
-        'คำตอบที่ถูก': 'B',
-        'คะแนน': 10
-      },
-      {
-        'คำถาม': 'ตัวอย่างคำถาม: เมืองหลวงของไทยคือ?',
-        'ตัวเลือก A': 'กรุงเทพฯ',
-        'ตัวเลือก B': 'เชียงใหม่',
-        'ตัวเลือก C': 'ภูเก็ต',
-        'ตัวเลือก D': 'พัทยา',
-        'คำตอบที่ถูก': 'A',
-        'คะแนน': 10
-      }
-    ];
+    let templateData;
+    
+    if (supportBilingual) {
+      // Template 2 ภาษา
+      templateData = [
+        {
+          'คำถาม (ไทย)': 'ตัวอย่างคำถาม: 2 + 2 = ?',
+          'คำถาม (English)': 'Example: 2 + 2 = ?',
+          'ตัวเลือก A (ไทย)': '3',
+          'ตัวเลือก A (English)': '3',
+          'ตัวเลือก B (ไทย)': '4',
+          'ตัวเลือก B (English)': '4',
+          'ตัวเลือก C (ไทย)': '5',
+          'ตัวเลือก C (English)': '5',
+          'ตัวเลือก D (ไทย)': '6',
+          'ตัวเลือก D (English)': '6',
+          'คำตอบที่ถูก': 'B',
+          'คะแนน': 10
+        },
+        {
+          'คำถาม (ไทย)': 'เมืองหลวงของไทยคือ?',
+          'คำถาม (English)': 'What is the capital of Thailand?',
+          'ตัวเลือก A (ไทย)': 'กรุงเทพฯ',
+          'ตัวเลือก A (English)': 'Bangkok',
+          'ตัวเลือก B (ไทย)': 'เชียงใหม่',
+          'ตัวเลือก B (English)': 'Chiang Mai',
+          'ตัวเลือก C (ไทย)': 'ภูเก็ต',
+          'ตัวเลือก C (English)': 'Phuket',
+          'ตัวเลือก D (ไทย)': 'พัทยา',
+          'ตัวเลือก D (English)': 'Pattaya',
+          'คำตอบที่ถูก': 'A',
+          'คะแนน': 10
+        }
+      ];
+    } else {
+      // Template ภาษาเดียว
+      templateData = [
+        {
+          'คำถาม': 'ตัวอย่างคำถาม: 2 + 2 = ?',
+          'ตัวเลือก A': '3',
+          'ตัวเลือก B': '4',
+          'ตัวเลือก C': '5',
+          'ตัวเลือก D': '6',
+          'คำตอบที่ถูก': 'B',
+          'คะแนน': 10
+        },
+        {
+          'คำถาม': 'เมืองหลวงของไทยคือ?',
+          'ตัวเลือก A': 'กรุงเทพฯ',
+          'ตัวเลือก B': 'เชียงใหม่',
+          'ตัวเลือก C': 'ภูเก็ต',
+          'ตัวเลือก D': 'พัทยา',
+          'คำตอบที่ถูก': 'A',
+          'คะแนน': 10
+        }
+      ];
+    }
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Quiz Template');
     
     // ปรับขนาดคอลัมน์
-    const colWidths = [
-      { wch: 50 }, // คำถาม
-      { wch: 20 }, // ตัวเลือก A
-      { wch: 20 }, // ตัวเลือก B
-      { wch: 20 }, // ตัวเลือก C
-      { wch: 20 }, // ตัวเลือก D
-      { wch: 15 }, // คำตอบที่ถูก
-      { wch: 10 }  // คะแนน
-    ];
+    let colWidths;
+    if (supportBilingual) {
+      colWidths = [
+        { wch: 40 }, // คำถาม (ไทย)
+        { wch: 40 }, // คำถาม (English)
+        { wch: 20 }, // ตัวเลือก A (ไทย)
+        { wch: 20 }, // ตัวเลือก A (English)
+        { wch: 20 }, // ตัวเลือก B (ไทย)
+        { wch: 20 }, // ตัวเลือก B (English)
+        { wch: 20 }, // ตัวเลือก C (ไทย)
+        { wch: 20 }, // ตัวเลือก C (English)
+        { wch: 20 }, // ตัวเลือก D (ไทย)
+        { wch: 20 }, // ตัวเลือก D (English)
+        { wch: 15 }, // คำตอบที่ถูก
+        { wch: 10 }  // คะแนน
+      ];
+    } else {
+      colWidths = [
+        { wch: 50 }, // คำถาม
+        { wch: 20 }, // ตัวเลือก A
+        { wch: 20 }, // ตัวเลือก B
+        { wch: 20 }, // ตัวเลือก C
+        { wch: 20 }, // ตัวเลือก D
+        { wch: 15 }, // คำตอบที่ถูก
+        { wch: 10 }  // คะแนน
+      ];
+    }
     ws['!cols'] = colWidths;
 
-    XLSX.writeFile(wb, 'quiz-template.xlsx');
+    const filename = supportBilingual ? 'quiz-template-bilingual.xlsx' : 'quiz-template.xlsx';
+    XLSX.writeFile(wb, filename);
   };
 
   // อ่านไฟล์ Excel
@@ -71,60 +128,132 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
       jsonData.forEach((row, index) => {
         const rowNum = index + 2; // Excel row (starts from 2 because of header)
         
-        // ตรวจสอบข้อมูลที่จำเป็น
-        if (!row['คำถาม'] || !row['คำถาม'].toString().trim()) {
-          validationErrors.push(`แถว ${rowNum}: ไม่มีคำถาม`);
-          return;
-        }
-
-        if (!row['ตัวเลือก A'] || !row['ตัวเลือก B']) {
-          validationErrors.push(`แถว ${rowNum}: ต้องมีตัวเลือก A และ B อย่างน้อย`);
-          return;
-        }
-
-        if (!row['คำตอบที่ถูก']) {
-          validationErrors.push(`แถว ${rowNum}: ไม่ได้ระบุคำตอบที่ถูกต้อง`);
-          return;
-        }
-
-        // แปลงคำตอบที่ถูกต้อง
-        const correctAnswerLetter = row['คำตอบที่ถูก'].toString().toUpperCase();
-        let correctAnswer = -1;
-        
-        switch (correctAnswerLetter) {
-          case 'A': correctAnswer = 0; break;
-          case 'B': correctAnswer = 1; break;
-          case 'C': correctAnswer = 2; break;
-          case 'D': correctAnswer = 3; break;
-          default:
-            validationErrors.push(`แถว ${rowNum}: คำตอบที่ถูกต้องต้องเป็น A, B, C, หรือ D`);
+        if (supportBilingual) {
+          // ตรวจสอบข้อมูล 2 ภาษา
+          if (!row['คำถาม (ไทย)'] && !row['คำถาม (English)']) {
+            validationErrors.push(`แถว ${rowNum}: ต้องมีคำถามอย่างน้อยหนึ่งภาษา`);
             return;
+          }
+
+          if (!row['ตัวเลือก A (ไทย)'] && !row['ตัวเลือก A (English)']) {
+            validationErrors.push(`แถว ${rowNum}: ต้องมีตัวเลือก A อย่างน้อยหนึ่งภาษา`);
+            return;
+          }
+
+          if (!row['ตัวเลือก B (ไทย)'] && !row['ตัวเลือก B (English)']) {
+            validationErrors.push(`แถว ${rowNum}: ต้องมีตัวเลือก B อย่างน้อยหนึ่งภาษา`);
+            return;
+          }
+
+          if (!row['คำตอบที่ถูก']) {
+            validationErrors.push(`แถว ${rowNum}: ไม่ได้ระบุคำตอบที่ถูกต้อง`);
+            return;
+          }
+
+          // แปลงคำตอบที่ถูกต้อง
+          const correctAnswerLetter = row['คำตอบที่ถูก'].toString().toUpperCase();
+          let correctAnswer = -1;
+          
+          switch (correctAnswerLetter) {
+            case 'A': correctAnswer = 0; break;
+            case 'B': correctAnswer = 1; break;
+            case 'C': correctAnswer = 2; break;
+            case 'D': correctAnswer = 3; break;
+            default:
+              validationErrors.push(`แถว ${rowNum}: คำตอบที่ถูกต้องต้องเป็น A, B, C, หรือ D`);
+              return;
+          }
+
+          // สร้างตัวเลือก
+          const optionsTh = [
+            row['ตัวเลือก A (ไทย)']?.toString() || '',
+            row['ตัวเลือก B (ไทย)']?.toString() || '',
+            row['ตัวเลือก C (ไทย)']?.toString() || '',
+            row['ตัวเลือก D (ไทย)']?.toString() || ''
+          ];
+
+          const optionsEn = [
+            row['ตัวเลือก A (English)']?.toString() || '',
+            row['ตัวเลือก B (English)']?.toString() || '',
+            row['ตัวเลือก C (English)']?.toString() || '',
+            row['ตัวเลือก D (English)']?.toString() || ''
+          ];
+
+          const question = {
+            question: row['คำถาม (ไทย)']?.toString() || row['คำถาม (English)']?.toString() || '',
+            questionTh: row['คำถาม (ไทย)']?.toString() || '',
+            questionEn: row['คำถาม (English)']?.toString() || '',
+            options: optionsTh.some(opt => opt) ? optionsTh : optionsEn,
+            optionsTh: optionsTh,
+            optionsEn: optionsEn,
+            correctAnswer: correctAnswer,
+            points: parseInt(row['คะแนน']) || 10,
+            imported: true,
+            rowNumber: rowNum
+          };
+
+          processedQuestions.push(question);
+          
+        } else {
+          // ตรวจสอบข้อมูลภาษาเดียว
+          if (!row['คำถาม'] || !row['คำถาม'].toString().trim()) {
+            validationErrors.push(`แถว ${rowNum}: ไม่มีคำถาม`);
+            return;
+          }
+
+          if (!row['ตัวเลือก A'] || !row['ตัวเลือก B']) {
+            validationErrors.push(`แถว ${rowNum}: ต้องมีตัวเลือก A และ B อย่างน้อย`);
+            return;
+          }
+
+          if (!row['คำตอบที่ถูก']) {
+            validationErrors.push(`แถว ${rowNum}: ไม่ได้ระบุคำตอบที่ถูกต้อง`);
+            return;
+          }
+
+          // แปลงคำตอบที่ถูกต้อง
+          const correctAnswerLetter = row['คำตอบที่ถูก'].toString().toUpperCase();
+          let correctAnswer = -1;
+          
+          switch (correctAnswerLetter) {
+            case 'A': correctAnswer = 0; break;
+            case 'B': correctAnswer = 1; break;
+            case 'C': correctAnswer = 2; break;
+            case 'D': correctAnswer = 3; break;
+            default:
+              validationErrors.push(`แถว ${rowNum}: คำตอบที่ถูกต้องต้องเป็น A, B, C, หรือ D`);
+              return;
+          }
+
+          // สร้างตัวเลือก
+          const options = [
+            row['ตัวเลือก A']?.toString() || '',
+            row['ตัวเลือก B']?.toString() || '',
+            row['ตัวเลือก C']?.toString() || '',
+            row['ตัวเลือก D']?.toString() || ''
+          ];
+
+          // ตรวจสอบว่าคำตอบที่เลือกมีข้อความ
+          if (!options[correctAnswer] || !options[correctAnswer].trim()) {
+            validationErrors.push(`แถว ${rowNum}: คำตอบที่เลือก (${correctAnswerLetter}) ไม่มีข้อความ`);
+            return;
+          }
+
+          const question = {
+            question: row['คำถาม'].toString().trim(),
+            questionTh: row['คำถาม'].toString().trim(),
+            questionEn: '',
+            options: options,
+            optionsTh: options,
+            optionsEn: ['', '', '', ''],
+            correctAnswer: correctAnswer,
+            points: parseInt(row['คะแนน']) || 10,
+            imported: true,
+            rowNumber: rowNum
+          };
+
+          processedQuestions.push(question);
         }
-
-        // สร้างตัวเลือก
-        const options = [
-          row['ตัวเลือก A']?.toString() || '',
-          row['ตัวเลือก B']?.toString() || '',
-          row['ตัวเลือก C']?.toString() || '',
-          row['ตัวเลือก D']?.toString() || ''
-        ];
-
-        // ตรวจสอบว่าคำตอบที่เลือกมีข้อความ
-        if (!options[correctAnswer] || !options[correctAnswer].trim()) {
-          validationErrors.push(`แถว ${rowNum}: คำตอบที่เลือก (${correctAnswerLetter}) ไม่มีข้อความ`);
-          return;
-        }
-
-        const question = {
-          question: row['คำถาม'].toString().trim(),
-          options: options,
-          correctAnswer: correctAnswer,
-          points: parseInt(row['คะแนน']) || 10,
-          imported: true,
-          rowNumber: rowNum
-        };
-
-        processedQuestions.push(question);
       });
 
       if (validationErrors.length > 0) {
@@ -198,7 +327,22 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
             alignItems: 'center',
             gap: '12px'
           }}>
-            📊 นำเข้าคำถามจาก Excel
+            📊 {t('importFromExcel', currentLanguage)}
+            {supportBilingual && (
+              <span style={{
+                background: 'rgba(34, 197, 94, 0.2)',
+                color: '#4ade80',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <Globe size={14} />
+                2 ภาษา
+              </span>
+            )}
           </h2>
           <button
             onClick={handleClose}
@@ -242,6 +386,7 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
                 marginBottom: '16px'
               }}>
                 ดาวน์โหลดไฟล์ตัวอย่างเพื่อดูรูปแบบการจัดรูปแบบข้อมูล
+                {supportBilingual && ' (รองรับ 2 ภาษา: ไทย และอังกฤษ)'}
               </p>
               <button
                 onClick={downloadTemplate}
@@ -259,7 +404,7 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
                 }}
               >
                 <Download size={16} />
-                ดาวน์โหลด Template
+                ดาวน์โหลด Template {supportBilingual && '(2 ภาษา)'}
               </button>
             </div>
 
@@ -409,7 +554,22 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
                     fontWeight: 'bold',
                     marginBottom: '8px'
                   }}>
-                    ข้อ {existingQuestions.length + index + 1}: {question.question}
+                    ข้อ {existingQuestions.length + index + 1}: 
+                    {supportBilingual && (
+                      <>
+                        {question.questionTh && (
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            🇹🇭 {question.questionTh}
+                          </span>
+                        )}
+                        {question.questionEn && (
+                          <span style={{ display: 'block', marginTop: '4px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                            🇬🇧 {question.questionEn}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {!supportBilingual && question.question}
                   </h4>
                   <div style={{
                     display: 'grid',
@@ -417,8 +577,10 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
                     gap: '8px',
                     marginBottom: '8px'
                   }}>
-                    {question.options.map((option, optIndex) => (
-                      option && (
+                    {question.options.map((option, optIndex) => {
+                      if (!option && !question.optionsEn[optIndex]) return null;
+                      
+                      return (
                         <div key={optIndex} style={{
                           padding: '8px 12px',
                           background: question.correctAnswer === optIndex 
@@ -429,10 +591,24 @@ const QuizImport = ({ isOpen, onClose, onImport, existingQuestions = [] }) => {
                           fontSize: '0.9rem',
                           border: question.correctAnswer === optIndex ? '1px solid #22c55e' : '1px solid rgba(255, 255, 255, 0.2)'
                         }}>
-                          {String.fromCharCode(65 + optIndex)}. {option}
+                          <strong>{String.fromCharCode(65 + optIndex)}.</strong>
+                          {supportBilingual ? (
+                            <>
+                              {question.optionsTh[optIndex] && (
+                                <div>🇹🇭 {question.optionsTh[optIndex]}</div>
+                              )}
+                              {question.optionsEn[optIndex] && (
+                                <div style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                  🇬🇧 {question.optionsEn[optIndex]}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span> {option}</span>
+                          )}
                         </div>
-                      )
-                    ))}
+                      );
+                    })}
                   </div>
                   <div style={{
                     color: 'rgba(255, 255, 255, 0.6)',

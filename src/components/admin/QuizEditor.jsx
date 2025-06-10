@@ -1,26 +1,34 @@
-// src/components/admin/QuizEditor.jsx - แก้ไข validation UI และเพิ่มการดึงหมวดหมู่จาก Firebase
+// src/components/admin/QuizEditor.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Upload, Globe } from 'lucide-react';
 import QuizImport from './QuizImport';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
+import { t } from '../../translations';
 
-const QuizEditor = ({ quiz = null, onSave, onBack }) => {
+const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [showBilingualFields, setShowBilingualFields] = useState(true);
   
-  // Quiz data
+  // Quiz data - รองรับ 2 ภาษา
   const [quizData, setQuizData] = useState({
     title: '',
+    titleTh: '',
+    titleEn: '',
     emoji: '📚',
     difficulty: 'ง่าย',
     categoryId: 'uncategorized',
     questions: [
       {
         question: '',
+        questionTh: '',
+        questionEn: '',
         options: ['', '', '', ''],
+        optionsTh: ['', '', '', ''],
+        optionsEn: ['', '', '', ''],
         correctAnswer: 0,
         points: 10
       }
@@ -37,16 +45,27 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     if (quiz) {
       setQuizData({
         title: quiz.title || '',
+        titleTh: quiz.titleTh || quiz.title || '',
+        titleEn: quiz.titleEn || '',
         emoji: quiz.emoji || '📚',
         difficulty: quiz.difficulty || 'ง่าย',
         categoryId: quiz.categoryId || 'uncategorized',
         questions: quiz.questions?.length > 0 ? quiz.questions.map(q => ({
           ...q,
-          options: [...(q.options || []), '', '', '', ''].slice(0, 4)
+          question: q.question || '',
+          questionTh: q.questionTh || q.question || '',
+          questionEn: q.questionEn || '',
+          options: q.options || ['', '', '', ''],
+          optionsTh: q.optionsTh || q.options || ['', '', '', ''],
+          optionsEn: q.optionsEn || ['', '', '', '']
         })) : [
           {
             question: '',
+            questionTh: '',
+            questionEn: '',
             options: ['', '', '', ''],
+            optionsTh: ['', '', '', ''],
+            optionsEn: ['', '', '', ''],
             correctAnswer: 0,
             points: 10
           }
@@ -76,31 +95,31 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     }
   };
 
-  // Simple validation
+  // Validation
   const validateQuiz = (quizToValidate) => {
     const validationErrors = [];
     
-    if (!quizToValidate.title?.trim()) {
-      validationErrors.push('กรุณาใส่ชื่อข้อสอบ');
+    // ตรวจสอบว่ามีชื่อข้อสอบอย่างน้อยภาษาใดภาษาหนึ่ง
+    if (!quizToValidate.titleTh?.trim() && !quizToValidate.titleEn?.trim()) {
+      validationErrors.push(t('pleaseEnterQuizName', currentLanguage));
     }
     
     if (!quizToValidate.questions || quizToValidate.questions.length === 0) {
-      validationErrors.push('กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อ');
+      validationErrors.push(t('pleaseAddQuestion', currentLanguage));
     }
     
     quizToValidate.questions?.forEach((question, index) => {
-      if (!question.question?.trim()) {
-        validationErrors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
+      // ตรวจสอบว่ามีคำถามอย่างน้อยภาษาใดภาษาหนึ่ง
+      if (!question.questionTh?.trim() && !question.questionEn?.trim()) {
+        validationErrors.push(`${t('question', currentLanguage)} ${index + 1}: ${t('pleaseEnterQuestion', currentLanguage)}`);
       }
       
-      const requiredOptions = question.options?.slice(0, 2).filter(opt => opt?.trim()).length || 0;
-      if (requiredOptions < 2) {
-        validationErrors.push(`คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือก A และ B (บังคับ)`);
-      }
-
-      const filledOptions = question.options?.filter(opt => opt?.trim()) || [];
-      if (question.correctAnswer >= filledOptions.length) {
-        validationErrors.push(`คำถามข้อ ${index + 1}: คำตอบที่เลือกไม่ถูกต้อง กรุณาเลือกจากตัวเลือกที่มีข้อความ`);
+      // ตรวจสอบตัวเลือก (อย่างน้อย 2 ตัวเลือกในภาษาใดภาษาหนึ่ง)
+      const filledOptionsTh = question.optionsTh?.filter(opt => opt?.trim()).length || 0;
+      const filledOptionsEn = question.optionsEn?.filter(opt => opt?.trim()).length || 0;
+      
+      if (filledOptionsTh < 2 && filledOptionsEn < 2) {
+        validationErrors.push(`${t('question', currentLanguage)} ${index + 1}: ${t('pleaseEnter2Options', currentLanguage)}`);
       }
     });
     
@@ -125,13 +144,14 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     setErrors([]);
   };
 
-  const handleOptionChange = (questionIndex, optionIndex, value) => {
+  const handleOptionChange = (questionIndex, optionIndex, value, lang = 'th') => {
+    const field = lang === 'th' ? 'optionsTh' : 'optionsEn';
     setQuizData(prev => ({
       ...prev,
       questions: prev.questions.map((q, i) => 
         i === questionIndex ? {
           ...q,
-          options: q.options.map((opt, j) => j === optionIndex ? value : opt)
+          [field]: q[field].map((opt, j) => j === optionIndex ? value : opt)
         } : q
       )
     }));
@@ -144,7 +164,11 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
       ...prev,
       questions: [...prev.questions, {
         question: '',
+        questionTh: '',
+        questionEn: '',
         options: ['', '', '', ''],
+        optionsTh: ['', '', '', ''],
+        optionsEn: ['', '', '', ''],
         correctAnswer: 0,
         points: 10
       }]
@@ -193,24 +217,36 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
     }
     
     try {
+      // เตรียมข้อมูลสำหรับบันทึก
+      const dataToSave = {
+        ...quizData,
+        title: quizData.titleTh || quizData.titleEn || quizData.title,
+        // แปลงคำถามให้รองรับ format เก่า
+        questions: quizData.questions.map(q => ({
+          ...q,
+          question: q.questionTh || q.questionEn || q.question,
+          options: q.optionsTh?.some(opt => opt.trim()) ? q.optionsTh : q.optionsEn
+        }))
+      };
+      
       let savedQuizId;
       
       if (quiz && quiz.id) {
-        await FirebaseService.updateQuiz(quiz.id, quizData);
+        await FirebaseService.updateQuiz(quiz.id, dataToSave);
         savedQuizId = quiz.id;
         await audioService.correctAnswer();
-        alert('✅ บันทึกการแก้ไขเรียบร้อยแล้ว!');
+        alert(t('saveSuccess', currentLanguage));
       } else {
-        savedQuizId = await FirebaseService.createQuiz(quizData);
+        savedQuizId = await FirebaseService.createQuiz(dataToSave);
         await audioService.achievement();
-        alert('🎉 สร้างข้อสอบใหม่เรียบร้อยแล้ว!');
+        alert(t('createQuizSuccess', currentLanguage));
       }
       
-      onSave({ ...quizData, id: savedQuizId });
+      onSave({ ...dataToSave, id: savedQuizId });
     } catch (error) {
       console.error('Error saving quiz:', error);
       await audioService.wrongAnswer();
-      alert('❌ เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่');
+      alert(t('errorOccurred', currentLanguage));
     } finally {
       setIsLoading(false);
     }
@@ -229,6 +265,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
       minHeight: '100vh',
       width: '100vw',
       background: 'linear-gradient(135deg, #1f2937 0%, #4c1d95 50%, #7c2d12 100%)',
+      paddingTop: '60px',
       position: 'relative',
       overflow: 'auto',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
@@ -264,7 +301,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
               alignItems: 'center',
               gap: '12px'
             }}>
-              {quiz ? '✏️ แก้ไขข้อสอบ' : '✨ สร้างข้อสอบใหม่'}
+              {quiz ? '✏️ ' + t('editQuiz', currentLanguage) : '✨ ' + t('createQuiz', currentLanguage)}
             </h1>
             
             <button
@@ -292,7 +329,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
               }}
             >
               <ArrowLeft size={16} />
-              กลับ
+              {t('back', currentLanguage)}
             </button>
           </div>
           
@@ -328,16 +365,33 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
               }}
             >
               <Upload size={16} />
-              📊 นำเข้าคำถามจาก Excel
+              📊 {t('importFromExcel', currentLanguage)}
             </button>
-          </div>
-          
-          <div style={{
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '0.9rem',
-            textAlign: 'center'
-          }}>
-            💡 ปุ่มเพิ่มคำถามและปุ่มบันทึกอยู่ด้านล่างสุดของหน้า
+
+            {/* Toggle Bilingual Fields */}
+            <button
+              onClick={() => setShowBilingualFields(!showBilingualFields)}
+              style={{
+                background: showBilingualFields 
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                  : 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                border: showBilingualFields
+                  ? 'none'
+                  : '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '16px',
+                padding: '12px 24px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Globe size={16} />
+              {showBilingualFields ? '🌐 2 ภาษา' : '🇹🇭 ภาษาเดียว'}
+            </button>
           </div>
         </div>
 
@@ -388,8 +442,8 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '20px'
           }}>
-            {/* Quiz Title */}
-            <div>
+            {/* Quiz Title Thai */}
+            <div style={{ gridColumn: showBilingualFields ? 'span 1' : 'span 2' }}>
               <label style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1rem',
@@ -397,38 +451,58 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 marginBottom: '8px',
                 display: 'block'
               }}>
-                ชื่อข้อสอบ <span style={{ color: quizData.title.trim() ? 'rgba(255, 255, 255, 0.8)' : '#ef4444' }}>*</span>
+                {t('quizTitleTh', currentLanguage)} <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
                 type="text"
-                value={quizData.title}
-                onChange={(e) => handleQuizInfoChange('title', e.target.value)}
+                value={quizData.titleTh}
+                onChange={(e) => handleQuizInfoChange('titleTh', e.target.value)}
                 placeholder="เช่น คณิตศาสตร์ ป.6"
                 style={{
                   width: '100%',
                   padding: '12px 16px',
                   background: 'rgba(255, 255, 255, 0.1)',
-                  border: quizData.title.trim() 
-                    ? '1px solid rgba(255, 255, 255, 0.3)' 
-                    : '2px solid #ef4444',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
                   borderRadius: '12px',
                   color: 'white',
                   fontSize: '1rem',
                   outline: 'none',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.3s ease'
-                }}
-                onFocus={(e) => {
-                  if (!quizData.title.trim()) {
-                    e.target.style.borderColor = '#3b82f6';
-                  }
-                }}
-                onBlur={(e) => {
-                  const hasContent = e.target.value.trim();
-                  e.target.style.borderColor = hasContent ? 'rgba(255, 255, 255, 0.3)' : '#ef4444';
+                  fontFamily: 'inherit'
                 }}
               />
             </div>
+
+            {/* Quiz Title English */}
+            {showBilingualFields && (
+              <div>
+                <label style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  {t('quizTitleEn', currentLanguage)}
+                </label>
+                <input
+                  type="text"
+                  value={quizData.titleEn}
+                  onChange={(e) => handleQuizInfoChange('titleEn', e.target.value)}
+                  placeholder="e.g. Mathematics Grade 6"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '12px',
+                    color: 'white',
+                    fontSize: '1rem',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+            )}
 
             {/* Emoji Selection */}
             <div>
@@ -479,7 +553,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 marginBottom: '8px',
                 display: 'block'
               }}>
-                ระดับความยาก
+                {t('difficulty', currentLanguage)}
               </label>
               <select
                 value={quizData.difficulty}
@@ -539,7 +613,6 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                 ))}
               </select>
             </div>
-            
           </div>
         </div>
 
@@ -583,7 +656,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                   fontSize: '1.1rem',
                   fontWeight: 'bold'
                 }}>
-                  คำถามข้อ {questionIndex + 1}
+                  {t('question', currentLanguage)} {questionIndex + 1}
                 </h3>
                 
                 {quizData.questions.length > 1 && (
@@ -603,130 +676,172 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                     }}
                   >
                     <Trash2 size={14} />
-                    ลบ
+                    {t('delete', currentLanguage)}
                   </button>
                 )}
               </div>
 
               {/* Question Text */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  display: 'block'
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: showBilingualFields ? 'repeat(2, 1fr)' : '1fr',
+                  gap: '16px'
                 }}>
-                  คำถาม <span style={{ color: question.question.trim() ? 'rgba(255, 255, 255, 0.8)' : '#ef4444' }}>*</span>
-                </label>
-                <textarea
-                  value={question.question}
-                  onChange={(e) => handleQuestionChange(questionIndex, 'question', e.target.value)}
-                  placeholder="ใส่คำถามที่นี่..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: question.question.trim() 
-                      ? '1px solid rgba(255, 255, 255, 0.3)' 
-                      : '2px solid #ef4444',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onFocus={(e) => {
-                    if (!question.question.trim()) {
-                      e.target.style.borderColor = '#3b82f6';
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const hasContent = e.target.value.trim();
-                    e.target.style.borderColor = hasContent ? 'rgba(255, 255, 255, 0.3)' : '#ef4444';
-                  }}
-                />
-              </div>
+                  {/* Thai Question */}
+                  <div>
+                    <label style={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      marginBottom: '8px',
+                      display: 'block'
+                    }}>
+                      {t('questionTextTh', currentLanguage)} <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <textarea
+                      value={question.questionTh}
+                      onChange={(e) => handleQuestionChange(questionIndex, 'questionTh', e.target.value)}
+                      placeholder="ใส่คำถามภาษาไทยที่นี่..."
+                      rows={2}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '12px',
+                        color: 'white',
+                        fontSize: '1rem',
+                        outline: 'none',
+                        resize: 'vertical',
+                        fontFamily: 'inherit'
+                      }}
+                    />
+                  </div>
 
-              {/* Options */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '12px',
-                marginBottom: '16px'
-              }}>
-                {question.options.map((option, index) => {
-                  const hasContent = option && option.trim() !== '';
-                  const isRequired = index < 2;
-                  
-                  return (
-                    <div key={index}>
+                  {/* English Question */}
+                  {showBilingualFields && (
+                    <div>
                       <label style={{
                         color: 'rgba(255, 255, 255, 0.8)',
                         fontSize: '0.9rem',
                         fontWeight: '500',
-                        marginBottom: '6px',
+                        marginBottom: '8px',
                         display: 'block'
                       }}>
-                        ตัวเลือก {String.fromCharCode(65 + index)} 
-                        {isRequired ? (
-                          <span style={{ color: hasContent ? 'rgba(255, 255, 255, 0.8)' : '#ef4444' }}> *</span>
-                        ) : (
-                          <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}> (ไม่บังคับ)</span>
-                        )}
+                        {t('questionTextEn', currentLanguage)}
                       </label>
-                      <input
-                        type="text"
-                        value={option}
-                        onChange={(e) => handleOptionChange(questionIndex, index, e.target.value)}
-                        placeholder={isRequired 
-                          ? `ตัวเลือก ${String.fromCharCode(65 + index)} (บังคับ)` 
-                          : `ตัวเลือก ${String.fromCharCode(65 + index)} (ไม่บังคับ)`}
+                      <textarea
+                        value={question.questionEn}
+                        onChange={(e) => handleQuestionChange(questionIndex, 'questionEn', e.target.value)}
+                        placeholder="Enter English question here..."
+                        rows={2}
                         style={{
                           width: '100%',
-                          padding: '10px 14px',
-                          background: question.correctAnswer === index 
-                            ? 'rgba(34, 197, 94, 0.1)' 
-                            : 'rgba(255, 255, 255, 0.1)',
-                          border: question.correctAnswer === index 
-                            ? '2px solid #22c55e' 
-                            : isRequired 
-                              ? hasContent 
-                                ? '1px solid rgba(255, 255, 255, 0.3)'
-                                : '2px solid #ef4444'
-                              : '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '10px',
+                          padding: '12px 16px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          borderRadius: '12px',
                           color: 'white',
-                          fontSize: '0.9rem',
+                          fontSize: '1rem',
                           outline: 'none',
-                          fontFamily: 'inherit',
-                          transition: 'all 0.3s ease'
-                        }}
-                        onFocus={(e) => {
-                          if (isRequired && !hasContent) {
-                            e.target.style.borderColor = '#3b82f6';
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const newHasContent = e.target.value && e.target.value.trim() !== '';
-                          if (isRequired && !newHasContent) {
-                            e.target.style.borderColor = '#ef4444';
-                          } else if (question.correctAnswer === index) {
-                            e.target.style.borderColor = '#22c55e';
-                          } else {
-                            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                          }
+                          resize: 'vertical',
+                          fontFamily: 'inherit'
                         }}
                       />
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
 
-              {/* Correct Answer */}
+              {/* Options */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  marginBottom: '12px',
+                  display: 'block'
+                }}>
+                  ตัวเลือก (A และ B บังคับ, C และ D ไม่บังคับ)
+                </label>
+                
+                {['A', 'B', 'C', 'D'].map((letter, optionIndex) => (
+                  <div key={optionIndex} style={{ marginBottom: '12px' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '8px'
+                    }}>
+                      <span style={{
+                        color: question.correctAnswer === optionIndex ? '#22c55e' : 'rgba(255, 255, 255, 0.8)',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        minWidth: '30px'
+                      }}>
+                        {letter}.
+                      </span>
+                      <div style={{
+                        flex: 1,
+                        display: 'grid',
+                        gridTemplateColumns: showBilingualFields ? 'repeat(2, 1fr)' : '1fr',
+                        gap: '12px'
+                      }}>
+                        {/* Thai Option */}
+                        <input
+                          type="text"
+                          value={question.optionsTh[optionIndex]}
+                          onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value, 'th')}
+                          placeholder={`ตัวเลือก ${letter} (ภาษาไทย)${optionIndex < 2 ? ' *' : ''}`}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            background: question.correctAnswer === optionIndex 
+                              ? 'rgba(34, 197, 94, 0.1)' 
+                              : 'rgba(255, 255, 255, 0.1)',
+                            border: question.correctAnswer === optionIndex 
+                              ? '2px solid #22c55e' 
+                              : '1px solid rgba(255, 255, 255, 0.3)',
+                            borderRadius: '10px',
+                            color: 'white',
+                            fontSize: '0.9rem',
+                            outline: 'none',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                        
+                        {/* English Option */}
+                        {showBilingualFields && (
+                          <input
+                            type="text"
+                            value={question.optionsEn[optionIndex]}
+                            onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value, 'en')}
+                            placeholder={`Option ${letter} (English)`}
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              background: question.correctAnswer === optionIndex 
+                                ? 'rgba(34, 197, 94, 0.1)' 
+                                : 'rgba(255, 255, 255, 0.1)',
+                              border: question.correctAnswer === optionIndex 
+                                ? '2px solid #22c55e' 
+                                : '1px solid rgba(255, 255, 255, 0.3)',
+                              borderRadius: '10px',
+                              color: 'white',
+                              fontSize: '0.9rem',
+                              outline: 'none',
+                              fontFamily: 'inherit'
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Correct Answer and Points */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -740,7 +855,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                     marginBottom: '6px',
                     display: 'block'
                   }}>
-                    คำตอบที่ถูกต้อง <span style={{ color: '#10b981' }}>*</span>
+                    {t('correctAnswer', currentLanguage)} <span style={{ color: '#10b981' }}>*</span>
                   </label>
                   <select
                     value={question.correctAnswer}
@@ -758,17 +873,22 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                       fontFamily: 'inherit'
                     }}
                   >
-                    {question.options.map((opt, optionIndex) => (
-                      opt.trim() && (
-                        <option 
-                          key={optionIndex} 
-                          value={optionIndex}
-                          style={{ background: '#374151', color: 'white' }}
-                        >
-                          {String.fromCharCode(65 + optionIndex)} - {opt.substring(0, 20)}{opt.length > 20 ? '...' : ''}
-                        </option>
-                      )
-                    ))}
+                    {['A', 'B', 'C', 'D'].map((letter, index) => {
+                      const hasThai = question.optionsTh[index]?.trim();
+                      const hasEnglish = question.optionsEn[index]?.trim();
+                      if (hasThai || hasEnglish) {
+                        return (
+                          <option 
+                            key={index} 
+                            value={index}
+                            style={{ background: '#374151', color: 'white' }}
+                          >
+                            {letter}
+                          </option>
+                        );
+                      }
+                      return null;
+                    })}
                   </select>
                 </div>
 
@@ -835,7 +955,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
               }}
             >
               <Plus size={20} />
-              ➕ เพิ่มคำถามใหม่
+              ➕ {t('addQuestion', currentLanguage)}
             </button>
           </div>
         </div>
@@ -890,12 +1010,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
                 }}></div>
-                <span>กำลังบันทึก...</span>
+                <span>{t('saving', currentLanguage)}</span>
               </>
             ) : (
               <>
                 <Save size={24} />
-                <span>{quiz ? '💾 บันทึกการแก้ไข' : '🎉 สร้างข้อสอบ'}</span>
+                <span>{quiz ? '💾 ' + t('save', currentLanguage) : '🎉 ' + t('createQuiz', currentLanguage)}</span>
               </>
             )}
           </button>
@@ -909,6 +1029,8 @@ const QuizEditor = ({ quiz = null, onSave, onBack }) => {
           onClose={() => setShowImportModal(false)}
           onImport={handleImportQuestions}
           existingQuestions={quizData.questions}
+          supportBilingual={showBilingualFields}
+          currentLanguage={currentLanguage}
         />
       )}
 

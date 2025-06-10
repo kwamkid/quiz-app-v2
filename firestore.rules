@@ -1,4 +1,4 @@
-// firestore.rules - Security Rules สำหรับ Firestore
+// firestore.rules - Security Rules สำหรับ Firestore (รองรับ schools)
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,12 +24,21 @@ service cloud.firestore {
       allow update, delete: if true; // TODO: เพิ่ม authorization
     }
     
+    // ✅ Schools Collection
+    match /schools/{schoolId} {
+      // อ่านได้ทุกคน (สำหรับนักเรียนเลือกโรงเรียน)
+      allow read: if true;
+      
+      // เขียน/แก้ไข/ลบได้เฉพาะ admin
+      allow write: if true; // TODO: เปลี่ยนเป็น admin only เมื่อมี authentication
+    }
+    
     // ✅ Students Collection (สำหรับอนาคต)
     match /students/{studentId} {
       allow read, write: if true; // TODO: เพิ่ม proper authentication
     }
     
-   // ✅ Teachers/Admins Collection (สำหรับอนาคต)
+    // ✅ Teachers/Admins Collection (สำหรับอนาคต)
     match /teachers/{teacherId} {
       allow read, write: if true; // TODO: เพิ่ม admin-only access
     }
@@ -47,7 +56,5 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
-
-    
   }
 }

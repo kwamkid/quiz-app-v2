@@ -1,7 +1,9 @@
-// src/App.jsx - เพิ่มระบบ Direct Quiz Access
+// src/App.jsx - เพิ่มระบบภาษาและโรงเรียน
 import React, { useState, useEffect } from 'react';
+import GlobalHeader from './components/common/GlobalHeader';
 import LandingPage from './components/layout/LandingPage';
 import StudentLogin from './components/student/StudentLogin';
+import SchoolSelection from './components/student/SchoolSelection';
 import CategorySelection from './components/student/CategorySelection';
 import QuizList from './components/student/QuizList';
 import QuizTaking from './components/student/QuizTaking';
@@ -14,11 +16,14 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import FirebaseService from './services/firebase';
 import { loadFromLocalStorage, saveToLocalStorage, clearLocalStorage } from './utils/helpers';
 import CategoryManager from './components/admin/CategoryManager';
+import SchoolManager from './components/admin/SchoolManager';
 import DirectQuizAccess from './components/student/DirectQuizAccess';
+import musicService from './services/musicService';
 
 function App() {
   const [view, setView] = useState('landing');
   const [studentName, setStudentName] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
@@ -26,6 +31,10 @@ function App() {
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [loading, setLoading] = useState(false);
   const [directQuizId, setDirectQuizId] = useState(null);
+  
+  // 🌐 State สำหรับภาษาและเพลง
+  const [currentLanguage, setCurrentLanguage] = useState('th');
+  const [musicEnabled, setMusicEnabled] = useState(false);
 
   // 🎯 ตรวจสอบ URL Parameter สำหรับ Direct Quiz Access
   useEffect(() => {
@@ -54,18 +63,58 @@ function App() {
     checkUrlParams();
   }, []);
 
-  // Load saved student name on mount
+  // Load saved data on mount
   useEffect(() => {
     const savedName = loadFromLocalStorage('studentName');
+    const savedSchool = loadFromLocalStorage('selectedSchool');
+    const savedLanguage = loadFromLocalStorage('language') || 'th';
+    const savedMusicEnabled = loadFromLocalStorage('musicEnabled') || false;
+    
     if (savedName && !directQuizId) {
       setStudentName(savedName);
     }
+    if (savedSchool) {
+      setSelectedSchool(savedSchool);
+    }
+    setCurrentLanguage(savedLanguage);
+    setMusicEnabled(savedMusicEnabled);
+    
+    // Initialize music service
+    musicService.initialize();
   }, [directQuizId]);
+
+  // จัดการการเปลี่ยนภาษา
+  const handleLanguageChange = (lang) => {
+    setCurrentLanguage(lang);
+    saveToLocalStorage('language', lang);
+    console.log('🌐 Language changed to:', lang);
+  };
+
+  // จัดการเพลง
+  const handleMusicToggle = async () => {
+    const newState = !musicEnabled;
+    setMusicEnabled(newState);
+    saveToLocalStorage('musicEnabled', newState);
+    
+    if (newState) {
+      const success = await musicService.playMenuMusic();
+      if (!success) {
+        setMusicEnabled(false);
+        saveToLocalStorage('musicEnabled', false);
+      }
+    } else {
+      musicService.stop();
+    }
+  };
 
   const handleSelectRole = (role) => {
     if (role === 'student') {
       if (studentName) {
-        setView('categorySelection');
+        if (selectedSchool) {
+          setView('categorySelection');
+        } else {
+          setView('schoolSelection');
+        }
       } else {
         setView('studentLogin');
       }
@@ -78,7 +127,15 @@ function App() {
     setView('categoryManager');
   };
 
+  const handleManageSchools = () => {
+    setView('schoolManager');
+  };
+
   const handleBackFromCategories = () => {
+    setView('adminDashboard');
+  };
+
+  const handleBackFromSchools = () => {
     setView('adminDashboard');
   };
 
@@ -90,8 +147,14 @@ function App() {
     if (directQuizId) {
       setView('directQuizAccess');
     } else {
-      setView('categorySelection');
+      setView('schoolSelection');
     }
+  };
+
+  const handleSchoolSelect = (school) => {
+    setSelectedSchool(school);
+    saveToLocalStorage('selectedSchool', school);
+    setView('categorySelection');
   };
 
   const handleSelectCategory = (category) => {
@@ -128,6 +191,7 @@ function App() {
       
       const attemptData = {
         studentName: studentName,
+        schoolId: selectedSchool?.id || null,
         quizTitle: results.quizTitle,
         quizId: results.quizId || currentQuiz?.id || 'unknown',
         score: results.score,
@@ -166,7 +230,9 @@ function App() {
 
   const handleLogout = () => {
     setStudentName('');
+    setSelectedSchool(null);
     clearLocalStorage('studentName');
+    clearLocalStorage('selectedSchool');
     setCurrentQuiz(null);
     setQuizResults(null);
     setSelectedCategory(null);
@@ -176,6 +242,11 @@ function App() {
 
   const handleBack = () => {
     setView('landing');
+  };
+
+  const handleBackToSchoolSelection = () => {
+    setSelectedCategory(null);
+    setView('schoolSelection');
   };
 
   const handleBackToCategories = () => {
@@ -243,23 +314,48 @@ function App() {
   };
 
   const handleBackFromAdminScores = () => {
-    setView('adminDashboard');
+    setView('adminScores');
   };
 
   if (loading) {
     return <LoadingSpinner message="กำลังบันทึกข้อมูล..." />;
   }
 
+  // หน้าที่ไม่ต้องการแสดง header
+  const hideHeaderOnPages = [];
+
   return (
     <div style={{ fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif' }}>
+      {/* Global Header */}
+      <GlobalHeader
+        currentLanguage={currentLanguage}
+        onLanguageChange={handleLanguageChange}
+        musicEnabled={musicEnabled}
+        onMusicToggle={handleMusicToggle}
+        hideOnPages={hideHeaderOnPages}
+      />
+      
       {view === 'landing' && (
-        <LandingPage onSelectRole={handleSelectRole} />
+        <LandingPage 
+          onSelectRole={handleSelectRole}
+          currentLanguage={currentLanguage}
+        />
       )}
       
       {view === 'studentLogin' && (
         <StudentLogin 
           onNameSubmit={handleNameSubmit}
           onBack={handleBack}
+          currentLanguage={currentLanguage}
+        />
+      )}
+      
+      {view === 'schoolSelection' && (
+        <SchoolSelection
+          studentName={studentName}
+          onSelectSchool={handleSchoolSelect}
+          onBack={handleBack}
+          currentLanguage={currentLanguage}
         />
       )}
       
@@ -267,6 +363,7 @@ function App() {
         <AdminLogin 
           onLoginSuccess={handleAdminLoginSuccess}
           onBack={handleBack}
+          currentLanguage={currentLanguage}
         />
       )}
 
@@ -277,6 +374,7 @@ function App() {
           studentName={studentName}
           onStartQuiz={handleDirectQuizStart}
           onError={handleDirectQuizError}
+          currentLanguage={currentLanguage}
         />
       )}
       
@@ -285,6 +383,8 @@ function App() {
           studentName={studentName}
           onSelectCategory={handleSelectCategory}
           onLogout={handleLogout}
+          onBackToSchoolSelection={handleBackToSchoolSelection}
+          currentLanguage={currentLanguage}
         />
       )}
       
@@ -297,13 +397,16 @@ function App() {
           onViewHistory={handleViewHistory}
           onBackToCategories={handleBackToCategories}
           onLogout={handleLogout}
+          currentLanguage={currentLanguage}
         />
       )}
 
       {view === 'scoreHistory' && (
         <ScoreHistory
           studentName={studentName}
+          schoolId={selectedSchool?.id}
           onBack={handleBackFromHistory}
+          currentLanguage={currentLanguage}
         />
       )}
       
@@ -313,6 +416,7 @@ function App() {
           studentName={studentName}
           onQuizEnd={handleQuizEnd}
           onBack={handleBackToQuizList}
+          currentLanguage={currentLanguage}
         />
       )}
       
@@ -323,20 +427,31 @@ function App() {
           onDeleteQuiz={() => {}}
           onViewScores={handleAdminViewScores}
           onManageCategories={handleManageCategories}
+          onManageSchools={handleManageSchools}
           onBack={handleBack}
           onLogout={handleAdminLogout}
+          currentLanguage={currentLanguage}
         />
       )}
 
       {view === 'adminScores' && isAdminLoggedIn && (
         <AdminScores
           onBack={handleBackFromAdminScores}
+          currentLanguage={currentLanguage}
         />
       )}
 
       {view === 'categoryManager' && isAdminLoggedIn && (
         <CategoryManager
           onBack={handleBackFromCategories}
+          currentLanguage={currentLanguage}
+        />
+      )}
+
+      {view === 'schoolManager' && isAdminLoggedIn && (
+        <SchoolManager
+          onBack={handleBackFromSchools}
+          currentLanguage={currentLanguage}
         />
       )}
 
@@ -345,6 +460,7 @@ function App() {
           quiz={editingQuiz}
           onSave={handleQuizSaved}
           onBack={handleBackToAdmin}
+          currentLanguage={currentLanguage}
         />
       )}
 
@@ -357,6 +473,7 @@ function App() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '20px',
+          paddingTop: '80px', // เพิ่มเพื่อหลีก header
           fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
         }}>
           <div style={{
@@ -383,7 +500,7 @@ function App() {
               marginBottom: '16px',
               textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
             }}>
-              เสร็จแล้ว!
+              {currentLanguage === 'th' ? 'เสร็จแล้ว!' : 'Completed!'}
             </h1>
             
             <div style={{
@@ -408,7 +525,7 @@ function App() {
                   <div style={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '1.1rem'
-                  }}>คะแนนที่ได้</div>
+                  }}>{currentLanguage === 'th' ? 'คะแนนที่ได้' : 'Your Score'}</div>
                 </div>
                 <div>
                   <div style={{
@@ -419,7 +536,7 @@ function App() {
                   <div style={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '1.1rem'
-                  }}>คะแนนเต็ม</div>
+                  }}>{currentLanguage === 'th' ? 'คะแนนเต็ม' : 'Total Score'}</div>
                 </div>
                 <div>
                   <div style={{
@@ -430,7 +547,7 @@ function App() {
                   <div style={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '1.1rem'
-                  }}>เปอร์เซ็นต์</div>
+                  }}>{currentLanguage === 'th' ? 'เปอร์เซ็นต์' : 'Percentage'}</div>
                 </div>
                 <div>
                   <div style={{
@@ -441,7 +558,7 @@ function App() {
                   <div style={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     fontSize: '1.1rem'
-                  }}>เวลาที่ใช้</div>
+                  }}>{currentLanguage === 'th' ? 'เวลาที่ใช้' : 'Time Used'}</div>
                 </div>
               </div>
             </div>
@@ -455,7 +572,9 @@ function App() {
               <p style={{
                 color: 'rgba(255, 255, 255, 0.7)',
                 fontSize: '1.1rem'
-              }}>โดย {quizResults.studentName}</p>
+              }}>
+                {currentLanguage === 'th' ? 'โดย' : 'by'} {quizResults.studentName}
+              </p>
             </div>
             
             <div style={{
@@ -488,7 +607,7 @@ function App() {
                   e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
                 }}
               >
-                🏠 กลับหน้าหลัก
+                🏠 {currentLanguage === 'th' ? 'กลับหน้าหลัก' : 'Back to Home'}
               </button>
 
               <button
@@ -516,7 +635,7 @@ function App() {
                   e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
                 }}
               >
-                🏆 ดูประวัติคะแนน
+                🏆 {currentLanguage === 'th' ? 'ดูประวัติคะแนน' : 'View Score History'}
               </button>
             </div>
           </div>
