@@ -1,163 +1,138 @@
-// src/utils/helpers.js - แก้ไขแล้ว
+// src/utils/helpers.js
+
+// Local Storage Helpers
+export const saveToLocalStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error("Error saving to localStorage:", error);
+  }
+};
+
+export const getFromLocalStorage = (key, defaultValue = null) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error("Error reading from localStorage:", error);
+    return defaultValue;
+  }
+};
+
+export const removeFromLocalStorage = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error("Error removing from localStorage:", error);
+  }
+};
+
+// Date Formatting
+export const formatDate = (timestamp) => {
+  if (!timestamp) return "ไม่ทราบวันที่";
+
+  try {
+    // Handle Firestore Timestamp
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+
+    return new Intl.DateTimeFormat("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "ไม่ทราบวันที่";
+  }
+};
+
+// Timer Color Helper
+export const getTimerColor = (timeLeft) => {
+  if (timeLeft > 20) return "#22c55e"; // Green
+  if (timeLeft > 10) return "#eab308"; // Yellow
+  return "#ef4444"; // Red
+};
+
+// Score Percentage Calculator
+export const calculatePercentage = (score, total) => {
+  if (!total || total === 0) return 0;
+  return Math.round((score / total) * 100);
+};
+
+// Shuffle Array
+export const shuffleArray = (array) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
+
+// Validate Email
+export const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Generate Random ID
+export const generateId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+};
+
+// Debounce Function
+export const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
+// Format Time (seconds to mm:ss)
 export const formatTime = (seconds) => {
+  if (!seconds || seconds < 0) return "0:00";
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
-export const calculatePercentage = (
-  score,
-  totalQuestions,
-  pointsPerQuestion = 10
-) => {
-  const maxScore = totalQuestions * pointsPerQuestion;
-  return Math.round((score / maxScore) * 100);
+// Get Grade Info
+export const getGradeInfo = (percentage) => {
+  if (percentage >= 90) return { grade: "A", emoji: "🏆", color: "#22c55e" };
+  if (percentage >= 80) return { grade: "B", emoji: "🌟", color: "#3b82f6" };
+  if (percentage >= 70) return { grade: "C", emoji: "👍", color: "#eab308" };
+  if (percentage >= 60) return { grade: "D", emoji: "💪", color: "#f97316" };
+  return { grade: "F", emoji: "📚", color: "#ef4444" };
 };
 
-export const getScoreMessage = (percentage) => {
-  if (percentage >= 90) {
-    return {
-      message: "🏆 เยี่ยมมาก! คุณเก่งจริงๆ!",
-      emoji: "🎉",
-      color: "text-yellow-300",
-    };
-  }
-  if (percentage >= 80) {
-    return {
-      message: "🌟 ดีมาก! เก่งแล้ว!",
-      emoji: "⭐",
-      color: "text-green-300",
-    };
-  }
-  if (percentage >= 70) {
-    return {
-      message: "👍 ดีแล้ว! พอใจ!",
-      emoji: "😊",
-      color: "text-blue-300",
-    };
-  }
-  if (percentage >= 60) {
-    return {
-      message: "💪 ไม่เป็นไร ลองใหม่นะ!",
-      emoji: "🤗",
-      color: "text-orange-300",
-    };
-  }
-  return {
-    message: "📚 อย่าท้อ! ฝึกเพิ่มเติมนะ",
-    emoji: "💪",
-    color: "text-red-300",
-  };
+// Truncate Text
+export const truncateText = (text, maxLength) => {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + "...";
 };
 
-export const shuffleArray = (array) => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
+// Check if Mobile Device
+export const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
 };
 
-export const getTimerColor = (timeLeft, maxTime = 30) => {
-  const percentage = (timeLeft / maxTime) * 100;
-  if (percentage > 66) return "text-green-400";
-  if (percentage > 33) return "text-yellow-400";
-  return "text-red-400";
+// Format Number with Commas
+export const formatNumber = (num) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
-export const formatDate = (timestamp) => {
-  if (!timestamp) return "วันที่ไม่ทราบ";
-
-  let date;
-  if (timestamp.seconds) {
-    // Firestore timestamp
-    date = new Date(timestamp.seconds * 1000);
-  } else {
-    // Regular date
-    date = new Date(timestamp);
-  }
-
-  return date.toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-// ลบฟังก์ชันซ้ำออก และรวมเป็นฟังก์ชันเดียว
-export const validateQuiz = (quiz) => {
-  const errors = [];
-
-  if (!quiz.title?.trim()) {
-    errors.push("กรุณาใส่ชื่อข้อสอบ");
-  }
-
-  if (!quiz.emoji?.trim()) {
-    errors.push("กรุณาเลือก Emoji");
-  }
-
-  if (!quiz.questions || quiz.questions.length === 0) {
-    errors.push("กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อ");
-  }
-
-  quiz.questions?.forEach((question, index) => {
-    if (!question.question?.trim()) {
-      errors.push(`คำถามข้อ ${index + 1}: กรุณาใส่คำถาม`);
-    }
-
-    if (!question.options || question.options.length < 2) {
-      errors.push(
-        `คำถามข้อ ${index + 1}: กรุณาใส่ตัวเลือกอย่างน้อย 2 ตัวเลือก`
-      );
-    }
-
-    if (question.correctAnswer === undefined || question.correctAnswer < 0) {
-      errors.push(`คำถามข้อ ${index + 1}: กรุณาเลือกคำตอบที่ถูกต้อง`);
-    }
-
-    question.options?.forEach((option, optionIndex) => {
-      if (!option?.trim()) {
-        errors.push(
-          `คำถามข้อ ${index + 1}, ตัวเลือก ${String.fromCharCode(
-            65 + optionIndex
-          )}: กรุณาใส่ข้อความ`
-        );
-      }
-    });
-  });
-
-  return errors;
-};
-
-export const generateQuizId = () => {
-  return "quiz_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-};
-
-export const saveToLocalStorage = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
-    console.warn("Failed to save to localStorage:", error);
-  }
-};
-
-export const loadFromLocalStorage = (key, defaultValue = null) => {
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : defaultValue;
-  } catch (error) {
-    console.warn("Failed to load from localStorage:", error);
-    return defaultValue;
-  }
-};
-
-export const clearLocalStorage = (key) => {
-  try {
-    localStorage.removeItem(key);
-  } catch (error) {
-    console.warn("Failed to clear localStorage:", error);
-  }
+// Calculate Reading Time
+export const calculateReadingTime = (text, wordsPerMinute = 200) => {
+  if (!text) return 0;
+  const words = text.trim().split(/\s+/).length;
+  return Math.ceil(words / wordsPerMinute);
 };

@@ -17,8 +17,10 @@ const GlobalHeader = ({
   }
 
   const handleLanguageToggle = async () => {
+    console.log('🔵 Language button clicked! Current:', currentLanguage);
     await audioService.buttonClick();
     const newLang = currentLanguage === 'th' ? 'en' : 'th';
+    console.log('🔵 Switching to:', newLang);
     onLanguageChange(newLang);
   };
 
@@ -77,6 +79,9 @@ const GlobalHeader = ({
           <Globe size={16} />
           <span style={{ fontWeight: 'bold' }}>
             {currentLanguage === 'th' ? 'TH' : 'EN'}
+          </span>
+          <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+            ({currentLanguage === 'th' ? '→ EN' : '→ TH'})
           </span>
         </button>
 

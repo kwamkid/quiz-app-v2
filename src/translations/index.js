@@ -1,4 +1,5 @@
 // src/translations/index.js
+
 const translations = {
   th: {
     // Common
@@ -7,131 +8,101 @@ const translations = {
     cancel: "ยกเลิก",
     delete: "ลบ",
     edit: "แก้ไข",
-    create: "สร้าง",
-    start: "เริ่ม",
-    next: "ถัดไป",
-    finish: "เสร็จสิ้น",
-    logout: "ออกจากระบบ",
     loading: "กำลังโหลด...",
+    confirm: "ยืนยัน",
+    search: "ค้นหา",
+    filter: "กรอง",
+    all: "ทั้งหมด",
 
-    // Landing Page
-    appTitle: "Quiz Quest",
-    appSubtitle: "เกมทำข้อสอบสุดมันส์!",
-    iAmStudent: "ฉันเป็นนักเรียน",
-    iAmTeacher: "ฉันเป็นครูคนดี",
-
-    // Student Login
-    welcome: "ยินดีต้อนรับ!",
-    enterNickname: "บอกชื่อเล่นของคุณหน่อยสิ",
-    nickname: "ชื่อเล่น",
-    letsStart: "เริ่มเลย!",
-
-    // School Selection
-    selectSchool: "เลือกโรงเรียน",
-    searchSchool: "ค้นหาโรงเรียน...",
-    noSchoolFound: "ไม่พบโรงเรียน",
-    allSchools: "ทุกโรงเรียน",
-
-    // Category Selection
-    selectCategory: "เลือกหมวดหมู่วิชา",
+    // Categories
     allCategories: "ทุกวิชา",
-    noQuizAvailable: "ยังไม่มีข้อสอบให้ทำ",
-    waitForTeacher: "รอครูสร้างข้อสอบก่อนนะ!",
+    math: "คณิตศาสตร์",
+    science: "วิทยาศาสตร์",
+    thai: "ภาษาไทย",
+    english: "ภาษาอังกฤษ",
+    art: "ศิลปะ",
+    music: "ดนตรี",
+    pe: "พลศึกษา",
+    other: "อื่นๆ",
 
-    // Quiz List
+    // Navigation
+    studentRole: "ฉันเป็นนักเรียน",
+    teacherRole: "ฉันเป็นครู",
+    logout: "ออกจากระบบ",
+
+    // Student
     hello: "สวัสดี",
-    selectQuizToPlay: "เลือกข้อสอบที่ต้องการทำ",
-    viewMyScores: "ดูคะแนนของฉัน",
-    questions: "คำถาม",
-    difficulty: "ความยาก",
-    easy: "ง่าย",
-    medium: "ปานกลาง",
-    hard: "ยาก",
-
-    // Quiz Taking
-    question: "ข้อ",
-    of: "จาก",
+    selectCategory: "เลือกหมวดหมู่วิชา",
+    selectQuiz: "เลือกข้อสอบ",
+    startQuiz: "เริ่มทำข้อสอบ",
+    viewHistory: "ดูประวัติคะแนน",
+    question: "คำถาม",
+    correctAnswer: "คำตอบที่ถูกต้อง",
     score: "คะแนน",
-    timeLeft: "เวลาเหลือ",
-    answer: "ตอบ!",
-    correct: "ถูกต้อง!",
-    incorrect: "ผิด!",
-    correctAnswerIs: "คำตอบที่ถูกคือ",
+    percentage: "เปอร์เซ็นต์",
+    time: "เวลา",
+    congratulations: "ยินดีด้วย!",
+    quizCompleted: "ทำข้อสอบเสร็จแล้ว",
+    yourScore: "คะแนนของคุณ",
+
+    // Teacher/Admin
+    adminDashboard: "แดชบอร์ดครู",
+    createQuiz: "สร้างข้อสอบใหม่",
+    editQuiz: "แก้ไขข้อสอบ",
+    deleteQuiz: "ลบข้อสอบ",
+    viewScores: "ดูคะแนนนักเรียน",
+    manageCategories: "จัดการหมวดหมู่",
+    quizTitle: "ชื่อข้อสอบ",
+    quizTitleTh: "ชื่อข้อสอบ (ภาษาไทย)",
+    quizTitleEn: "ชื่อข้อสอบ (ภาษาอังกฤษ)",
+    difficulty: "ระดับความยาก",
+    category: "หมวดหมู่",
+    addQuestion: "เพิ่มคำถาม",
+    questionText: "คำถาม",
+    questionTextTh: "คำถาม (ภาษาไทย)",
+    questionTextEn: "คำถาม (ภาษาอังกฤษ)",
+    options: "ตัวเลือก",
     points: "คะแนน",
 
-    // Quiz Result
-    completed: "เสร็จแล้ว!",
-    yourScore: "คะแนนที่ได้",
-    totalScore: "คะแนนเต็ม",
-    percentage: "เปอร์เซ็นต์",
-    timeUsed: "เวลาที่ใช้",
-    backToHome: "กลับหน้าหลัก",
-    viewHistory: "ดูประวัติคะแนน",
-
-    // Score History
-    scoreHistory: "ประวัติคะแนน",
-    totalAttempts: "ครั้งที่ทำ",
-    averageScore: "คะแนนเฉลี่ย",
-    bestScore: "คะแนนสูงสุด",
-    noHistory: "ยังไม่มีประวัติการทำข้อสอบ",
-
-    // Admin Login
-    adminLogin: "เข้าสู่ระบบครู",
-    username: "ชื่อผู้ใช้",
-    password: "รหัสผ่าน",
-    login: "เข้าสู่ระบบ",
-    invalidCredentials: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
-
-    // Admin Dashboard
-    teacherDashboard: "แดชบอร์ดครู",
-    manageQuizzes: "จัดการข้อสอบและติดตามความก้าวหน้า",
-    createNewQuiz: "สร้างข้อสอบใหม่",
-    viewStudentScores: "ดูคะแนนนักเรียน",
-    manageCategories: "จัดการหมวดหมู่",
-    manageSchools: "จัดการโรงเรียน",
-    totalQuizzes: "ข้อสอบทั้งหมด",
-    totalQuestions: "คำถามทั้งหมด",
-    totalAttempts: "การทำข้อสอบทั้งหมด",
-
-    // School Management
+    // School
+    selectSchool: "เลือกโรงเรียน",
+    selectYourSchool: "เลือกโรงเรียนของคุณ",
+    searchSchool: "ค้นหาชื่อโรงเรียน",
     schoolManagement: "จัดการโรงเรียน",
     addSchool: "เพิ่มโรงเรียน",
     schoolName: "ชื่อโรงเรียน",
-    schoolNameTh: "ชื่อโรงเรียน (ไทย)",
-    schoolNameEn: "ชื่อโรงเรียน (อังกฤษ)",
+    schoolNameTh: "ชื่อโรงเรียน (ภาษาไทย)",
+    schoolNameEn: "ชื่อโรงเรียน (ภาษาอังกฤษ)",
     province: "จังหวัด",
-    district: "อำเภอ/เขต",
+    district: "อำเภอ",
     studentCount: "จำนวนนักเรียน",
+    students: "นักเรียน",
+    allProvinces: "ทุกจังหวัด",
+    selectProvince: "เลือกจังหวัด",
+    noSchoolFound: "ไม่พบโรงเรียนที่ค้นหา",
+    tryDifferentSearch: "ลองค้นหาด้วยคำอื่น",
+    selectThisSchool: "เลือกโรงเรียนนี้",
+    manageSchoolsDesc: "จัดการข้อมูลโรงเรียนทั้งหมดในระบบ",
 
-    // Quiz Editor
-    createQuiz: "สร้างข้อสอบใหม่",
-    editQuiz: "แก้ไขข้อสอบ",
-    quizTitle: "ชื่อข้อสอบ",
-    quizTitleTh: "ชื่อข้อสอบ (ไทย)",
-    quizTitleEn: "ชื่อข้อสอบ (อังกฤษ)",
-    addQuestion: "เพิ่มคำถาม",
-    questionText: "คำถาม",
-    questionTextTh: "คำถาม (ไทย)",
-    questionTextEn: "คำถาม (อังกฤษ)",
-    option: "ตัวเลือก",
-    optionTh: "ตัวเลือก (ไทย)",
-    optionEn: "ตัวเลือก (อังกฤษ)",
-    correctAnswer: "คำตอบที่ถูกต้อง",
-    importFromExcel: "นำเข้าคำถามจาก Excel",
+    // Import/Export
+    importFromExcel: "นำเข้าจาก Excel",
+    exportToExcel: "ส่งออกเป็น Excel",
+    downloadTemplate: "ดาวน์โหลดเทมเพลต",
 
     // Messages
-    confirmDelete: "คุณต้องการลบ {item} นี้หรือไม่?",
-    saveSuccess: "บันทึกเรียบร้อยแล้ว",
-    deleteSuccess: "ลบเรียบร้อยแล้ว",
+    saveSuccess: "บันทึกสำเร็จ",
+    deleteSuccess: "ลบสำเร็จ",
     errorOccurred: "เกิดข้อผิดพลาด",
-    pleaseSelectSchool: "กรุณาเลือกโรงเรียน",
-
-    // Score Messages
-    excellentScore: "เยี่ยมมาก! คุณเก่งจริงๆ!",
-    veryGoodScore: "ดีมาก! เก่งแล้ว!",
-    goodScore: "ดีแล้ว! พอใจ!",
-    fairScore: "ไม่เป็นไร ลองใหม่นะ!",
-    needImprovement: "อย่าท้อ! ฝึกเพิ่มเติมนะ",
+    pleaseEnterQuizName: "กรุณาใส่ชื่อข้อสอบ",
+    pleaseEnterQuestion: "กรุณาใส่คำถาม",
+    pleaseEnter2Options: "กรุณาใส่ตัวเลือกอย่างน้อย 2 ตัวเลือก",
+    pleaseAddQuestion: "กรุณาเพิ่มคำถามอย่างน้อย 1 ข้อ",
+    confirmDelete: "คุณแน่ใจหรือไม่ที่จะลบ {{item}}?",
+    saving: "กำลังบันทึก...",
+    createQuizSuccess: "สร้างข้อสอบสำเร็จ",
+    pleaseEnterSchoolName: "กรุณาใส่ชื่อโรงเรียน",
+    noSchoolsYet: "ยังไม่มีโรงเรียนในระบบ",
+    startAddingSchool: "เริ่มเพิ่มโรงเรียนแรกของคุณ!",
   },
 
   en: {
@@ -141,93 +112,66 @@ const translations = {
     cancel: "Cancel",
     delete: "Delete",
     edit: "Edit",
-    create: "Create",
-    start: "Start",
-    next: "Next",
-    finish: "Finish",
-    logout: "Logout",
     loading: "Loading...",
+    confirm: "Confirm",
+    search: "Search",
+    filter: "Filter",
+    all: "All",
 
-    // Landing Page
-    appTitle: "Quiz Quest",
-    appSubtitle: "Fun Quiz Game!",
-    iAmStudent: "I'm a Student",
-    iAmTeacher: "I'm a Teacher",
-
-    // Student Login
-    welcome: "Welcome!",
-    enterNickname: "Please tell us your nickname",
-    nickname: "Nickname",
-    letsStart: "Let's Start!",
-
-    // School Selection
-    selectSchool: "Select School",
-    searchSchool: "Search school...",
-    noSchoolFound: "No school found",
-    allSchools: "All Schools",
-
-    // Category Selection
-    selectCategory: "Select Subject Category",
+    // Categories
     allCategories: "All Subjects",
-    noQuizAvailable: "No quiz available",
-    waitForTeacher: "Wait for teacher to create quiz!",
+    math: "Mathematics",
+    science: "Science",
+    thai: "Thai Language",
+    english: "English",
+    art: "Art",
+    music: "Music",
+    pe: "Physical Education",
+    other: "Others",
 
-    // Quiz List
+    // Navigation
+    studentRole: "I'm a Student",
+    teacherRole: "I'm a Teacher",
+    logout: "Logout",
+
+    // Student
     hello: "Hello",
-    selectQuizToPlay: "Select quiz to play",
-    viewMyScores: "View My Scores",
-    questions: "Questions",
-    difficulty: "Difficulty",
-    easy: "Easy",
-    medium: "Medium",
-    hard: "Hard",
-
-    // Quiz Taking
-    question: "Question",
-    of: "of",
-    score: "Score",
-    timeLeft: "Time Left",
-    answer: "Answer!",
-    correct: "Correct!",
-    incorrect: "Wrong!",
-    correctAnswerIs: "The correct answer is",
-    points: "points",
-
-    // Quiz Result
-    completed: "Completed!",
-    yourScore: "Your Score",
-    totalScore: "Total Score",
-    percentage: "Percentage",
-    timeUsed: "Time Used",
-    backToHome: "Back to Home",
+    selectCategory: "Select Subject Category",
+    selectQuiz: "Select Quiz",
+    startQuiz: "Start Quiz",
     viewHistory: "View Score History",
+    question: "Question",
+    correctAnswer: "Correct Answer",
+    score: "Score",
+    percentage: "Percentage",
+    time: "Time",
+    congratulations: "Congratulations!",
+    quizCompleted: "Quiz Completed",
+    yourScore: "Your Score",
 
-    // Score History
-    scoreHistory: "Score History",
-    totalAttempts: "Total Attempts",
-    averageScore: "Average Score",
-    bestScore: "Best Score",
-    noHistory: "No quiz history yet",
-
-    // Admin Login
-    adminLogin: "Teacher Login",
-    username: "Username",
-    password: "Password",
-    login: "Login",
-    invalidCredentials: "Invalid username or password",
-
-    // Admin Dashboard
-    teacherDashboard: "Teacher Dashboard",
-    manageQuizzes: "Manage quizzes and track progress",
-    createNewQuiz: "Create New Quiz",
-    viewStudentScores: "View Student Scores",
+    // Teacher/Admin
+    adminDashboard: "Teacher Dashboard",
+    createQuiz: "Create New Quiz",
+    editQuiz: "Edit Quiz",
+    deleteQuiz: "Delete Quiz",
+    viewScores: "View Student Scores",
     manageCategories: "Manage Categories",
-    manageSchools: "Manage Schools",
-    totalQuizzes: "Total Quizzes",
-    totalQuestions: "Total Questions",
-    totalAttempts: "Total Attempts",
+    quizTitle: "Quiz Title",
+    quizTitleTh: "Quiz Title (Thai)",
+    quizTitleEn: "Quiz Title (English)",
+    difficulty: "Difficulty",
+    category: "Category",
+    addQuestion: "Add Question",
+    questionText: "Question",
+    questionTextTh: "Question (Thai)",
+    questionTextEn: "Question (English)",
+    options: "Options",
+    points: "Points",
 
-    // School Management
+    // School
+    selectSchool: "Select School",
+    selectYourSchool: "Select Your School",
+    searchSchool: "Search school name",
     schoolManagement: "School Management",
     addSchool: "Add School",
     schoolName: "School Name",
@@ -236,85 +180,60 @@ const translations = {
     province: "Province",
     district: "District",
     studentCount: "Student Count",
+    students: "students",
+    allProvinces: "All Provinces",
+    selectProvince: "Select Province",
+    noSchoolFound: "No schools found",
+    tryDifferentSearch: "Try different search terms",
+    selectThisSchool: "Select This School",
+    manageSchoolsDesc: "Manage all schools in the system",
 
-    // Quiz Editor
-    createQuiz: "Create New Quiz",
-    editQuiz: "Edit Quiz",
-    quizTitle: "Quiz Title",
-    quizTitleTh: "Quiz Title (Thai)",
-    quizTitleEn: "Quiz Title (English)",
-    addQuestion: "Add Question",
-    questionText: "Question",
-    questionTextTh: "Question (Thai)",
-    questionTextEn: "Question (English)",
-    option: "Option",
-    optionTh: "Option (Thai)",
-    optionEn: "Option (English)",
-    correctAnswer: "Correct Answer",
-    importFromExcel: "Import Questions from Excel",
+    // Import/Export
+    importFromExcel: "Import from Excel",
+    exportToExcel: "Export to Excel",
+    downloadTemplate: "Download Template",
 
     // Messages
-    confirmDelete: "Are you sure you want to delete this {item}?",
     saveSuccess: "Saved successfully",
     deleteSuccess: "Deleted successfully",
     errorOccurred: "An error occurred",
-    pleaseSelectSchool: "Please select a school",
-
-    // Score Messages
-    excellentScore: "Excellent! You are amazing!",
-    veryGoodScore: "Very good! Well done!",
-    goodScore: "Good! Satisfactory!",
-    fairScore: "It's okay, try again!",
-    needImprovement: "Don't give up! Keep practicing!",
+    pleaseEnterQuizName: "Please enter quiz name",
+    pleaseEnterQuestion: "Please enter question",
+    pleaseEnter2Options: "Please enter at least 2 options",
+    pleaseAddQuestion: "Please add at least 1 question",
+    confirmDelete: "Are you sure you want to delete {{item}}?",
+    saving: "Saving...",
+    createQuizSuccess: "Quiz created successfully",
+    pleaseEnterSchoolName: "Please enter school name",
+    noSchoolsYet: "No schools in the system yet",
+    startAddingSchool: "Start adding your first school!",
   },
 };
 
-// Helper function to get translation
-export const t = (key, lang = "th", params = {}) => {
-  const keys = key.split(".");
-  let value = translations[lang];
+// Translation function
+export const t = (key, language = "th", params = {}) => {
+  const translation =
+    translations[language]?.[key] || translations["th"][key] || key;
 
-  for (const k of keys) {
-    value = value?.[k];
-  }
-
-  if (!value) {
-    // Fallback to Thai if English not available
-    value = translations["th"];
-    for (const k of keys) {
-      value = value?.[k];
-    }
-  }
-
-  if (!value) return key;
-
-  // Replace parameters
-  let result = value;
-  Object.keys(params).forEach((param) => {
-    result = result.replace(`{${param}}`, params[param]);
+  // Replace parameters like {{item}}
+  return translation.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
+    return params[paramKey] || match;
   });
-
-  return result;
 };
 
-// Helper to get language-specific field
-export const getLocalizedField = (obj, fieldName, lang = "th") => {
+// Get localized field from object
+export const getLocalizedField = (obj, fieldName, language = "th") => {
   if (!obj) return "";
 
-  // Try to get language-specific field first
-  const langField = `${fieldName}${
-    lang.charAt(0).toUpperCase() + lang.slice(1)
-  }`;
+  // Try language-specific field first
+  const langField = `${fieldName}${language
+    .charAt(0)
+    .toUpperCase()}${language.slice(1)}`;
   if (obj[langField]) return obj[langField];
 
   // Fallback to default field
-  if (obj[fieldName]) return obj[fieldName];
-
-  // Fallback to Thai if English not available
-  const thField = `${fieldName}Th`;
-  if (obj[thField]) return obj[thField];
-
-  return "";
+  return obj[fieldName] || "";
 };
 
-export default translations;
+// Export translations object for direct access if needed
+export { translations };

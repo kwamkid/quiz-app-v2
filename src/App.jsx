@@ -19,7 +19,6 @@ import StudentHistoryPage from './components/student/StudentHistoryPage';
 import DirectQuizAccess from './components/student/DirectQuizAccess';
 import GlobalHeader from './components/common/GlobalHeader';
 import LoadingSpinner from './components/common/LoadingSpinner';
-import QuizResultPage from './components/student/QuizResultPage';
 
 // Services
 import musicService from './services/musicService';
