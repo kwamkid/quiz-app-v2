@@ -411,6 +411,7 @@ public/
         return (
           <AdminLogin 
             onLoginSuccess={handleAdminLoginSuccess} 
+            currentLanguage={currentLanguage}
             onBack={() => {
               setUserRole(null);
               setView('landing');
@@ -418,9 +419,10 @@ public/
           />
         );
 
-      case 'adminDashboard':
+       case 'adminDashboard':
         return (
           <AdminDashboard
+            currentLanguage={currentLanguage}
             onCreateQuiz={handleCreateQuiz}
             onEditQuiz={handleEditQuiz}
             onDeleteQuiz={(id) => console.log('Delete quiz:', id)}
@@ -448,6 +450,7 @@ public/
       case 'adminScores':
         return (
           <AdminScores
+            currentLanguage={currentLanguage}
             onBack={handleBackFromScores}
           />
         );
@@ -455,6 +458,7 @@ public/
       case 'categoryManager':
         return (
           <CategoryManager
+            currentLanguage={currentLanguage}
             onBack={handleBackFromCategories}
           />
         );
