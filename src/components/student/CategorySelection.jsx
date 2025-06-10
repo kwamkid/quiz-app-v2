@@ -5,6 +5,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
+import { t } from '../../translations';
 
 // Icon mapping for categories
 const categoryIcons = {
@@ -18,21 +19,17 @@ const categoryIcons = {
   'default': BookOpen
 };
 
-const CategorySelection = ({ studentName, onSelectCategory, onLogout }) => {
+const CategorySelection = ({ studentName, onSelectCategory, onLogout, currentLanguage = 'th' }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(false);
 
-  // ✅ ตรวจสอบสถานะเพลงเมื่อ component mount
+  // ตรวจสอบสถานะเพลงเมื่อ component mount
   useEffect(() => {
     const initializeMusic = async () => {
       await musicService.initialize();
-      
-      // ตรวจสอบว่าเพลงกำลังเล่นอยู่หรือไม่
       const isPlaying = musicService.isCurrentlyPlaying();
       setMusicEnabled(isPlaying);
-      
-      console.log('🎵 Music status on CategorySelection mount:', isPlaying);
     };
     
     initializeMusic();
@@ -45,7 +42,6 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout }) => {
   const loadCategoriesWithQuizCount = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Loading categories with quiz count...');
       
       // ดึงหมวดหมู่จาก Firebase
       const categoriesData = await FirebaseService.getAllCategories();
@@ -66,16 +62,16 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout }) => {
         quizCount: categoryCounts[category.id] || 0
       }));
       
-      // ✅ กรองเฉพาะหมวดที่มีข้อสอบ
+      // กรองเฉพาะหมวดที่มีข้อสอบ
       const categoriesWithQuizzes = categoriesWithCount.filter(category => category.quizCount > 0);
       
       // เพิ่มหมวด "ทุกวิชา" ถ้ามีข้อสอบ
       if (allQuizzes.length > 0) {
         categoriesWithQuizzes.push({
           id: 'all',
-          name: '📖 ทุกวิชา',
+          name: t('allSubjects', currentLanguage),
           emoji: '📖',
-          description: 'ดูข้อสอบทั้งหมด',
+          description: t('viewAllQuizzes', currentLanguage),
           color: 'from-gray-400 to-gray-500',
           iconType: 'default',
           quizCount: allQuizzes.length
@@ -83,17 +79,15 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout }) => {
       }
       
       setCategories(categoriesWithQuizzes);
-      console.log('✅ Categories loaded:', categoriesWithQuizzes.length, 'categories with quizzes');
       
     } catch (error) {
       console.error('Error loading categories:', error);
-      // ถ้าเกิด error ให้ใช้ default categories
       setCategories([
         {
           id: 'all',
-          name: '📖 ทุกวิชา',
+          name: t('allSubjects', currentLanguage),
           emoji: '📖',
-          description: 'ดูข้อสอบทั้งหมด',
+          description: t('viewAllQuizzes', currentLanguage),
           color: 'from-gray-400 to-gray-500',
           iconType: 'default',
           quizCount: 0
@@ -112,29 +106,20 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout }) => {
   const handleLogout = async () => {
     await audioService.navigation();
     
-    // หยุดเพลงเมื่อออกจากระบบ
     if (musicService.isCurrentlyPlaying()) {
       musicService.stop();
-      console.log('🔇 Music stopped on logout');
     }
     
     onLogout();
   };
 
-  // ✅ Toggle เพลง
   const toggleMusic = async () => {
     await audioService.buttonClick();
     
     if (musicEnabled) {
-      // หยุดเพลง
       musicService.stop();
       setMusicEnabled(false);
-      console.log('🔇 Music stopped by user');
     } else {
-      // เริ่มเพลง
-      console.log('🎵 Attempting to start music...');
-      
-      // ตรวจสอบไฟล์เพลงก่อน
       const fileExists = await musicService.checkMusicFile();
       
       if (!fileExists) {
@@ -143,50 +128,32 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout }) => {
 กรุณาทำดังนี้:
 1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
 2. วางไฟล์ในโฟลเดอร์ public/
-3. รีเฟรชหน้าใหม่
-
-โครงสร้างที่ถูกต้อง:
-public/
-  quiz-music.mp3`);
+3. รีเฟรชหน้าใหม่`);
         return;
       }
       
       const success = await musicService.playMenuMusic();
       if (success) {
         setMusicEnabled(true);
-        console.log('🎵 Music started successfully');
-      } else {
-        console.log('❌ Failed to start music');
-        alert(`🎵 ไม่สามารถเล่นเพลงได้
-
-สาเหตุที่เป็นไปได้:
-- เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
-- รูปแบบไฟล์ไม่รองรับ
-- ไฟล์เสียหาย
-
-ลองกดปุ่มเพลงอีกครั้งหลังจากมีการโต้ตอบกับหน้าเว็บ`);
       }
     }
   };
 
-  // ✅ เพิ่มฟังก์ชันสำหรับอัพเดทสถานะเพลงแบบ real-time
+  // เพิ่มฟังก์ชันสำหรับอัพเดทสถานะเพลงแบบ real-time
   useEffect(() => {
     const checkMusicStatus = () => {
       const isPlaying = musicService.isCurrentlyPlaying();
       if (isPlaying !== musicEnabled) {
         setMusicEnabled(isPlaying);
-        console.log('🎵 Music status updated:', isPlaying);
       }
     };
 
-    // ตรวจสอบสถานะเพลงทุก 1 วินาที
     const interval = setInterval(checkMusicStatus, 1000);
-
     return () => clearInterval(interval);
   }, [musicEnabled]);
 
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดหมวดหมู่..." />;
+    return <LoadingSpinner message={t('loading', currentLanguage)} />;
   }
 
   return (
@@ -205,7 +172,8 @@ public/
         left: '3%',
         fontSize: '3rem',
         opacity: '0.1',
-        animation: 'pulse 3s infinite'
+        animation: 'pulse 3s infinite',
+        display: window.innerWidth < 768 ? 'none' : 'block'
       }}>📚</div>
       
       <div style={{
@@ -214,7 +182,8 @@ public/
         right: '5%',
         fontSize: '2.5rem',
         opacity: '0.2',
-        animation: 'bounce 4s infinite'
+        animation: 'bounce 4s infinite',
+        display: window.innerWidth < 768 ? 'none' : 'block'
       }}>🎓</div>
 
       <div style={{
@@ -255,13 +224,13 @@ public/
                   fontSize: '3rem',
                   animation: 'bounce 3s infinite'
                 }}>📚</span>
-                เลือกหมวดหมู่วิชา
+                {t('selectCategory', currentLanguage)}
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                สวัสดี {studentName}! เลือกวิชาที่ต้องการทำข้อสอบ 🎯 {musicEnabled && '🎵'}
+                {t('hello', currentLanguage)} {studentName}! {t('selectSubjectMessage', currentLanguage)} 🎯
               </p>
             </div>
             
@@ -270,34 +239,6 @@ public/
               gap: '12px',
               alignItems: 'center'
             }}>
-              {/* Music Toggle Button */}
-              <button
-                onClick={toggleMusic}
-                style={{
-                  background: musicEnabled 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
-              >
-                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-              </button>
-
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
@@ -324,7 +265,7 @@ public/
                 }}
               >
                 <ArrowLeft size={16} />
-                ออก
+                {t('exit', currentLanguage)}
               </button>
             </div>
           </div>
@@ -348,13 +289,13 @@ public/
               marginBottom: '12px',
               fontWeight: 'bold'
             }}>
-              ยังไม่มีข้อสอบให้ทำ
+              {t('noQuizAvailable', currentLanguage)}
             </h3>
             <p style={{
               color: 'rgba(255, 255, 255, 0.7)',
               fontSize: '1.2rem'
             }}>
-              รอครูสร้างข้อสอบก่อนนะ! 🎓
+              {t('waitForTeacher', currentLanguage)} 🎓
             </p>
           </div>
         ) : (
@@ -451,7 +392,7 @@ public/
                       color: 'white',
                       fontWeight: 'bold'
                     }}>
-                      {category.quizCount} ข้อสอบ
+                      {category.quizCount} {t('quizCount', currentLanguage)}
                     </span>
                     
                     <div style={{

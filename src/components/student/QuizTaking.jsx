@@ -1,12 +1,13 @@
-// src/components/student/QuizTaking.jsx - แก้ไขเพลงให้เล่นต่อเนื่อง และปรับ UI สำหรับมือถือ
+// src/components/student/QuizTaking.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import { getTimerColor, calculatePercentage } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
+import { t } from '../../translations';
 
-const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
+const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 'th' }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [score, setScore] = useState(0);
@@ -23,28 +24,16 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   const originalTotalQuestions = quiz.originalTotalQuestions || totalQuestions;
   const selectedQuestionCount = quiz.selectedQuestionCount || totalQuestions;
 
-  // ✅ ตรวจสอบและเล่นเพลงต่อจากที่เล่นอยู่
+  // ตรวจสอบและเล่นเพลงต่อจากที่เล่นอยู่
   useEffect(() => {
     const initializeMusic = async () => {
-      // ตรวจสอบว่าเพลงกำลังเล่นอยู่หรือไม่ก่อนเข้ามาทำข้อสอบ
       const wasPlaying = musicService.isCurrentlyPlaying();
       setMusicWasPlaying(wasPlaying);
       
       console.log('🎵 Quiz started - Music was playing:', wasPlaying);
-      
-      if (wasPlaying) {
-        // ถ้าเพลงกำลังเล่นอยู่ ให้เล่นต่อไป (ไม่หยุด)
-        console.log('🎵 Continuing music during quiz...');
-      } else {
-        // ถ้าไม่มีเพลง ก็ไม่ต้องเริ่มเล่น
-        console.log('🔇 No music was playing, keeping silent');
-      }
     };
 
     initializeMusic();
-
-    // ✅ ไม่ cleanup เพลงเมื่อออกจาก component แล้ว
-    // เพราะต้องการให้เพลงเล่นต่อเนื่อง
   }, []);
 
   // Timer countdown
@@ -115,10 +104,9 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
       setShowFeedback(false);
       setTimeLeft(QUIZ_SETTINGS.TIME_PER_QUESTION);
     } else {
-      // ✅ จบข้อสอบแล้ว - เล่นเสียงเฉลิมฉลองแต่ไม่หยุดเพลง
+      // จบข้อสอบแล้ว
       await audioService.quizComplete();
       
-      // ✅ ไม่หยุดเพลงเมื่อจบข้อสอบ ให้เล่นต่อไป
       console.log('🏆 Quiz completed - keeping music playing');
       
       const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
@@ -147,12 +135,10 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
   };
 
   const handleBack = async () => {
-    const confirmExit = confirm('🚪 คุณแน่ใจหรือไม่ว่าต้องการออกจากข้อสอบ? ผลคะแนนจะไม่ถูกบันทึก');
+    const confirmExit = confirm(t('exitQuizConfirm', currentLanguage));
     if (confirmExit) {
       await audioService.navigation();
       
-      // ✅ ถ้าเพลงไม่ได้เล่นตั้งแต่แรก ให้หยุดเพลง
-      // ถ้าเพลงเล่นอยู่ตั้งแต่แรก ให้เล่นต่อไป
       if (!musicWasPlaying && musicService.isCurrentlyPlaying()) {
         console.log('🔇 Stopping music on quiz exit (was not playing before)');
         musicService.stop();
@@ -185,7 +171,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
           textAlign: 'center'
         }}>
           <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🎯</div>
-          <p style={{ color: 'white', fontSize: '1.2rem' }}>ไม่พบคำถาม...</p>
+          <p style={{ color: 'white', fontSize: '1.2rem' }}>{t('noQuestions', currentLanguage)}</p>
         </div>
       </div>
     );
@@ -193,15 +179,15 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
 
   return (
     <div style={{
-        minHeight: '100dvh', // ใช้แค่ dvh อย่างเดียว
-        width: '100vw',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+      minHeight: '100dvh',
+      width: '100vw',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+      fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       {/* Floating elements - ซ่อนบนมือถือ */}
       <div style={{
         position: 'absolute',
@@ -280,7 +266,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                 fontSize: window.innerWidth < 768 ? '0.8rem' : '1rem',
                 display: window.innerWidth < 768 ? 'none' : 'block'
               }}>
-                สวัสดี {studentName}! 🎮 {musicService.isCurrentlyPlaying() && '🎵'}
+                {t('hello', currentLanguage)} {studentName}! 🎮 {musicService.isCurrentlyPlaying() && '🎵'}
               </p>
             </div>
             
@@ -310,7 +296,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
               }}
             >
               <ArrowLeft size={14} />
-              ออก
+              {t('exit', currentLanguage)}
             </button>
           </div>
 
@@ -326,13 +312,13 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: window.innerWidth < 768 ? '0.8rem' : '0.9rem'
               }}>
-                ข้อ {currentQuestionIndex + 1}/{totalQuestions}
+                {t('question', currentLanguage)} {currentQuestionIndex + 1}/{totalQuestions}
               </span>
               <span style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: window.innerWidth < 768 ? '0.8rem' : '0.9rem'
               }}>
-                คะแนน: {score}
+                {t('score', currentLanguage)}: {score}
               </span>
             </div>
             <div style={{
@@ -398,7 +384,9 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
               lineHeight: '1.4'
             }}>
-              {currentQuestion.question}
+              {currentLanguage === 'th' 
+                ? (currentQuestion.questionTextTh || currentQuestion.question)
+                : (currentQuestion.questionTextEn || currentQuestion.question)}
             </h2>
           </div>
 
@@ -413,8 +401,14 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
             maxHeight: window.innerWidth < 768 ? 'calc(100vh - 380px)' : 'auto'
           }}>
             {currentQuestion.options.map((option, index) => {
-              // ตรวจสอบว่าตัวเลือกมีข้อความหรือไม่
-              if (option && option.trim() !== "") {
+              // ตรวจสอบว่า option เป็น object หรือ string
+              const optionText = typeof option === 'object' 
+                ? (currentLanguage === 'th' 
+                    ? (option.textTh || option.text || option) 
+                    : (option.textEn || option.text || option))
+                : option;
+                
+              if (optionText && optionText.toString().trim() !== "") {
                 let buttonStyle = {
                   width: '100%',
                   padding: window.innerWidth < 768 ? '14px 16px' : '20px 24px',
@@ -497,7 +491,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                       flex: 1,
                       wordBreak: 'break-word',
                       lineHeight: '1.3'
-                    }}>{option}</span>
+                    }}>{optionText}</span>
                   </button>
                 );
               }
@@ -544,7 +538,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                 }}
               >
                 <Target size={20} />
-                ตอบ!
+                {t('submit', currentLanguage)}
               </button>
             ) : (
               <div style={{ textAlign: 'center' }}>
@@ -556,9 +550,9 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                   animation: 'slideUp 0.5s ease-out'
                 }}>
                   {isCorrect ? (
-                    <>🎉 ถูกต้อง! +{currentQuestion.points || QUIZ_SETTINGS.POINTS_PER_QUESTION} คะแนน</>
+                    <>🎉 {t('correct', currentLanguage)} +{currentQuestion.points || QUIZ_SETTINGS.POINTS_PER_QUESTION} {t('score', currentLanguage)}</>
                   ) : (
-                    <>❌ ผิด! คำตอบคือ {String.fromCharCode(65 + currentQuestion.correctAnswer)}</>
+                    <>❌ {t('incorrect', currentLanguage)} {String.fromCharCode(65 + currentQuestion.correctAnswer)}</>
                   )}
                 </div>
                 
@@ -597,12 +591,12 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack }) => {
                   {currentQuestionIndex < totalQuestions - 1 ? (
                     <>
                       <ArrowLeft style={{ transform: 'rotate(180deg)' }} size={20} />
-                      ข้อถัดไป
+                      {t('next', currentLanguage)}
                     </>
                   ) : (
                     <>
                       <Trophy size={20} />
-                      เสร็จสิ้น!
+                      {t('finish', currentLanguage)}
                     </>
                   )}
                 </button>

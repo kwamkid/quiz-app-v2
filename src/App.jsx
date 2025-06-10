@@ -1,4 +1,4 @@
-// src/App.jsx - แก้ไขระบบเปลี่ยนภาษาให้ทำงาน
+// src/App.jsx - ปรับให้กระชับ
 import React, { useState, useEffect } from 'react';
 
 // Components
@@ -10,7 +10,6 @@ import QuizEditor from './components/admin/QuizEditor';
 import AdminScores from './components/admin/AdminScores';
 import CategoryManager from './components/admin/CategoryManager';
 import SchoolManager from './components/admin/SchoolManager';
-import SchoolSelection from './components/student/SchoolSelection';
 import CategorySelection from './components/student/CategorySelection';
 import QuizList from './components/student/QuizList';
 import QuizTaking from './components/student/QuizTaking';
@@ -29,21 +28,20 @@ function App() {
   // State Management
   const [userRole, setUserRole] = useState(null);
   const [studentName, setStudentName] = useState('');
-  const [studentSchool, setStudentSchool] = useState(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [quizStartMethod, setQuizStartMethod] = useState('normal'); // normal, direct
-  const [view, setView] = useState('landing'); // Track current view
+  const [quizStartMethod, setQuizStartMethod] = useState('normal');
+  const [view, setView] = useState('landing');
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // ✅ Language and Music State
+  // Language and Music State
   const [currentLanguage, setCurrentLanguage] = useState('th');
   const [musicEnabled, setMusicEnabled] = useState(false);
 
-  // ✅ Initialize app settings
+  // Initialize app settings
   useEffect(() => {
     const initializeApp = async () => {
       // Load saved language
@@ -54,16 +52,6 @@ function App() {
       const savedName = getFromLocalStorage('studentName');
       if (savedName) {
         setStudentName(savedName);
-      }
-      
-      // Load saved school
-      const savedSchool = getFromLocalStorage('studentSchool');
-      if (savedSchool) {
-        try {
-          setStudentSchool(JSON.parse(savedSchool));
-        } catch (e) {
-          console.error('Error parsing saved school:', e);
-        }
       }
       
       // Initialize audio service
@@ -88,27 +76,23 @@ function App() {
     initializeApp();
   }, []);
 
-  // ✅ Language change handler
+  // Language change handler
   const handleLanguageChange = (newLanguage) => {
     console.log('🌐 Changing language to:', newLanguage);
     setCurrentLanguage(newLanguage);
     saveToLocalStorage('appLanguage', newLanguage);
-    
-    // Play sound effect
     audioService.buttonClick();
   };
 
-  // ✅ Music toggle handler
+  // Music toggle handler
   const handleMusicToggle = async () => {
     console.log('🎵 Toggling music:', !musicEnabled);
     
     if (musicEnabled) {
-      // Stop music
       musicService.stop();
       setMusicEnabled(false);
       console.log('🔇 Music stopped');
     } else {
-      // Start music
       const fileExists = await musicService.checkMusicFile();
       
       if (!fileExists) {
@@ -117,11 +101,7 @@ function App() {
 กรุณาทำดังนี้:
 1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
 2. วางไฟล์ในโฟลเดอร์ public/
-3. รีเฟรชหน้าใหม่
-
-โครงสร้างที่ถูกต้อง:
-public/
-  quiz-music.mp3`);
+3. รีเฟรชหน้าใหม่`);
         return;
       }
       
@@ -130,31 +110,10 @@ public/
         setMusicEnabled(true);
         console.log('🎵 Music started successfully');
       } else {
-        alert(`🎵 ไม่สามารถเล่นเพลงได้
-
-สาเหตุที่เป็นไปได้:
-- เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
-- รูปแบบไฟล์ไม่รองรับ
-- ไฟล์เสียหาย
-
-ลองกดปุ่มเพลงอีกครั้ง`);
+        alert(`🎵 ไม่สามารถเล่นเพลงได้`);
       }
     }
   };
-
-  // ✅ Sync music status
-  useEffect(() => {
-    const checkMusicStatus = () => {
-      const isPlaying = musicService.isCurrentlyPlaying();
-      if (isPlaying !== musicEnabled) {
-        setMusicEnabled(isPlaying);
-        console.log('🎵 Music status synced:', isPlaying);
-      }
-    };
-
-    const interval = setInterval(checkMusicStatus, 1000);
-    return () => clearInterval(interval);
-  }, [musicEnabled]);
 
   // Navigation handlers
   const handleSelectRole = (role) => {
@@ -177,12 +136,6 @@ public/
     }
   };
 
-  const handleSchoolSelect = (school) => {
-    setStudentSchool(school);
-    saveToLocalStorage('studentSchool', JSON.stringify(school));
-    setView('categorySelection');
-  };
-
   const handleAdminLoginSuccess = () => {
     setIsAdminLoggedIn(true);
     setView('adminDashboard');
@@ -193,7 +146,6 @@ public/
     setUserRole(null);
     setView('landing');
     
-    // Stop music if playing
     if (musicService.isCurrentlyPlaying()) {
       musicService.stop();
       setMusicEnabled(false);
@@ -209,7 +161,6 @@ public/
     setView('landing');
     localStorage.removeItem('studentName');
     
-    // Stop music if playing
     if (musicService.isCurrentlyPlaying()) {
       musicService.stop();
       setMusicEnabled(false);
@@ -313,10 +264,6 @@ public/
     window.history.pushState({}, '', window.location.pathname);
   };
 
-  // ✅ Define pages where header should be hidden
-  const hideHeaderOnPages = [];
-  if (view === 'landing') hideHeaderOnPages.push(window.location.pathname);
-
   // Render logic based on view
   const renderView = () => {
     if (loading) {
@@ -325,7 +272,7 @@ public/
 
     switch (view) {
       case 'landing':
-        return <LandingPage onSelectRole={handleSelectRole} />;
+        return <LandingPage onSelectRole={handleSelectRole} currentLanguage={currentLanguage} />;
 
       case 'studentLogin':
         return (
@@ -334,17 +281,8 @@ public/
             onBack={() => {
               setUserRole(null);
               setView('landing');
-            }} 
-          />
-        );
-
-      case 'schoolSelection':
-        return (
-          <SchoolSelection
-            studentName={studentName}
+            }}
             currentLanguage={currentLanguage}
-            onSelectSchool={handleSchoolSelect}
-            onBack={handleStudentLogout}
           />
         );
 
@@ -354,6 +292,7 @@ public/
             studentName={studentName}
             onSelectCategory={handleCategorySelect}
             onLogout={handleStudentLogout}
+            currentLanguage={currentLanguage}
           />
         );
 
@@ -367,6 +306,7 @@ public/
             onLogout={handleStudentLogout}
             onViewHistory={handleViewHistory}
             onBackToCategories={handleBackToCategories}
+            currentLanguage={currentLanguage}
           />
         );
 
@@ -377,6 +317,7 @@ public/
             studentName={studentName}
             onQuizEnd={handleQuizEnd}
             onBack={handleBackToQuizList}
+            currentLanguage={currentLanguage}
           />
         );
 
@@ -386,6 +327,7 @@ public/
             results={quizResults}
             onBackToHome={handleBackToQuizList}
             onViewHistory={handleViewHistory}
+            currentLanguage={currentLanguage}
           />
         );
 
@@ -394,6 +336,7 @@ public/
           <StudentHistoryPage
             studentName={studentName}
             onBack={handleBackFromHistory}
+            currentLanguage={currentLanguage}
           />
         );
 
@@ -404,6 +347,7 @@ public/
             studentName={studentName}
             onStartQuiz={handleDirectQuizStart}
             onError={handleDirectQuizError}
+            currentLanguage={currentLanguage}
           />
         );
 
@@ -411,7 +355,6 @@ public/
         return (
           <AdminLogin 
             onLoginSuccess={handleAdminLoginSuccess} 
-            currentLanguage={currentLanguage}
             onBack={() => {
               setUserRole(null);
               setView('landing');
@@ -419,10 +362,9 @@ public/
           />
         );
 
-       case 'adminDashboard':
+      case 'adminDashboard':
         return (
           <AdminDashboard
-            currentLanguage={currentLanguage}
             onCreateQuiz={handleCreateQuiz}
             onEditQuiz={handleEditQuiz}
             onDeleteQuiz={(id) => console.log('Delete quiz:', id)}
@@ -441,7 +383,6 @@ public/
         return (
           <QuizEditor
             quiz={editingQuiz}
-            currentLanguage={currentLanguage}
             onSave={handleSaveQuiz}
             onBack={handleBackFromEditor}
           />
@@ -450,7 +391,6 @@ public/
       case 'adminScores':
         return (
           <AdminScores
-            currentLanguage={currentLanguage}
             onBack={handleBackFromScores}
           />
         );
@@ -458,7 +398,6 @@ public/
       case 'categoryManager':
         return (
           <CategoryManager
-            currentLanguage={currentLanguage}
             onBack={handleBackFromCategories}
           />
         );
@@ -466,25 +405,24 @@ public/
       case 'schoolManager':
         return (
           <SchoolManager
-            currentLanguage={currentLanguage}
             onBack={handleBackFromSchools}
           />
         );
 
       default:
-        return <LandingPage onSelectRole={handleSelectRole} />;
+        return <LandingPage onSelectRole={handleSelectRole} currentLanguage={currentLanguage} />;
     }
   };
 
   return (
     <div className="App" style={{ fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif' }}>
-      {/* ✅ Global Header with language and music controls */}
+      {/* Global Header with language and music controls */}
       <GlobalHeader
         currentLanguage={currentLanguage}
         onLanguageChange={handleLanguageChange}
         musicEnabled={musicEnabled}
         onMusicToggle={handleMusicToggle}
-        hideOnPages={hideHeaderOnPages}
+        hideOnPages={[]}
       />
       
       {/* Main content */}

@@ -1,13 +1,14 @@
-// src/components/student/QuizSelectionModal.jsx - แก้ไขตัวเลือกเป็น 20,30,40,50 ข้อ
+// src/components/student/QuizSelectionModal.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
 import { X, Play, AlertCircle } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
+import { t } from '../../translations';
 
-const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
+const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, currentLanguage = 'th' }) => {
   const [selectedQuestionCount, setSelectedQuestionCount] = useState(20);
   const [isStarting, setIsStarting] = useState(false);
 
-  // ✅ ใช้ allQuizzes ที่ส่งมาจาก props แทนการโหลดเอง
+  // ใช้ allQuizzes ที่ส่งมาจาก props แทนการโหลดเอง
   const quizzes = allQuizzes || [];
 
   // Reset selected count when quiz changes
@@ -70,11 +71,6 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
           options.push(option);
         }
       });
-      
-      // ถ้าต้องการให้เลือกทำทั้งหมดได้ด้วย (optional)
-      // if (totalQuestions > 50) {
-      //   options.push(totalQuestions);
-      // }
     }
     
     return options;
@@ -162,7 +158,7 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             color: 'rgba(255, 255, 255, 0.8)',
             fontSize: '1.1rem'
           }}>
-            📚 มีทั้งหมด {totalQuestions} คำถาม
+            📚 {totalQuestions} {t('questions', currentLanguage)}
           </p>
         </div>
 
@@ -175,7 +171,7 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             marginBottom: '16px',
             textAlign: 'center'
           }}>
-            🎯 {totalQuestions < 20 ? 'จำนวนข้อสอบ' : 'เลือกจำนวนข้อที่ต้องการทำ'}
+            🎯 {totalQuestions < 20 ? t('questionCountNote', currentLanguage) : t('selectQuestionCountTitle', currentLanguage)}
           </h3>
 
           <div style={{
@@ -224,14 +220,14 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
                   }
                 }}
               >
-                {count} ข้อ
+                {count} {currentLanguage === 'th' ? 'ข้อ' : count === 1 ? 'question' : 'questions'}
                 {totalQuestions < 20 && (
                   <div style={{
                     fontSize: '0.7rem',
                     opacity: 0.8,
                     marginTop: '2px'
                   }}>
-                    (ทั้งหมด)
+                    ({t('allQuestions', currentLanguage)})
                   </div>
                 )}
               </button>
@@ -252,11 +248,11 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             <div style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.95rem' }}>
               {totalQuestions < 20 ? (
                 <>
-                  <strong>📝 หมายเหตุ:</strong> ข้อสอบนี้มี {totalQuestions} ข้อ จึงต้องทำทั้งหมด
+                  <strong>📝 {t('noteQuizHasOnly', currentLanguage)}</strong> {totalQuestions} {t('questionsOnly', currentLanguage)}
                 </>
               ) : (
                 <>
-                  <strong>💡 เคล็ดลับ:</strong> คำถามจะถูกสุ่มใหม่ทุกครั้ง แต่ละข้อได้ 10 คะแนน
+                  <strong>💡 {t('tip', currentLanguage)}:</strong> {t('questionsWillBeRandomized', currentLanguage)}
                 </>
               )}
             </div>
@@ -291,7 +287,7 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
               e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
             }}
           >
-            ยกเลิก
+            {t('cancel', currentLanguage)}
           </button>
 
           <button
@@ -339,14 +335,16 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
                 }} />
-                กำลังเริ่ม...
+                {t('loading', currentLanguage)}...
               </>
             ) : (
               <>
                 <Play size={20} />
                 <div style={{ textAlign: 'center', lineHeight: '1.2' }}>
-                  <div>🚀 เริ่มทำข้อสอบ</div>
-                  <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>({selectedQuestionCount} ข้อ)</div>
+                  <div>🚀 {t('startQuiz', currentLanguage)}</div>
+                  <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                    ({selectedQuestionCount} {currentLanguage === 'th' ? 'ข้อ' : selectedQuestionCount === 1 ? 'question' : 'questions'})
+                  </div>
                 </div>
               </>
             )}
@@ -367,13 +365,13 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart }) => {
             fontSize: '0.9rem',
             margin: 0
           }}>
-            🎯 คะแนนเต็ม: <strong style={{ color: 'white' }}>{selectedQuestionCount * 10}</strong> คะแนน
+            🎯 {t('fullScore', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * 10}</strong> {t('score', currentLanguage)}
             <br />
-            ⏱️ เวลาทำ: <strong style={{ color: 'white' }}>{selectedQuestionCount * 30}</strong> วินาที
+            ⏱️ {t('timeEstimate', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * 30}</strong> {t('seconds', currentLanguage)}
             {totalQuestions >= 20 && (
               <>
                 <br />
-                📊 สุ่มจาก: <strong style={{ color: 'white' }}>{totalQuestions}</strong> ข้อ
+                📊 {t('randomFrom', currentLanguage)}: <strong style={{ color: 'white' }}>{totalQuestions}</strong> {t('questions', currentLanguage)}
               </>
             )}
           </p>

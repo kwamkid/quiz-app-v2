@@ -1,11 +1,11 @@
 // src/components/student/StudentLogin.jsx
 import React, { useState } from 'react';
 import { User, ArrowLeft } from 'lucide-react';
-import Button from '../common/Button';
 import audioService from '../../services/simpleAudio';
 import { saveToLocalStorage } from '../../utils/helpers';
+import { t } from '../../translations';
 
-const StudentLogin = ({ onNameSubmit, onBack }) => {
+const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -141,14 +141,14 @@ const StudentLogin = ({ onNameSubmit, onBack }) => {
               marginBottom: '12px',
               textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
             }}>
-              🎉 ยินดีต้อนรับ!
+              🎉 {t('welcome', currentLanguage)}
             </h2>
             
             <p style={{
               color: 'rgba(255, 255, 255, 0.8)',
               fontSize: '1.2rem'
             }}>
-              บอกชื่อเล่นของคุณหน่อยสิ
+              {t('enterNickname', currentLanguage)}
             </p>
           </div>
           
@@ -162,7 +162,7 @@ const StudentLogin = ({ onNameSubmit, onBack }) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="✨ ชื่อเล่นของคุณ"
+                placeholder={`✨ ${t('yourNickname', currentLanguage)}`}
                 disabled={isLoading}
                 style={{
                   width: '100%',
@@ -207,33 +207,62 @@ const StudentLogin = ({ onNameSubmit, onBack }) => {
               </div>
             </div>
             
-            <Button
+            <button
               type="submit"
-              variant="success"
-              size="large"
               disabled={!name.trim() || isLoading}
-              loading={isLoading}
-              className="w-full"
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #ec4899, #be185d)',
-                boxShadow: '0 10px 25px rgba(236, 72, 153, 0.3)',
+                background: name.trim() && !isLoading
+                  ? 'linear-gradient(135deg, #ec4899, #be185d)'
+                  : 'rgba(255, 255, 255, 0.1)',
+                color: name.trim() && !isLoading ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '20px 32px',
                 fontSize: '1.2rem',
-                padding: '20px 32px'
+                fontWeight: 'bold',
+                cursor: name.trim() && !isLoading ? 'pointer' : 'not-allowed',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: name.trim() && !isLoading 
+                  ? '0 10px 25px rgba(236, 72, 153, 0.3)' 
+                  : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (name.trim() && !isLoading) {
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 15px 35px rgba(236, 72, 153, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (name.trim() && !isLoading) {
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(236, 72, 153, 0.3)';
+                }
               }}
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
-                  <span>กำลังเตรียม...</span>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <span>{t('loading', currentLanguage)}...</span>
                 </>
               ) : (
                 <>
                   <span>🚀</span>
-                  <span>เริ่มเลย!</span>
+                  <span>{t('letsStart', currentLanguage)}</span>
                 </>
               )}
-            </Button>
+            </button>
           </form>
           
           {/* Back Button */}
@@ -256,23 +285,23 @@ const StudentLogin = ({ onNameSubmit, onBack }) => {
                 transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = 'white';
-                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.target.style.background = 'transparent';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                e.currentTarget.style.background = 'transparent';
               }}
             >
               <ArrowLeft size={16} />
-              กลับหน้าหลัก
+              {t('backToHome', currentLanguage)}
             </button>
           </div>
         </div>
       </div>
 
       {/* CSS Animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes bounce {
           0%, 20%, 53%, 80%, 100% {
             transform: translate3d(0,0,0);
@@ -330,10 +359,6 @@ const StudentLogin = ({ onNameSubmit, onBack }) => {
         
         input::placeholder {
           color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .w-full {
-          width: 100%;
         }
       `}</style>
     </div>

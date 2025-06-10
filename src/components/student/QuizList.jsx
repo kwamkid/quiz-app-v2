@@ -1,20 +1,19 @@
-// src/components/student/QuizList.jsx - แก้ไขเพลงให้เล่นต่อเนื่อง
+// src/components/student/QuizList.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trophy, Music, VolumeX, Volume2 } from 'lucide-react';
+import { ArrowLeft, Trophy } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
+import { t } from '../../translations';
 
-const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout, onViewHistory, onBackToCategories }) => {
+const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout, onViewHistory, onBackToCategories, currentLanguage = 'th' }) => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [musicEnabled, setMusicEnabled] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
 
-  // ✅ ใช้ useEffect แบบที่ไม่ทำให้เกิด infinite loop
   useEffect(() => {
     let isMounted = true;
     
@@ -43,21 +42,6 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
       isMounted = false;
     };
   }, [categoryId]);
-
-  // ✅ ตรวจสอบสถานะเพลงเมื่อ component mount
-  useEffect(() => {
-    const initializeMusic = async () => {
-      await musicService.initialize();
-      
-      // ตรวจสอบว่าเพลงกำลังเล่นอยู่หรือไม่
-      const isPlaying = musicService.isCurrentlyPlaying();
-      setMusicEnabled(isPlaying);
-      
-      console.log('🎵 Music status on QuizList mount:', isPlaying);
-    };
-    
-    initializeMusic();
-  }, []);
 
   const handleQuizClick = async (quiz) => {
     if (quiz.questions?.length > 0) {
@@ -88,7 +72,6 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
       setShowQuizModal(false);
       setSelectedQuiz(null);
       
-      // ✅ ไม่หยุดเพลงเมื่อเริ่มทำข้อสอบ
       console.log('🎮 Starting quiz - keeping music status:', musicService.isCurrentlyPlaying());
       
       onStartQuiz(quizWithSelectedQuestions);
@@ -104,7 +87,6 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
   const handleLogout = async () => {
     await audioService.navigation();
     
-    // ✅ หยุดเพลงเมื่อออกจากระบบ
     if (musicService.isCurrentlyPlaying()) {
       musicService.stop();
       console.log('🔇 Music stopped on logout');
@@ -118,72 +100,8 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
     onViewHistory();
   };
 
-  // ✅ ปรับปรุงฟังก์ชันควบคุมเพลงให้ทำงานได้ดีขึ้น
-  const toggleMusic = async () => {
-    await audioService.buttonClick();
-    
-    if (musicEnabled) {
-      // หยุดเพลง
-      musicService.stop();
-      setMusicEnabled(false);
-      console.log('🔇 Music stopped by user');
-    } else {
-      // เริ่มเพลง
-      console.log('🎵 Attempting to start music...');
-      
-      // ตรวจสอบไฟล์เพลงก่อน
-      const fileExists = await musicService.checkMusicFile();
-      
-      if (!fileExists) {
-        alert(`🎵 ไม่พบไฟล์เพลง!
-
-กรุณาทำดังนี้:
-1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
-2. วางไฟล์ในโฟลเดอร์ public/
-3. รีเฟรชหน้าใหม่
-
-โครงสร้างที่ถูกต้อง:
-public/
-  quiz-music.mp3`);
-        return;
-      }
-      
-      const success = await musicService.playMenuMusic();
-      if (success) {
-        setMusicEnabled(true);
-        console.log('🎵 Music started successfully');
-      } else {
-        console.log('❌ Failed to start music');
-        alert(`🎵 ไม่สามารถเล่นเพลงได้
-
-สาเหตุที่เป็นไปได้:
-- เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
-- รูปแบบไฟล์ไม่รองรับ
-- ไฟล์เสียหาย
-
-ลองกดปุ่มเพลงอีกครั้งหลังจากมีการโต้ตอบกับหน้าเว็บ`);
-      }
-    }
-  };
-
-  // ✅ เพิ่มฟังก์ชันสำหรับอัพเดทสถานะเพลงแบบ real-time
-  useEffect(() => {
-    const checkMusicStatus = () => {
-      const isPlaying = musicService.isCurrentlyPlaying();
-      if (isPlaying !== musicEnabled) {
-        setMusicEnabled(isPlaying);
-        console.log('🎵 Music status updated:', isPlaying);
-      }
-    };
-
-    // ตรวจสอบสถานะเพลงทุก 1 วินาที
-    const interval = setInterval(checkMusicStatus, 1000);
-
-    return () => clearInterval(interval);
-  }, [musicEnabled]);
-
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อสอบ..." />;
+    return <LoadingSpinner message={t('loading', currentLanguage)} />;
   }
 
   return (
@@ -262,13 +180,13 @@ public/
                   fontSize: '3rem',
                   animation: 'bounce 3s infinite'
                 }}>👋</span>
-                สวัสดี {studentName}!
+                {t('hello', currentLanguage)} {studentName}!
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                {categoryName ? `หมวด: ${categoryName}` : 'เลือกข้อสอบที่ต้องการทำ'} 🎮 {musicEnabled && '🎵'}
+                {categoryName ? `${categoryName}` : t('selectQuiz', currentLanguage)} 🎮
               </p>
             </div>
             
@@ -277,35 +195,6 @@ public/
               gap: '12px',
               alignItems: 'center'
             }}>
-
-              {/* Music Toggle */}
-              <button
-                onClick={toggleMusic}
-                style={{
-                  background: musicEnabled 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                }}
-                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
-              >
-                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-              </button>
-              
               {/* Back to Categories Button */}
               {onBackToCategories && (
                 <button
@@ -336,11 +225,9 @@ public/
                   }}
                 >
                   <ArrowLeft size={16} />
-                  หมวดหมู่
+                  {t('backToCategories', currentLanguage)}
                 </button>
               )}
-
-              
 
               {/* Logout Button */}
               <button
@@ -368,7 +255,7 @@ public/
                 }}
               >
                 <ArrowLeft size={16} />
-                ออก
+                {t('exit', currentLanguage)}
               </button>
             </div>
           </div>
@@ -405,7 +292,7 @@ public/
               }}
             >
               <Trophy size={18} />
-              🏆 ดูคะแนนของฉัน
+              🏆 {t('myScoreHistory', currentLanguage)}
             </button>
           </div>
         </div>
@@ -477,7 +364,7 @@ public/
                     fontWeight: 'bold',
                     border: '1px solid rgba(255, 255, 255, 0.3)'
                   }}>
-                    {quiz.difficulty || 'ง่าย'}
+                    {t(quiz.difficulty?.toLowerCase() || 'easy', currentLanguage)}
                   </span>
                 </div>
                 
@@ -500,7 +387,7 @@ public/
                   gap: '10px',
                   fontSize: '1.1rem'
                 }}>
-                  🎯 {quiz.questions?.length || 0} คำถาม
+                  🎯 {quiz.questions?.length || 0} {t('questions', currentLanguage)}
                   {quiz.questions?.length > 20 && (
                     <span style={{
                       background: 'rgba(34, 197, 94, 0.2)',
@@ -510,7 +397,7 @@ public/
                       fontSize: '0.8rem',
                       fontWeight: 'bold'
                     }}>
-                      เลือกได้
+                      {t('canSelect', currentLanguage)}
                     </span>
                   )}
                 </p>
@@ -536,11 +423,11 @@ public/
                 }}>
                   {quiz.questions?.length > 0 ? (
                     <>
-                      ▶️ เลือกจำนวนข้อ
+                      ▶️ {t('selectQuestionCount', currentLanguage)}
                     </>
                   ) : (
                     <>
-                      🚫 ยังไม่มีคำถาม
+                      🚫 {t('noQuestions', currentLanguage)}
                     </>
                   )}
                 </div>
@@ -563,13 +450,13 @@ public/
               marginBottom: '12px',
               fontWeight: 'bold'
             }}>
-              ยังไม่มีข้อสอบให้ทำ
+              {t('noQuizAvailable', currentLanguage)}
             </h3>
             <p style={{
               color: 'rgba(255, 255, 255, 0.7)',
               fontSize: '1.2rem'
             }}>
-              รอครูสร้างข้อสอบก่อนนะ! 🎓
+              {t('waitForTeacher', currentLanguage)} 🎓
             </p>
           </div>
         )}
@@ -582,6 +469,7 @@ public/
         allQuizzes={quizzes}
         onClose={handleCloseModal}
         onStart={handleStartQuiz}
+        currentLanguage={currentLanguage}
       />
 
       {/* CSS Animations */}
@@ -644,9 +532,12 @@ const getDifficultyColor = (difficulty) => {
   const colors = {
     'ง่าย': 'rgba(34, 197, 94, 0.2)',
     'ปานกลาง': 'rgba(251, 191, 36, 0.2)',
-    'ยาก': 'rgba(239, 68, 68, 0.2)'
+    'ยาก': 'rgba(239, 68, 68, 0.2)',
+    'easy': 'rgba(34, 197, 94, 0.2)',
+    'medium': 'rgba(251, 191, 36, 0.2)',
+    'hard': 'rgba(239, 68, 68, 0.2)'
   };
-  return colors[difficulty] || colors['ง่าย'];
+  return colors[difficulty?.toLowerCase()] || colors['easy'];
 };
 
 export default QuizList;
