@@ -1,11 +1,12 @@
 // src/components/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, BarChart3, ArrowLeft, Target, Calendar, Users, BookOpen, Filter, Tag, Volume2, VolumeX } from 'lucide-react';
+import { Plus, Edit, Trash2, BarChart3, ArrowLeft, Target, Calendar, Users, BookOpen, Filter, Tag, Volume2, VolumeX, QrCode } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 import { formatDate } from '../../utils/helpers';
+import QRCodeModal from './QRCodeModal';
 
 const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, onManageCategories, onBack, onLogout }) => {
   const [quizzes, setQuizzes] = useState([]);
@@ -19,6 +20,8 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
     totalAttempts: 0
   });
   const [musicEnabled, setMusicEnabled] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedQuizForQR, setSelectedQuizForQR] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -222,6 +225,12 @@ public/
 ลองกดปุ่มเพลงอีกครั้ง`);
       }
     }
+  };
+
+  const handleShowQRCode = async (quiz) => {
+    await audioService.buttonClick();
+    setSelectedQuizForQR(quiz);
+    setShowQRModal(true);
   };
 
   if (loading) {
@@ -839,7 +848,7 @@ public/
                       }}>
                         <div style={{ 
                           fontSize: '3rem',
-                          animation: 'bounce 3s infinite'
+                          animation: `bounce 3s infinite`
                         }}>{quiz.emoji}</div>
                         <div style={{ flex: 1 }}>
                           <h3 style={{
@@ -901,6 +910,34 @@ public/
                         display: 'flex',
                         gap: '12px'
                       }}>
+                        <button
+                          onClick={() => handleShowQRCode(quiz)}
+                          style={{
+                            background: 'rgba(139, 92, 246, 0.2)',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            color: '#8b5cf6',
+                            padding: '12px 20px',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: '500'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <QrCode size={16} />
+                          QR Code
+                        </button>
+
                         <button
                           onClick={() => handleEditQuiz(quiz)}
                           style={{
@@ -965,6 +1002,18 @@ public/
           </div>
         </div>
       </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <QRCodeModal
+          isOpen={showQRModal}
+          quiz={selectedQuizForQR}
+          onClose={() => {
+            setShowQRModal(false);
+            setSelectedQuizForQR(null);
+          }}
+        />
+      )}
 
       {/* CSS Animations */}
       <style>{`

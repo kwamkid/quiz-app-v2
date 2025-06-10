@@ -1,6 +1,6 @@
-// src/components/admin/AdminScores.jsx - แก้ไข infinite loop
+// src/components/admin/AdminScores.jsx - เพิ่มการกรองตามวันที่
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Download } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
@@ -13,6 +13,9 @@ const AdminScores = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuiz, setSelectedQuiz] = useState('all');
   const [quizzes, setQuizzes] = useState([]);
+  const [selectedDateRange, setSelectedDateRange] = useState('all'); // all, today, week, month, custom
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalAttempts: 0,
@@ -37,6 +40,45 @@ const AdminScores = ({ onBack }) => {
       filtered = filtered.filter(attempt => attempt.quizId === selectedQuiz);
     }
     
+    // Filter by date range
+    if (selectedDateRange !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filtered = filtered.filter(attempt => {
+        const attemptDate = attempt.timestamp ? new Date(attempt.timestamp.seconds * 1000) : new Date(0);
+        
+        switch (selectedDateRange) {
+          case 'today':
+            return attemptDate >= today;
+            
+          case 'week': {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return attemptDate >= weekAgo;
+          }
+            
+          case 'month': {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            return attemptDate >= monthAgo;
+          }
+            
+          case 'custom':
+            if (customStartDate && customEndDate) {
+              const start = new Date(customStartDate);
+              const end = new Date(customEndDate);
+              end.setHours(23, 59, 59, 999); // Include entire end day
+              return attemptDate >= start && attemptDate <= end;
+            }
+            return true;
+            
+          default:
+            return true;
+        }
+      });
+    }
+    
     // Sort by date (newest first)
     filtered.sort((a, b) => {
       const dateA = a.timestamp ? new Date(a.timestamp.seconds * 1000) : new Date(0);
@@ -46,7 +88,7 @@ const AdminScores = ({ onBack }) => {
     
     setFilteredAttempts(filtered);
     console.log('✅ Filtered:', filtered.length, 'attempts');
-  }, [allAttempts, searchTerm, selectedQuiz]); // dependencies ที่ชัดเจน
+  }, [allAttempts, searchTerm, selectedQuiz, selectedDateRange, customStartDate, customEndDate]);
 
   // โหลดข้อมูลครั้งเดียวตอน mount
   useEffect(() => {
@@ -63,7 +105,7 @@ const AdminScores = ({ onBack }) => {
           FirebaseService.getQuizzes()
         ]);
         
-        if (!mounted) return; // ป้องกัน state update หลัง unmount
+        if (!mounted) return;
         
         setAllAttempts(attempts);
         setQuizzes(quizzesData);
@@ -98,12 +140,12 @@ const AdminScores = ({ onBack }) => {
     return () => {
       mounted = false;
     };
-  }, []); // Empty dependency - โหลดครั้งเดียว
+  }, []);
 
-  // Filter เมื่อข้อมูลเปลี่ยน - แยกออกจาก loading
+  // Filter เมื่อข้อมูลเปลี่ยน
   useEffect(() => {
     filterAttempts();
-  }, [filterAttempts]); // dependency คือ function ที่เป็น useCallback
+  }, [filterAttempts]);
 
   const handleBack = async () => {
     await audioService.navigation();
@@ -122,6 +164,47 @@ const AdminScores = ({ onBack }) => {
     if (percentage >= 70) return '👍';
     if (percentage >= 60) return '💪';
     return '📚';
+  };
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    if (filteredAttempts.length === 0) {
+      alert('ไม่มีข้อมูลให้ส่งออก');
+      return;
+    }
+
+    // Prepare CSV headers
+    const headers = ['ชื่อนักเรียน', 'ชื่อข้อสอบ', 'คะแนน', 'เปอร์เซ็นต์', 'จำนวนข้อ', 'เวลาที่ใช้ (วินาที)', 'วันที่ทำ'];
+    
+    // Prepare CSV rows
+    const rows = filteredAttempts.map(attempt => [
+      attempt.studentName,
+      attempt.quizTitle,
+      attempt.score,
+      attempt.percentage + '%',
+      attempt.totalQuestions,
+      attempt.totalTime || 0,
+      formatDate(attempt.timestamp)
+    ]);
+    
+    // Convert to CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // Create blob and download
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `quiz-scores-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading) {
@@ -180,40 +263,69 @@ const AdminScores = ({ onBack }) => {
               </p>
             </div>
             
-            <button
-              onClick={handleBack}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: 'rgba(255, 255, 255, 0.7)',
-                padding: '12px 20px',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.color = 'white';
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-              }}
-            >
-              <ArrowLeft size={18} />
-              กลับ
-            </button>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button
+                onClick={exportToCSV}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontWeight: 'bold'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <Download size={18} />
+                ส่งออก CSV
+              </button>
+
+              <button
+                onClick={handleBack}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                <ArrowLeft size={18} />
+                กลับ
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px'
           }}>
+            {/* Search Input */}
             <div style={{ position: 'relative' }}>
               <Search size={20} style={{
                 position: 'absolute',
@@ -240,6 +352,7 @@ const AdminScores = ({ onBack }) => {
               />
             </div>
 
+            {/* Quiz Filter */}
             <div style={{ position: 'relative' }}>
               <Filter size={20} style={{
                 position: 'absolute',
@@ -273,7 +386,121 @@ const AdminScores = ({ onBack }) => {
                 ))}
               </select>
             </div>
+
+            {/* Date Range Filter */}
+            <div style={{ position: 'relative' }}>
+              <Calendar size={20} style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'rgba(255, 255, 255, 0.5)'
+              }} />
+              <select
+                value={selectedDateRange}
+                onChange={(e) => {
+                  setSelectedDateRange(e.target.value);
+                  if (e.target.value !== 'custom') {
+                    setCustomStartDate('');
+                    setCustomEndDate('');
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <option value="all" style={{ background: '#374151', color: 'white' }}>
+                  📅 ทุกช่วงเวลา
+                </option>
+                <option value="today" style={{ background: '#374151', color: 'white' }}>
+                  📆 วันนี้
+                </option>
+                <option value="week" style={{ background: '#374151', color: 'white' }}>
+                  📅 7 วันที่ผ่านมา
+                </option>
+                <option value="month" style={{ background: '#374151', color: 'white' }}>
+                  📅 30 วันที่ผ่านมา
+                </option>
+                <option value="custom" style={{ background: '#374151', color: 'white' }}>
+                  📅 กำหนดเอง
+                </option>
+              </select>
+            </div>
           </div>
+
+          {/* Custom Date Range Inputs */}
+          {selectedDateRange === 'custom' && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '16px',
+              marginTop: '16px',
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <div>
+                <label style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.9rem',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  วันที่เริ่มต้น
+                </label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.9rem',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  วันที่สิ้นสุด
+                </label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  min={customStartDate}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -361,17 +588,17 @@ const AdminScores = ({ onBack }) => {
             alignItems: 'center',
             gap: '10px'
           }}>
-            📋 รายการคะแนนล่าสุด ({filteredAttempts.length} รายการ)
+            📋 รายการคะแนน ({filteredAttempts.length} รายการ)
           </h2>
 
           {filteredAttempts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📊</div>
               <h3 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '10px' }}>
-                {searchTerm || selectedQuiz !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลคะแนน'}
+                {searchTerm || selectedQuiz !== 'all' || selectedDateRange !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลคะแนน'}
               </h3>
               <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {searchTerm || selectedQuiz !== 'all' ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' : 'รอนักเรียนทำข้อสอบก่อน'}
+                {searchTerm || selectedQuiz !== 'all' || selectedDateRange !== 'all' ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' : 'รอนักเรียนทำข้อสอบก่อน'}
               </p>
             </div>
           ) : (
@@ -390,12 +617,12 @@ const AdminScores = ({ onBack }) => {
                     transition: 'all 0.3s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.target.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.target.style.transform = 'translateY(0)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
                   <div style={{
@@ -479,7 +706,7 @@ const AdminScores = ({ onBack }) => {
                         fontSize: '0.9rem',
                         marginBottom: '4px'
                       }}>
-                        <Target size={14} />
+                        <Clock size={14} />
                         เวลาที่ใช้
                       </div>
                       <div style={{ color: 'white', fontWeight: 'bold' }}>

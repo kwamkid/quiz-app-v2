@@ -1,4 +1,4 @@
-// src/App.jsx - แก้ไขการบันทึกคะแนน และเพิ่ม Category
+// src/App.jsx - เพิ่มระบบ Direct Quiz Access
 import React, { useState, useEffect } from 'react';
 import LandingPage from './components/layout/LandingPage';
 import StudentLogin from './components/student/StudentLogin';
@@ -14,7 +14,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import FirebaseService from './services/firebase';
 import { loadFromLocalStorage, saveToLocalStorage, clearLocalStorage } from './utils/helpers';
 import CategoryManager from './components/admin/CategoryManager';
-
+import DirectQuizAccess from './components/student/DirectQuizAccess';
 
 function App() {
   const [view, setView] = useState('landing');
@@ -25,14 +25,42 @@ function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [directQuizId, setDirectQuizId] = useState(null);
+
+  // 🎯 ตรวจสอบ URL Parameter สำหรับ Direct Quiz Access
+  useEffect(() => {
+    const checkUrlParams = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const quizId = urlParams.get('quiz');
+      
+      if (quizId) {
+        console.log('🎯 Direct quiz access detected:', quizId);
+        setDirectQuizId(quizId);
+        
+        // ตรวจสอบว่ามีชื่อนักเรียนหรือยัง
+        const savedName = loadFromLocalStorage('studentName');
+        if (savedName) {
+          setStudentName(savedName);
+          setView('directQuizAccess');
+        } else {
+          setView('studentLogin');
+        }
+        
+        // ล้าง URL parameter หลังจากอ่านแล้ว
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+    
+    checkUrlParams();
+  }, []);
 
   // Load saved student name on mount
   useEffect(() => {
     const savedName = loadFromLocalStorage('studentName');
-    if (savedName) {
+    if (savedName && !directQuizId) {
       setStudentName(savedName);
     }
-  }, []);
+  }, [directQuizId]);
 
   const handleSelectRole = (role) => {
     if (role === 'student') {
@@ -57,7 +85,13 @@ function App() {
   const handleNameSubmit = (name) => {
     setStudentName(name);
     saveToLocalStorage('studentName', name);
-    setView('categorySelection');
+    
+    // ถ้ามี directQuizId ให้ไปหน้า directQuizAccess
+    if (directQuizId) {
+      setView('directQuizAccess');
+    } else {
+      setView('categorySelection');
+    }
   };
 
   const handleSelectCategory = (category) => {
@@ -74,14 +108,24 @@ function App() {
     }
   };
 
-  // 🔥 แก้ไขหลัก: ปรับการบันทึกคะแนน
+  // 🎯 Handle Direct Quiz Start
+  const handleDirectQuizStart = (quiz) => {
+    setDirectQuizId(null); // Clear direct quiz ID
+    handleStartQuiz(quiz);
+  };
+
+  // 🎯 Handle Direct Quiz Error
+  const handleDirectQuizError = () => {
+    setDirectQuizId(null);
+    setView('categorySelection');
+  };
+
   const handleQuizEnd = async (results) => {
     try {
       setLoading(true);
       
       console.log("🎯 Quiz completed with results:", results);
       
-      // เตรียมข้อมูลสำหรับบันทึก
       const attemptData = {
         studentName: studentName,
         quizTitle: results.quizTitle,
@@ -97,22 +141,18 @@ function App() {
       
       console.log("💾 Saving attempt data:", attemptData);
       
-      // บันทึกลง Firebase
       const savedId = await FirebaseService.saveStudentAttempt(attemptData);
       
       console.log("✅ Quiz result saved successfully with ID:", savedId);
       
-      // แสดงผลลัพธ์
       setQuizResults(results);
       setView('quizResult');
       
     } catch (error) {
       console.error("❌ Error saving quiz result:", error);
       
-      // แสดง error message ให้ผู้ใช้ทราบ
       alert(`⚠️ บันทึกคะแนนไม่สำเร็จ: ${error.message}\n\nแต่คุณยังสามารถดูผลลัพธ์ได้`);
       
-      // แสดงผลลัพธ์แม้ว่าจะบันทึกไม่สำเร็จ
       setQuizResults(results);
       setView('quizResult');
     } finally {
@@ -120,7 +160,6 @@ function App() {
     }
   };
 
-  // ✅ เพิ่ม handler สำหรับดูประวัติคะแนนของนักเรียน
   const handleViewHistory = () => {
     setView('scoreHistory');
   };
@@ -131,6 +170,7 @@ function App() {
     setCurrentQuiz(null);
     setQuizResults(null);
     setSelectedCategory(null);
+    setDirectQuizId(null);
     setView('landing');
   };
 
@@ -151,12 +191,21 @@ function App() {
   const handleBackToHome = () => {
     setCurrentQuiz(null);
     setQuizResults(null);
-    setView('quizList');
+    
+    // ถ้ามาจาก direct quiz ให้กลับไป category selection
+    if (!selectedCategory) {
+      setView('categorySelection');
+    } else {
+      setView('quizList');
+    }
   };
 
-  // ✅ เพิ่ม handler สำหรับกลับจากหน้าประวัติคะแนน
   const handleBackFromHistory = () => {
-    setView('quizList');
+    if (!selectedCategory) {
+      setView('categorySelection');
+    } else {
+      setView('quizList');
+    }
   };
 
   const handleAdminLoginSuccess = () => {
@@ -179,7 +228,6 @@ function App() {
     setView('quizEditor');
   };
 
-  // ✅ เพิ่ม handler สำหรับดูคะแนนของครู
   const handleAdminViewScores = () => {
     setView('adminScores');
   };
@@ -194,12 +242,10 @@ function App() {
     setView('adminDashboard');
   };
 
-  // ✅ เพิ่ม handler สำหรับกลับจากหน้าดูคะแนนของครู
   const handleBackFromAdminScores = () => {
     setView('adminDashboard');
   };
 
-  // Show loading spinner when loading
   if (loading) {
     return <LoadingSpinner message="กำลังบันทึกข้อมูล..." />;
   }
@@ -223,6 +269,16 @@ function App() {
           onBack={handleBack}
         />
       )}
+
+      {/* 🎯 Direct Quiz Access */}
+      {view === 'directQuizAccess' && directQuizId && (
+        <DirectQuizAccess
+          quizId={directQuizId}
+          studentName={studentName}
+          onStartQuiz={handleDirectQuizStart}
+          onError={handleDirectQuizError}
+        />
+      )}
       
       {view === 'categorySelection' && (
         <CategorySelection
@@ -244,7 +300,6 @@ function App() {
         />
       )}
 
-      {/* ✅ เพิ่มหน้าประวัติคะแนนของนักเรียน */}
       {view === 'scoreHistory' && (
         <ScoreHistory
           studentName={studentName}
@@ -267,13 +322,12 @@ function App() {
           onEditQuiz={handleEditQuiz}
           onDeleteQuiz={() => {}}
           onViewScores={handleAdminViewScores}
-          onManageCategories={handleManageCategories} // เพิ่มบรรทัดนี้
+          onManageCategories={handleManageCategories}
           onBack={handleBack}
           onLogout={handleAdminLogout}
         />
       )}
 
-      {/* ✅ เพิ่มหน้าดูคะแนนของครู */}
       {view === 'adminScores' && isAdminLoggedIn && (
         <AdminScores
           onBack={handleBackFromAdminScores}

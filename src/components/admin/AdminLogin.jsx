@@ -1,8 +1,9 @@
 // src/components/admin/AdminLogin.jsx
-import React, { useState } from 'react';
-import { Lock, ArrowLeft, Eye, EyeOff, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, ArrowLeft, Eye, EyeOff, Settings, Volume2, VolumeX } from 'lucide-react';
 import Button from '../common/Button';
 import audioService from '../../services/simpleAudio';
+import musicService from '../../services/musicService';
 import { DEFAULT_ADMIN } from '../../constants';
 
 const AdminLogin = ({ onLoginSuccess, onBack }) => {
@@ -11,6 +12,18 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [musicEnabled, setMusicEnabled] = useState(false);
+
+  // ตรวจสอบสถานะเพลงเมื่อ component mount
+  useEffect(() => {
+    const initializeMusic = async () => {
+      await musicService.initialize();
+      const isPlaying = musicService.isCurrentlyPlaying();
+      setMusicEnabled(isPlaying);
+    };
+    
+    initializeMusic();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,6 +52,49 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
   const togglePassword = () => {
     setShowPassword(!showPassword);
+  };
+
+  const toggleMusic = async () => {
+    await audioService.buttonClick();
+    
+    if (musicEnabled) {
+      // หยุดเพลง
+      musicService.stop();
+      setMusicEnabled(false);
+      console.log('🔇 Music stopped by user');
+    } else {
+      // เริ่มเพลง
+      const fileExists = await musicService.checkMusicFile();
+      
+      if (!fileExists) {
+        alert(`🎵 ไม่พบไฟล์เพลง!
+
+กรุณาทำดังนี้:
+1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
+2. วางไฟล์ในโฟลเดอร์ public/
+3. รีเฟรชหน้าใหม่
+
+โครงสร้างที่ถูกต้อง:
+public/
+  quiz-music.mp3`);
+        return;
+      }
+      
+      const success = await musicService.playMenuMusic();
+      if (success) {
+        setMusicEnabled(true);
+        console.log('🎵 Music started successfully');
+      } else {
+        alert(`🎵 ไม่สามารถเล่นเพลงได้
+
+สาเหตุที่เป็นไปได้:
+- เบราว์เซอร์บล็อกการเล่นเพลงอัตโนมัติ
+- รูปแบบไฟล์ไม่รองรับ
+- ไฟล์เสียหาย
+
+ลองกดปุ่มเพลงอีกครั้ง`);
+      }
+    }
   };
 
   return (
@@ -76,6 +132,48 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
         fontSize: '5rem',
         opacity: '0.15'
       }}>👨‍🏫</div>
+
+      {/* Music Toggle Button - Fixed Position */}
+      <button
+        onClick={toggleMusic}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: musicEnabled 
+            ? 'linear-gradient(135deg, #10b981, #059669)' 
+            : 'rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          color: 'white',
+          padding: '12px',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          zIndex: 100,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          if (!musicEnabled) {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          if (!musicEnabled) {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          }
+        }}
+        title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
+      >
+        {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        <span style={{ fontSize: '0.9rem' }}>
+          {musicEnabled ? 'ปิดเพลง' : 'เปิดเพลง'}
+        </span>
+      </button>
 
       {/* Main Content */}
       <div style={{
@@ -332,7 +430,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
           </form>
           
           {/* Back Button */}
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ textAlign: 'center' }}>
             <button
               onClick={handleBack}
               disabled={isLoading}
@@ -364,51 +462,22 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
             </button>
           </div>
           
-          {/* Demo Credentials */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '16px',
-            padding: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <p style={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: '0.9rem',
-              textAlign: 'center',
-              marginBottom: '12px'
-            }}>
-              🔑 ข้อมูลสำหรับทดสอบ:
-            </p>
+          {/* Music Status */}
+          {musicEnabled && (
             <div style={{
+              marginTop: '20px',
+              textAlign: 'center',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '0.9rem',
               display: 'flex',
-              justifyContent: 'center',
               alignItems: 'center',
-              gap: '8px',
-              flexWrap: 'wrap'
+              justifyContent: 'center',
+              gap: '8px'
             }}>
-              <span style={{
-                fontFamily: 'monospace',
-                background: 'rgba(255, 255, 255, 0.1)',
-                padding: '4px 12px',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '0.9rem'
-              }}>
-                admin
-              </span>
-              <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>/</span>
-              <span style={{
-                fontFamily: 'monospace',
-                background: 'rgba(255, 255, 255, 0.1)',
-                padding: '4px 12px',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '0.9rem'
-              }}>
-                admin123
-              </span>
+              <Volume2 size={14} />
+              กำลังเล่นเพลง
             </div>
-          </div>
+          )}
         </div>
       </div>
 
