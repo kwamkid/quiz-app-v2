@@ -51,7 +51,7 @@ const translations = {
     welcomeTitle: "Quiz Quest",
     welcomeSubtitle: "เกมทำข้อสอบสุดมันส์!",
     iAmStudent: "ฉันเป็นนักเรียน",
-    iAmTeacher: "ฉันเป็นครู",
+    iAmTeacher: "ฉันเป็นครูคนดี",
 
     // === Student Login ===
     welcome: "ยินดีต้อนรับ!",

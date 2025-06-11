@@ -36,10 +36,13 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
+      maxHeight: '100vh',
       width: '100vw',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-      position: 'relative',
+      position: 'fixed',
+      top: 0,
+      left: 0,
       overflow: 'hidden',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
     }}>
@@ -122,8 +125,8 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
-        padding: '20px',
+        height: '100vh',
+        padding: '80px 20px 20px 20px', // เพิ่ม padding-top เพื่อหลีก GlobalHeader
         position: 'relative',
         zIndex: 1
       }}>
@@ -132,7 +135,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
           backdropFilter: 'blur(10px)',
           borderRadius: '32px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          padding: '48px',
+          padding: '40px 32px',
           maxWidth: '500px',
           width: '100%',
           textAlign: 'center',
@@ -160,11 +163,11 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
           </div>
 
           {/* Logo and Title */}
-          <div style={{ marginBottom: '40px' }}>
+          <div style={{ marginBottom: '30px' }}>
             {/* Logo with effects */}
             <div style={{
               position: 'relative',
-              marginBottom: '32px',
+              marginBottom: '24px',
               display: 'inline-block',
               animation: 'logoFloat 3s ease-in-out infinite'
             }}>
@@ -174,8 +177,8 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: '150px',
-                height: '150px',
+                width: '120px',
+                height: '120px',
                 background: 'linear-gradient(135deg, #ff6b6b, #ff5252)',
                 borderRadius: '50%',
                 boxShadow: '0 0 40px rgba(255, 82, 82, 0.5), 0 10px 30px rgba(255, 82, 82, 0.3)',
@@ -188,7 +191,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 alt="Quiz Quest Logo"
                 onLoad={() => setIsLogoLoaded(true)}
                 style={{
-                  width: '100px',
+                  width: '80px',
                   height: 'auto',
                   position: 'relative',
                   zIndex: 1,
@@ -202,29 +205,29 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
               {/* Sparkles around logo */}
               <div style={{
                 position: 'absolute',
-                top: '-10px',
-                right: '10px',
+                top: '-5px',
+                right: '15px',
                 animation: 'sparkle 2s ease-in-out infinite'
               }}>
-                <Sparkles size={30} color="#fbbf24" />
+                <Sparkles size={24} color="#fbbf24" />
               </div>
               
               <div style={{
                 position: 'absolute',
-                bottom: '5px',
-                left: '0px',
+                bottom: '10px',
+                left: '5px',
                 animation: 'sparkle 2s ease-in-out infinite 0.5s'
               }}>
-                <Star size={25} color="#f59e0b" />
+                <Star size={20} color="#f59e0b" />
               </div>
 
               <div style={{
                 position: 'absolute',
                 top: '20px',
-                left: '-15px',
+                left: '-10px',
                 animation: 'sparkle 2s ease-in-out infinite 1s'
               }}>
-                <Zap size={20} color="#fbbf24" />
+                <Zap size={16} color="#fbbf24" />
               </div>
             </div>
             
@@ -257,15 +260,16 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 color: 'white',
                 border: 'none',
                 borderRadius: '20px',
-                padding: '20px 32px',
-                fontSize: '1.2rem',
+                padding: '16px 24px',
+                fontSize: '1.5rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '12px',
+                gap: '8px',
                 boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)',
                 position: 'relative',
                 overflow: 'hidden'
@@ -293,14 +297,14 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
               
               <div style={{
                 background: 'rgba(255, 255, 255, 0.2)',
-                padding: '8px',
+                padding: '10px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                animation: 'iconBounce 2s ease-in-out infinite'
+                marginBottom: '4px'
               }}>
-                <User size={24} />
+                <User size={28} />
               </div>
               <span style={{ position: 'relative', zIndex: 1 }}>🎓 {t('iAmStudent', currentLanguage)}</span>
             </button>
@@ -314,15 +318,16 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 color: 'white',
                 border: 'none',
                 borderRadius: '20px',
-                padding: '20px 32px',
-                fontSize: '1.2rem',
+                padding: '16px 24px',
+                fontSize: '1.5rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '12px',
+                gap: '8px',
                 boxShadow: '0 10px 25px rgba(139, 92, 246, 0.3)',
                 position: 'relative',
                 overflow: 'hidden'
@@ -350,14 +355,14 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
               
               <div style={{
                 background: 'rgba(255, 255, 255, 0.2)',
-                padding: '8px',
+                padding: '10px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                animation: 'iconBounce 2s ease-in-out infinite 0.5s'
+                marginBottom: '4px'
               }}>
-                <Settings size={24} />
+                <Settings size={28} />
               </div>
               <span style={{ position: 'relative', zIndex: 1 }}>⚙️ {t('iAmTeacher', currentLanguage)}</span>
             </button>
@@ -365,7 +370,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
           
           {/* Animated dots */}
           <div style={{
-            marginTop: '32px',
+            marginTop: '24px',
             display: 'flex',
             justifyContent: 'center',
             gap: '12px',
