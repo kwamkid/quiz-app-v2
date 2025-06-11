@@ -1,6 +1,6 @@
-// src/components/admin/AdminScores.jsx - เพิ่มการกรองตามวันที่
+// src/components/admin/AdminScores.jsx - เพิ่มการแสดงข้อมูลโรงเรียน
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Download } from 'lucide-react';
+import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Download, School } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
@@ -12,7 +12,9 @@ const AdminScores = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuiz, setSelectedQuiz] = useState('all');
+  const [selectedSchool, setSelectedSchool] = useState('all');
   const [quizzes, setQuizzes] = useState([]);
+  const [schools, setSchools] = useState([]);
   const [selectedDateRange, setSelectedDateRange] = useState('all'); // all, today, week, month, custom
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -38,6 +40,11 @@ const AdminScores = ({ onBack }) => {
     // Filter by quiz
     if (selectedQuiz !== 'all') {
       filtered = filtered.filter(attempt => attempt.quizId === selectedQuiz);
+    }
+    
+    // Filter by school
+    if (selectedSchool !== 'all') {
+      filtered = filtered.filter(attempt => attempt.schoolId === selectedSchool);
     }
     
     // Filter by date range
@@ -88,7 +95,7 @@ const AdminScores = ({ onBack }) => {
     
     setFilteredAttempts(filtered);
     console.log('✅ Filtered:', filtered.length, 'attempts');
-  }, [allAttempts, searchTerm, selectedQuiz, selectedDateRange, customStartDate, customEndDate]);
+  }, [allAttempts, searchTerm, selectedQuiz, selectedSchool, selectedDateRange, customStartDate, customEndDate]);
 
   // โหลดข้อมูลครั้งเดียวตอน mount
   useEffect(() => {
@@ -99,20 +106,26 @@ const AdminScores = ({ onBack }) => {
         setLoading(true);
         console.log('📊 Loading admin scores data...');
         
-        // Load all attempts and quizzes
-        const [attempts, quizzesData] = await Promise.all([
+        // Load all data in parallel
+        const [attempts, quizzesData, schoolsData] = await Promise.all([
           FirebaseService.getAllStudentAttempts(),
-          FirebaseService.getQuizzes()
+          FirebaseService.getQuizzes(),
+          FirebaseService.getAllSchools()
         ]);
         
         if (!mounted) return;
         
         setAllAttempts(attempts);
         setQuizzes(quizzesData);
+        setSchools(schoolsData);
         
         // Calculate stats
         if (attempts.length > 0) {
-          const uniqueStudents = new Set(attempts.map(attempt => attempt.studentName)).size;
+          // Unique students (ต้องดูทั้งชื่อและโรงเรียน)
+          const uniqueStudents = new Set(
+            attempts.map(attempt => `${attempt.studentName}_${attempt.schoolId || 'no-school'}`)
+          ).size;
+          
           const totalScore = attempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
           const averageScore = Math.round(totalScore / attempts.length);
           const topScore = Math.max(...attempts.map(attempt => attempt.percentage || 0));
@@ -125,7 +138,7 @@ const AdminScores = ({ onBack }) => {
           });
         }
         
-        console.log('✅ Admin scores loaded:', attempts.length, 'attempts,', quizzesData.length, 'quizzes');
+        console.log('✅ Admin scores loaded:', attempts.length, 'attempts,', quizzesData.length, 'quizzes,', schoolsData.length, 'schools');
       } catch (error) {
         console.error('❌ Error loading admin scores:', error);
       } finally {
@@ -174,11 +187,12 @@ const AdminScores = ({ onBack }) => {
     }
 
     // Prepare CSV headers
-    const headers = ['ชื่อนักเรียน', 'ชื่อข้อสอบ', 'คะแนน', 'เปอร์เซ็นต์', 'จำนวนข้อ', 'เวลาที่ใช้ (วินาที)', 'วันที่ทำ'];
+    const headers = ['ชื่อนักเรียน', 'โรงเรียน', 'ชื่อข้อสอบ', 'คะแนน', 'เปอร์เซ็นต์', 'จำนวนข้อ', 'เวลาที่ใช้ (วินาที)', 'วันที่ทำ'];
     
     // Prepare CSV rows
     const rows = filteredAttempts.map(attempt => [
       attempt.studentName,
+      attempt.displaySchoolName || attempt.schoolName || '-',
       attempt.quizTitle,
       attempt.score,
       attempt.percentage + '%',
@@ -350,6 +364,41 @@ const AdminScores = ({ onBack }) => {
                   fontFamily: 'inherit'
                 }}
               />
+            </div>
+
+            {/* School Filter */}
+            <div style={{ position: 'relative' }}>
+              <School size={20} style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'rgba(255, 255, 255, 0.5)'
+              }} />
+              <select
+                value={selectedSchool}
+                onChange={(e) => setSelectedSchool(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <option value="all" style={{ background: '#374151', color: 'white' }}>
+                  🏫 ทุกโรงเรียน
+                </option>
+                {schools.map((school) => (
+                  <option key={school.id} value={school.id} style={{ background: '#374151', color: 'white' }}>
+                    {school.nameTh}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Quiz Filter */}
@@ -595,10 +644,10 @@ const AdminScores = ({ onBack }) => {
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📊</div>
               <h3 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '10px' }}>
-                {searchTerm || selectedQuiz !== 'all' || selectedDateRange !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลคะแนน'}
+                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลคะแนน'}
               </h3>
               <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {searchTerm || selectedQuiz !== 'all' || selectedDateRange !== 'all' ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' : 'รอนักเรียนทำข้อสอบก่อน'}
+                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' : 'รอนักเรียนทำข้อสอบก่อน'}
               </p>
             </div>
           ) : (
@@ -627,17 +676,17 @@ const AdminScores = ({ onBack }) => {
                 >
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                     gap: '20px',
                     alignItems: 'center'
                   }}>
-                    {/* Student Info */}
+                    {/* Student & School Info */}
                     <div>
                       <h4 style={{
                         color: 'white',
                         fontSize: '1.2rem',
                         fontWeight: 'bold',
-                        marginBottom: '8px',
+                        marginBottom: '4px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '10px'
@@ -646,12 +695,23 @@ const AdminScores = ({ onBack }) => {
                       </h4>
                       <div style={{
                         color: 'rgba(255, 255, 255, 0.7)',
-                        fontSize: '0.9rem',
+                        fontSize: '0.85rem',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px'
                       }}>
-                        <Calendar size={14} />
+                        <School size={12} />
+                        {attempt.displaySchoolName || attempt.schoolName || '-'}
+                      </div>
+                      <div style={{
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        fontSize: '0.8rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginTop: '4px'
+                      }}>
+                        <Calendar size={12} />
                         {formatDate(attempt.timestamp)}
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 // Components
 import LandingPage from './components/layout/LandingPage';
 import StudentLogin from './components/student/StudentLogin';
+import SchoolSelection from './components/student/SchoolSelection';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import QuizEditor from './components/admin/QuizEditor';
@@ -28,6 +29,7 @@ function App() {
   // State Management
   const [userRole, setUserRole] = useState(null);
   const [studentName, setStudentName] = useState('');
+  const [studentSchool, setStudentSchool] = useState(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
@@ -52,6 +54,12 @@ function App() {
       const savedName = getFromLocalStorage('studentName');
       if (savedName) {
         setStudentName(savedName);
+      }
+      
+      // Load saved school  
+      const savedSchool = getFromLocalStorage('studentSchool');
+      if (savedSchool) {
+        setStudentSchool(savedSchool);
       }
       
       // Initialize audio service
@@ -125,9 +133,11 @@ function App() {
     }
   };
 
-  const handleStudentNameSubmit = (name) => {
+  const handleStudentNameSubmit = (name, school) => {
     setStudentName(name);
+    setStudentSchool(school);
     saveToLocalStorage('studentName', name);
+    saveToLocalStorage('studentSchool', school);
     
     if (quizStartMethod === 'direct' && currentQuiz?.id) {
       setView('directQuiz');
@@ -154,12 +164,14 @@ function App() {
 
   const handleStudentLogout = () => {
     setStudentName('');
+    setStudentSchool(null);
     setUserRole(null);
     setSelectedCategory(null);
     setCurrentQuiz(null);
     setQuizResults(null);
     setView('landing');
     localStorage.removeItem('studentName');
+    localStorage.removeItem('studentSchool');
     
     if (musicService.isCurrentlyPlaying()) {
       musicService.stop();
@@ -179,7 +191,12 @@ function App() {
   };
 
   const handleQuizEnd = (results) => {
-    setQuizResults(results);
+    // เพิ่มข้อมูลโรงเรียนเข้าไปใน results
+    const resultsWithSchool = {
+      ...results,
+      studentSchool: studentSchool
+    };
+    setQuizResults(resultsWithSchool);
     setCurrentQuiz(null);
     setView('quizResult');
   };
@@ -290,6 +307,7 @@ function App() {
         return (
           <CategorySelection
             studentName={studentName}
+            studentSchool={studentSchool}
             onSelectCategory={handleCategorySelect}
             onLogout={handleStudentLogout}
             currentLanguage={currentLanguage}

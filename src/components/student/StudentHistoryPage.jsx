@@ -1,75 +1,77 @@
-// src/components/student/StudentHistoryPage.jsx - รองรับ 2 ภาษา
+// src/components/student/StudentHistoryPage.jsx
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trophy, Star, Calendar, Clock, Target, Award, TrendingUp, BarChart } from 'lucide-react';
+import { ArrowLeft, Trophy, Target, Calendar, Clock, TrendingUp, Award, Zap } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
-import FirebaseService from '../../services/firebase';
 import audioService from '../../services/simpleAudio';
+import FirebaseService from '../../services/firebase';
+import { formatDate, getGradeInfo } from '../../utils/helpers';
 import { t } from '../../translations';
+import { getFromLocalStorage } from '../../utils/helpers';
 
 const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => {
-  const [results, setResults] = useState([]);
+  const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalQuizzes: 0,
     averageScore: 0,
     bestScore: 0,
     totalTime: 0,
-    recentStreak: 0
+    passingCount: 0,
+    streak: 0
   });
 
-  useEffect(() => {
-    loadStudentResults();
-  }, [studentName]);
+  // ดึงข้อมูลโรงเรียนจาก localStorage
+  const studentSchool = getFromLocalStorage('studentSchool');
+  const schoolId = studentSchool?.id || null;
 
-  const loadStudentResults = async () => {
+  useEffect(() => {
+    loadStudentHistory();
+  }, []);
+
+  const loadStudentHistory = async () => {
     try {
       setLoading(true);
-      console.log('📊 Loading results for:', studentName);
+      console.log('📊 Loading history for:', studentName, 'School:', schoolId);
       
-      const studentResults = await FirebaseService.getStudentResults(studentName);
-      setResults(studentResults);
+      // ส่ง schoolId ไปด้วยเพื่อกรองเฉพาะโรงเรียน
+      const history = await FirebaseService.getStudentAttempts(studentName, schoolId);
       
-      // คำนวณสถิติ
-      if (studentResults.length > 0) {
-        const totalQuizzes = studentResults.length;
-        const totalScore = studentResults.reduce((sum, result) => sum + (result.score || 0), 0);
-        const totalPossibleScore = studentResults.reduce((sum, result) => sum + (result.totalQuestions * 10), 0);
-        const averageScore = Math.round((totalScore / totalPossibleScore) * 100);
-        const bestScore = Math.max(...studentResults.map(result => 
-          Math.round((result.score / (result.totalQuestions * 10)) * 100)
-        ));
-        const totalTime = studentResults.reduce((sum, result) => sum + (result.totalTime || 0), 0);
+      if (history.length > 0) {
+        // คำนวณสถิติ
+        const totalScore = history.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
+        const avgScore = Math.round(totalScore / history.length);
+        const bestScore = Math.max(...history.map(attempt => attempt.percentage || 0));
+        const totalTime = history.reduce((sum, attempt) => sum + (attempt.totalTime || 0), 0);
+        const passingCount = history.filter(attempt => (attempt.percentage || 0) >= 60).length;
+        
+        // คำนวณ streak (จำนวนครั้งที่ผ่านติดต่อกัน)
+        let currentStreak = 0;
+        for (const attempt of history) {
+          if ((attempt.percentage || 0) >= 60) {
+            currentStreak++;
+          } else {
+            break;
+          }
+        }
         
         setStats({
-          totalQuizzes,
-          averageScore,
-          bestScore,
-          totalTime: Math.round(totalTime / 60), // แปลงเป็นนาที
-          recentStreak: calculateStreak(studentResults)
+          totalQuizzes: history.length,
+          averageScore: avgScore,
+          bestScore: bestScore,
+          totalTime: totalTime,
+          passingCount: passingCount,
+          streak: currentStreak
         });
       }
       
-      console.log('✅ Results loaded:', studentResults.length);
+      setAttempts(history);
+      console.log('✅ History loaded:', history.length, 'attempts');
+      
     } catch (error) {
-      console.error('❌ Error loading student results:', error);
+      console.error('❌ Error loading student history:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculateStreak = (results) => {
-    if (results.length === 0) return 0;
-    
-    let streak = 0;
-    for (const result of results) {
-      const percentage = (result.score / (result.totalQuestions * 10)) * 100;
-      if (percentage >= 70) { // ถือว่าผ่านถ้าได้ 70% ขึ้นไป
-        streak++;
-      } else {
-        break;
-      }
-    }
-    return streak;
   };
 
   const handleBack = async () => {
@@ -77,41 +79,10 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
     onBack();
   };
 
-  const getGradeEmoji = (percentage) => {
-    if (percentage >= 90) return '🏆';
-    if (percentage >= 80) return '🥇';
-    if (percentage >= 70) return '🥈';
-    if (percentage >= 60) return '🥉';
-    return '📚';
-  };
-
-  const getGradeColor = (percentage) => {
-    if (percentage >= 90) return 'from-yellow-400 to-orange-400';
-    if (percentage >= 80) return 'from-green-400 to-emerald-400';
-    if (percentage >= 70) return 'from-blue-400 to-cyan-400';
-    if (percentage >= 60) return 'from-purple-400 to-pink-400';
-    return 'from-gray-400 to-gray-500';
-  };
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return t('noDate', currentLanguage);
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const locale = currentLanguage === 'th' ? 'th-TH' : 'en-US';
-    
-    return new Intl.DateTimeFormat(locale, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  const getScoreColor = (percentage) => {
+    if (percentage >= 80) return '#22c55e';
+    if (percentage >= 60) return '#eab308';
+    return '#ef4444';
   };
 
   if (loading) {
@@ -144,20 +115,11 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
         fontSize: '2.5rem',
         opacity: '0.2',
         animation: 'bounce 4s infinite'
-      }}>📊</div>
-      
-      <div style={{
-        position: 'absolute',
-        bottom: '10%',
-        left: '2%',
-        fontSize: '4rem',
-        opacity: '0.15',
-        animation: 'pulse 5s infinite 1s'
       }}>⭐</div>
 
       <div style={{
         padding: '20px',
-        maxWidth: '1400px',
+        maxWidth: '1200px',
         margin: '0 auto'
       }}>
         {/* Header */}
@@ -176,8 +138,7 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '20px',
-            marginBottom: '24px'
+            gap: '20px'
           }}>
             <div>
               <h1 style={{
@@ -194,11 +155,17 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
                   fontSize: '3rem',
                   animation: 'bounce 3s infinite'
                 }}>🏆</span>
-                {t('scoreHistory', currentLanguage)} {studentName}
+                {t('scoreHistory', currentLanguage)}
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
+              }}>
+                {studentName} - {studentSchool ? (currentLanguage === 'th' ? studentSchool.nameTh : studentSchool.nameEn || studentSchool.nameTh) : 'ทุกโรงเรียน'}
+              </p>
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '1rem'
               }}>
                 {t('viewProgressHistory', currentLanguage)} 📈
               </p>
@@ -220,12 +187,12 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
                 fontSize: '0.9rem'
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = 'white';
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
               }}
             >
               <ArrowLeft size={16} />
@@ -234,287 +201,228 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
           </div>
         </div>
 
-        {results.length === 0 ? (
-          // Empty State
+        {/* Stats Cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '20px',
+          marginBottom: '32px'
+        }}>
+          {/* Total Quizzes */}
           <div style={{
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(124, 58, 237, 0.3))',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             textAlign: 'center',
-            padding: '60px 20px',
+            animation: 'slideUp 0.8s ease-out 0.2s both'
+          }}>
+            <Trophy size={32} style={{ color: '#8b5cf6', marginBottom: '12px' }} />
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+              {stats.totalQuizzes}
+            </div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('quizzesDone', currentLanguage)}</div>
+          </div>
+
+          {/* Average Score */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.3))',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            textAlign: 'center',
+            animation: 'slideUp 0.8s ease-out 0.3s both'
+          }}>
+            <Target size={32} style={{ color: '#22c55e', marginBottom: '12px' }} />
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+              {stats.averageScore}%
+            </div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('averageScore', currentLanguage)}</div>
+          </div>
+
+          {/* Best Score */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3))',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            textAlign: 'center',
             animation: 'slideUp 0.8s ease-out 0.4s both'
           }}>
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '24px',
-              padding: '60px 40px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <div style={{ fontSize: '5rem', marginBottom: '24px' }}>📊</div>
-              <h3 style={{
-                fontSize: '2rem',
-                color: 'white',
-                marginBottom: '12px',
-                fontWeight: 'bold'
-              }}>
+            <Award size={32} style={{ color: '#fbbf24', marginBottom: '12px' }} />
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+              {stats.bestScore}%
+            </div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('bestScore', currentLanguage)}</div>
+          </div>
+
+          {/* Streak */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(219, 39, 119, 0.3))',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '20px',
+            padding: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            textAlign: 'center',
+            animation: 'slideUp 0.8s ease-out 0.5s both'
+          }}>
+            <Zap size={32} style={{ color: '#ec4899', marginBottom: '12px' }} />
+            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+              {stats.streak}
+            </div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('streakCount', currentLanguage)}</div>
+          </div>
+        </div>
+
+        {/* History List */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '24px',
+          padding: '32px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          animation: 'slideUp 0.8s ease-out 0.6s both'
+        }}>
+          <h2 style={{
+            color: 'white',
+            fontSize: '1.8rem',
+            fontWeight: 'bold',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            📋 {t('allQuizHistory', currentLanguage)}
+          </h2>
+
+          {attempts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📚</div>
+              <h3 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '10px' }}>
                 {t('noHistoryYet', currentLanguage)}
               </h3>
-              <p style={{
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: '1.2rem'
-              }}>
-                {t('tryQuizFirst', currentLanguage)} 🎯
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                {t('tryQuizFirst', currentLanguage)}
               </p>
             </div>
-          </div>
-        ) : (
-          <>
-            {/* Stats Cards */}
+          ) : (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '20px',
-              marginBottom: '32px',
-              animation: 'slideUp 0.8s ease-out 0.2s both'
+              gap: '16px'
             }}>
-              {/* Total Quizzes */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                textAlign: 'center'
-              }}>
-                <Trophy size={40} color="#60a5fa" style={{ marginBottom: '12px' }} />
-                <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
-                  {stats.totalQuizzes}
-                </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('quizzesDone', currentLanguage)}</p>
-              </div>
-
-              {/* Average Score */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                textAlign: 'center'
-              }}>
-                <Target size={40} color="#34d399" style={{ marginBottom: '12px' }} />
-                <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
-                  {stats.averageScore}%
-                </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('averageScore', currentLanguage)}</p>
-              </div>
-
-              {/* Best Score */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                textAlign: 'center'
-              }}>
-                <Award size={40} color="#fbbf24" style={{ marginBottom: '12px' }} />
-                <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
-                  {stats.bestScore}%
-                </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('bestScore', currentLanguage)}</p>
-              </div>
-
-              {/* Recent Streak */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(124, 58, 237, 0.3))',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                textAlign: 'center'
-              }}>
-                <TrendingUp size={40} color="#a78bfa" style={{ marginBottom: '12px' }} />
-                <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
-                  {stats.recentStreak}
-                </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('streakCount', currentLanguage)}</p>
-              </div>
-            </div>
-
-            {/* Results List */}
-            <div style={{
-              animation: 'slideUp 0.8s ease-out 0.4s both'
-            }}>
-              <h2 style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                color: 'white',
-                marginBottom: '20px',
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <BarChart size={24} />
-                {t('allQuizHistory', currentLanguage)}
-              </h2>
-
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px'
-              }}>
-                {results.map((result, index) => {
-                  const percentage = Math.round((result.score / (result.totalQuestions * 10)) * 100);
-                  const gradeEmoji = getGradeEmoji(percentage);
-                  const gradeColor = getGradeColor(percentage);
-                  
-                  return (
-                    <div
-                      key={result.id || index}
-                      style={{
-                        background: `linear-gradient(135deg, ${gradeColor.split(' ').map(c => c.replace('from-', 'rgba(').replace('to-', 'rgba(').replace('-400', ', 0.3)')).join(', ')})`,
-                        backdropFilter: 'blur(10px)',
-                        borderRadius: '20px',
-                        padding: '24px',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.2)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    >
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'auto 1fr auto',
-                        gap: '20px',
-                        alignItems: 'center'
-                      }}>
-                        {/* Grade & Quiz Info */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <div style={{
-                            fontSize: '3rem',
-                            animation: `bounce 3s infinite ${index * 0.2}s`
-                          }}>
-                            {gradeEmoji}
-                          </div>
-                          <div>
-                            <h3 style={{
-                              color: 'white',
-                              fontSize: '1.3rem',
-                              fontWeight: 'bold',
-                              margin: '0 0 4px 0'
-                            }}>
-                              {result.quizTitle}
-                            </h3>
-                            <p style={{
-                              color: 'rgba(255, 255, 255, 0.8)',
-                              margin: 0,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}>
-                              <Calendar size={14} />
-                              {formatDate(result.timestamp)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Score Info */}
+              {attempts.map((attempt, index) => {
+                const gradeInfo = getGradeInfo(attempt.percentage || 0);
+                
+                return (
+                  <div 
+                    key={attempt.id || index}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '16px',
+                      alignItems: 'center'
+                    }}>
+                      {/* Quiz Info */}
+                      <div>
                         <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-                          gap: '16px',
-                          textAlign: 'center'
+                          color: 'white',
+                          fontSize: '1.2rem',
+                          fontWeight: '600',
+                          marginBottom: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
                         }}>
-                          <div>
-                            <div style={{
-                              color: 'white',
-                              fontSize: '1.5rem',
-                              fontWeight: 'bold'
-                            }}>
-                              {result.score}
-                            </div>
-                            <div style={{
-                              color: 'rgba(255, 255, 255, 0.7)',
-                              fontSize: '0.9rem'
-                            }}>
-                              {t('score', currentLanguage)}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <div style={{
-                              color: 'white',
-                              fontSize: '1.5rem',
-                              fontWeight: 'bold'
-                            }}>
-                              {percentage}%
-                            </div>
-                            <div style={{
-                              color: 'rgba(255, 255, 255, 0.7)',
-                              fontSize: '0.9rem'
-                            }}>
-                              {t('percentage', currentLanguage)}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <div style={{
-                              color: 'white',
-                              fontSize: '1.2rem',
-                              fontWeight: 'bold',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}>
-                              <Clock size={16} />
-                              {formatTime(result.totalTime || 0)}
-                            </div>
-                            <div style={{
-                              color: 'rgba(255, 255, 255, 0.7)',
-                              fontSize: '0.9rem'
-                            }}>
-                              {t('timeUsed', currentLanguage)}
-                            </div>
-                          </div>
+                          {attempt.emoji || '📝'} {attempt.quizTitle}
                         </div>
-
-                        {/* Question Count */}
                         <div style={{
-                          textAlign: 'center',
-                          padding: '12px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          borderRadius: '12px'
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.9rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
                         }}>
-                          <div style={{
-                            color: 'white',
-                            fontSize: '1.2rem',
-                            fontWeight: 'bold'
-                          }}>
-                            {result.totalQuestions}
-                          </div>
-                          <div style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: '0.8rem'
-                          }}>
-                            {t('questions', currentLanguage)}
-                          </div>
+                          <Calendar size={14} />
+                          {formatDate(attempt.timestamp)}
+                        </div>
+                      </div>
+
+                      {/* Score */}
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          fontSize: '2rem',
+                          fontWeight: 'bold',
+                          color: gradeInfo.color,
+                          marginBottom: '4px'
+                        }}>
+                          {gradeInfo.emoji} {attempt.percentage || 0}%
+                        </div>
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.9rem'
+                        }}>
+                          {attempt.score}/{attempt.totalQuestions * 10} คะแนน
+                        </div>
+                      </div>
+
+                      {/* Time */}
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.9rem',
+                          marginBottom: '4px'
+                        }}>
+                          <Clock size={14} />
+                          เวลาที่ใช้
+                        </div>
+                        <div style={{ color: 'white', fontWeight: 'bold' }}>
+                          {Math.floor((attempt.totalTime || 0) / 60)}:{((attempt.totalTime || 0) % 60).toString().padStart(2, '0')}
+                        </div>
+                      </div>
+
+                      {/* Questions */}
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.9rem',
+                          marginBottom: '4px'
+                        }}>
+                          จำนวนข้อ
+                        </div>
+                        <div style={{ color: 'white', fontWeight: 'bold' }}>
+                          {attempt.selectedQuestionCount || attempt.totalQuestions} ข้อ
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {/* CSS Animations */}

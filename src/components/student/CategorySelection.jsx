@@ -1,6 +1,6 @@
 // src/components/student/CategorySelection.jsx
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, Brain, Calculator, Globe, Palette, Music2, Dumbbell, ChevronRight, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, Calculator, Globe, Palette, Music2, Dumbbell, ChevronRight, School } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
@@ -19,7 +19,7 @@ const categoryIcons = {
   'default': BookOpen
 };
 
-const CategorySelection = ({ studentName, onSelectCategory, onLogout, currentLanguage = 'th' }) => {
+const CategorySelection = ({ studentName, studentSchool, onSelectCategory, onLogout, currentLanguage = 'th' }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(false);
@@ -37,7 +37,7 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout, currentLan
 
   useEffect(() => {
     loadCategoriesWithQuizCount();
-  }, []);
+  }, [currentLanguage]);
 
   const loadCategoriesWithQuizCount = async () => {
     try {
@@ -111,32 +111,6 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout, currentLan
     }
     
     onLogout();
-  };
-
-  const toggleMusic = async () => {
-    await audioService.buttonClick();
-    
-    if (musicEnabled) {
-      musicService.stop();
-      setMusicEnabled(false);
-    } else {
-      const fileExists = await musicService.checkMusicFile();
-      
-      if (!fileExists) {
-        alert(`🎵 ไม่พบไฟล์เพลง!
-
-กรุณาทำดังนี้:
-1. เปลี่ยนชื่อไฟล์เพลงเป็น "quiz-music.mp3"
-2. วางไฟล์ในโฟลเดอร์ public/
-3. รีเฟรชหน้าใหม่`);
-        return;
-      }
-      
-      const success = await musicService.playMenuMusic();
-      if (success) {
-        setMusicEnabled(true);
-      }
-    }
   };
 
   // เพิ่มฟังก์ชันสำหรับอัพเดทสถานะเพลงแบบ real-time
@@ -232,6 +206,19 @@ const CategorySelection = ({ studentName, onSelectCategory, onLogout, currentLan
               }}>
                 {t('hello', currentLanguage)} {studentName}! {t('selectSubjectMessage', currentLanguage)} 🎯
               </p>
+              {studentSchool && (
+                <p style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '1rem',
+                  marginTop: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <School size={18} />
+                  {currentLanguage === 'th' ? studentSchool.nameTh : (studentSchool.nameEn || studentSchool.nameTh)}
+                </p>
+              )}
             </div>
             
             <div style={{

@@ -328,40 +328,6 @@ public/
               gap: '12px',
               alignItems: 'center'
             }}>
-              {/* Music Toggle Button */}
-              <button
-                onClick={toggleMusic}
-                style={{
-                  background: musicEnabled 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  if (!musicEnabled) {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  if (!musicEnabled) {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  }
-                }}
-                title={musicEnabled ? 'ปิดเสียงเพลง' : 'เปิดเสียงเพลง'}
-              >
-                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-              </button>
-
               <button
                 onClick={handleLogout}
                 style={{
@@ -516,6 +482,40 @@ public/
                 📂 จัดการหมวดหมู่
               </button>
             )}
+
+            {onManageSchools && (
+              <button
+                onClick={onManageSchools}
+                style={{
+                  background: 'linear-gradient(135deg, #ec4899, #db2777)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '16px',
+                  padding: '16px 24px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  fontSize: '1.1rem',
+                  boxShadow: '0 8px 20px rgba(236, 72, 153, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 12px 25px rgba(236, 72, 153, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(236, 72, 153, 0.3)';
+                }}
+              >
+                <Users size={20} />
+                🏫 จัดการโรงเรียน
+              </button>
+            )}
+
+            
           </div>
         </div>
 

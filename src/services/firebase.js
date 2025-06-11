@@ -237,12 +237,36 @@ class FirebaseService {
       console.log("📝 Using mock schools - Firebase not configured");
       return [
         {
-          id: "school-1",
-          nameTh: "โรงเรียนสาธิต",
-          nameEn: "Demonstration School",
+          id: "codelab-rama2",
+          nameTh: "CodeLab พระราม 2",
+          nameEn: "CodeLab Rama 2",
           province: "กรุงเทพมหานคร",
-          district: "เขตจตุจักร",
+          district: "บางขุนเทียน",
+          studentCount: 100,
+        },
+        {
+          id: "codelab-muangthong",
+          nameTh: "CodeLab เมืองทอง",
+          nameEn: "CodeLab Muang Thong",
+          province: "นนทบุรี",
+          district: "ปากเกร็ด",
+          studentCount: 150,
+        },
+        {
+          id: "dbs",
+          nameTh: "โรงเรียนนานาชาติ DBS",
+          nameEn: "DBS International School",
+          province: "กรุงเทพมหานคร",
+          district: "บางนา",
           studentCount: 500,
+        },
+        {
+          id: "shrewsbury",
+          nameTh: "โรงเรียนนานาชาติชรูสเบอรี",
+          nameEn: "Shrewsbury International School",
+          province: "กรุงเทพมหานคร",
+          district: "วัฒนา",
+          studentCount: 800,
         },
       ];
     }
@@ -344,7 +368,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ อัพเดท saveStudentAttempt เพื่อเก็บ schoolId
+  // ✅ อัพเดท saveStudentAttempt เพื่อเก็บข้อมูลโรงเรียน
   static async saveStudentAttempt(attemptData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("💾 Mock save student attempt:", attemptData);
@@ -357,7 +381,9 @@ class FirebaseService {
 
       const docRef = await addDoc(collection(db, "quiz_results"), {
         studentName: attemptData.studentName,
-        schoolId: attemptData.schoolId || null, // เพิ่ม schoolId
+        studentSchool: attemptData.studentSchool || null, // เก็บข้อมูลโรงเรียนแบบ object
+        schoolId: attemptData.studentSchool?.id || attemptData.schoolId || null, // เก็บ schoolId แยก
+        schoolName: attemptData.studentSchool?.nameTh || null, // เก็บชื่อโรงเรียนแยก
         quizTitle: attemptData.quizTitle,
         quizId: attemptData.quizId,
         score: attemptData.score,
@@ -371,6 +397,8 @@ class FirebaseService {
         originalTotalQuestions:
           attemptData.originalTotalQuestions || attemptData.totalQuestions,
         answers: attemptData.answers || [],
+        difficulty: attemptData.difficulty || null,
+        emoji: attemptData.emoji || null,
       });
 
       console.log("✅ Student attempt saved with ID:", docRef.id);
@@ -386,16 +414,23 @@ class FirebaseService {
   // ✅ ดึงผลคะแนนของนักเรียน (รองรับการกรองตามโรงเรียน)
   static async getStudentAttempts(studentName, schoolId = null) {
     try {
-      console.log("📊 Getting attempts for student:", studentName);
+      console.log(
+        "📊 Getting attempts for student:",
+        studentName,
+        "School:",
+        schoolId
+      );
 
       let q;
       if (schoolId) {
+        // ถ้าระบุโรงเรียน ให้ดึงเฉพาะของโรงเรียนนั้น
         q = query(
           collection(db, "quiz_results"),
           where("studentName", "==", studentName),
           where("schoolId", "==", schoolId)
         );
       } else {
+        // ถ้าไม่ระบุโรงเรียน ให้ดึงทั้งหมดของชื่อนี้
         q = query(
           collection(db, "quiz_results"),
           where("studentName", "==", studentName)
@@ -414,8 +449,12 @@ class FirebaseService {
 
       // เรียงลำดับใน client
       attempts.sort((a, b) => {
-        const timeA = a.timestamp?.toDate() || new Date(0);
-        const timeB = b.timestamp?.toDate() || new Date(0);
+        const timeA = a.timestamp?.toDate
+          ? a.timestamp.toDate()
+          : new Date(a.timestamp || 0);
+        const timeB = b.timestamp?.toDate
+          ? b.timestamp.toDate()
+          : new Date(b.timestamp || 0);
         return timeB - timeA;
       });
 
@@ -446,16 +485,24 @@ class FirebaseService {
       const attempts = [];
 
       querySnapshot.forEach((doc) => {
+        const data = doc.data();
         attempts.push({
           id: doc.id,
-          ...doc.data(),
+          ...data,
+          // เพิ่มการจัดการ school name สำหรับการแสดงผล
+          displaySchoolName:
+            data.schoolName || data.studentSchool?.nameTh || "-",
         });
       });
 
       // เรียงลำดับใน client
       attempts.sort((a, b) => {
-        const timeA = a.timestamp?.toDate() || new Date(0);
-        const timeB = b.timestamp?.toDate() || new Date(0);
+        const timeA = a.timestamp?.toDate
+          ? a.timestamp.toDate()
+          : new Date(a.timestamp || 0);
+        const timeB = b.timestamp?.toDate
+          ? b.timestamp.toDate()
+          : new Date(b.timestamp || 0);
         return timeB - timeA;
       });
 
@@ -467,7 +514,7 @@ class FirebaseService {
     }
   }
 
-  // เก็บไว้เพื่อ backward compatibility
+  // ✅ สำหรับ backward compatibility
   static async saveQuizResult(resultData) {
     console.log(
       "⚠️ saveQuizResult is deprecated, use saveStudentAttempt instead"
@@ -475,11 +522,11 @@ class FirebaseService {
     return this.saveStudentAttempt(resultData);
   }
 
-  static async getStudentResults(studentName) {
+  static async getStudentResults(studentName, schoolId = null) {
     console.log(
       "⚠️ getStudentResults is deprecated, use getStudentAttempts instead"
     );
-    return this.getStudentAttempts(studentName);
+    return this.getStudentAttempts(studentName, schoolId);
   }
 
   // ✅ Get all categories (สำหรับการจัดการ)
@@ -848,11 +895,86 @@ class FirebaseService {
       console.error("❌ Error initializing categories:", error);
     }
   }
+
+  // ✅ Initialize default schools in Firestore
+  static async initializeDefaultSchools() {
+    if (!isFirebaseConfigValid || !db) {
+      console.log("⚠️ Firebase not configured - cannot initialize schools");
+      return;
+    }
+
+    try {
+      console.log("🔄 Checking and initializing default schools...");
+
+      const defaultSchools = [
+        {
+          id: "codelab-rama2",
+          nameTh: "CodeLab พระราม 2",
+          nameEn: "CodeLab Rama 2",
+          province: "กรุงเทพมหานคร",
+          district: "บางขุนเทียน",
+          studentCount: 0,
+        },
+        {
+          id: "codelab-muangthong",
+          nameTh: "CodeLab เมืองทอง",
+          nameEn: "CodeLab Muang Thong",
+          province: "นนทบุรี",
+          district: "ปากเกร็ด",
+          studentCount: 0,
+        },
+        {
+          id: "dbs",
+          nameTh: "โรงเรียนนานาชาติ DBS",
+          nameEn: "DBS International School",
+          province: "กรุงเทพมหานคร",
+          district: "บางนา",
+          studentCount: 0,
+        },
+        {
+          id: "shrewsbury",
+          nameTh: "โรงเรียนนานาชาติชรูสเบอรี",
+          nameEn: "Shrewsbury International School",
+          province: "กรุงเทพมหานคร",
+          district: "วัฒนา",
+          studentCount: 0,
+        },
+      ];
+
+      let created = 0;
+
+      for (const school of defaultSchools) {
+        const docRef = doc(db, "schools", school.id);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          console.log(
+            `📝 Creating default school: ${school.nameTh} with ID: ${school.id}`
+          );
+          await setDoc(docRef, {
+            ...school,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          created++;
+        }
+      }
+
+      if (created > 0) {
+        console.log(`✅ Created ${created} default schools`);
+      } else {
+        console.log("✅ All default schools already exist");
+      }
+    } catch (error) {
+      console.error("❌ Error initializing schools:", error);
+    }
+  }
 }
 
-// Initialize default categories when the app starts
+// Initialize default categories and schools when the app starts
 if (isFirebaseConfigValid && db) {
   FirebaseService.initializeDefaultCategories().catch(console.error);
+  FirebaseService.initializeDefaultSchools().catch(console.error);
 }
 
 export default FirebaseService;

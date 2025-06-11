@@ -1,19 +1,53 @@
 // src/components/student/StudentLogin.jsx
-import React, { useState } from 'react';
-import { User, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, ArrowLeft, School, MapPin } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
+import FirebaseService from '../../services/firebase';
 import { saveToLocalStorage } from '../../utils/helpers';
 import { t } from '../../translations';
 
 const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
   const [name, setName] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [schools, setSchools] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingSchools, setLoadingSchools] = useState(true);
+
+  useEffect(() => {
+    loadSchools();
+  }, []);
+
+  const loadSchools = async () => {
+    try {
+      setLoadingSchools(true);
+      const schoolsData = await FirebaseService.getAllSchools();
+      setSchools(schoolsData);
+    } catch (error) {
+      console.error('Error loading schools:', error);
+      // ถ้าโหลดไม่ได้ ใช้ default schools
+      setSchools([
+        { id: 'codelab-rama2', nameTh: 'CodeLab พระราม 2', nameEn: 'CodeLab Rama 2' },
+        { id: 'codelab-muangthong', nameTh: 'CodeLab เมืองทอง', nameEn: 'CodeLab Muang Thong' },
+        { id: 'dbs', nameTh: 'โรงเรียนนานาชาติ DBS', nameEn: 'DBS International School' },
+        { id: 'shrewsbury', nameTh: 'โรงเรียนนานาชาติชรูสเบอรี', nameEn: 'Shrewsbury International School' }
+      ]);
+    } finally {
+      setLoadingSchools(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!name.trim()) {
       await audioService.wrongAnswer();
+      alert(currentLanguage === 'th' ? 'กรุณาใส่ชื่อเล่น' : 'Please enter your nickname');
+      return;
+    }
+
+    if (!selectedSchool) {
+      await audioService.wrongAnswer();
+      alert(currentLanguage === 'th' ? 'กรุณาเลือกโรงเรียน' : 'Please select your school');
       return;
     }
 
@@ -22,17 +56,18 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
     try {
       await audioService.achievement();
       
-      // Save name to localStorage
+      // Save name and school to localStorage
       saveToLocalStorage('studentName', name.trim());
+      saveToLocalStorage('studentSchool', selectedSchool);
       
       // Simulate loading delay for better UX
       setTimeout(() => {
-        onNameSubmit(name.trim());
+        onNameSubmit(name.trim(), selectedSchool);
         setIsLoading(false);
       }, 1000);
       
     } catch (error) {
-      console.error('Error during name submission:', error);
+      console.error('Error during submission:', error);
       setIsLoading(false);
     }
   };
@@ -92,7 +127,7 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
           backdropFilter: 'blur(10px)',
           borderRadius: '32px',
           padding: '48px',
-          maxWidth: '500px',
+          maxWidth: '600px',
           width: '100%',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -148,30 +183,40 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
               color: 'rgba(255, 255, 255, 0.8)',
               fontSize: '1.2rem'
             }}>
-              {t('enterNickname', currentLanguage)}
+              {t('enterInfoToStart', currentLanguage)}
             </p>
           </div>
           
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ marginBottom: '32px' }}>
+            {/* Name Input */}
             <div style={{
               position: 'relative',
-              marginBottom: '32px'
+              marginBottom: '24px'
             }}>
+              <label style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '1rem',
+                fontWeight: '600',
+                marginBottom: '8px',
+                display: 'block'
+              }}>
+                👤 {t('yourNickname', currentLanguage)}
+              </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={`✨ ${t('yourNickname', currentLanguage)}`}
+                placeholder={`✨ ${t('enterYourNickname', currentLanguage)}`}
                 disabled={isLoading}
                 style={{
                   width: '100%',
-                  padding: '20px 24px',
-                  paddingRight: '60px',
+                  padding: '16px 20px',
+                  paddingRight: '50px',
                   background: 'rgba(255, 255, 255, 0.2)',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '20px',
-                  fontSize: '1.1rem',
+                  borderRadius: '16px',
+                  fontSize: '1rem',
                   fontWeight: '500',
                   color: 'white',
                   outline: 'none',
@@ -187,58 +232,168 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
                   e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                   e.target.style.boxShadow = 'none';
                 }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && name.trim() && !isLoading) {
-                    handleSubmit(e);
-                  }
-                }}
               />
               
               <div style={{
                 position: 'absolute',
-                right: '20px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: '1.5rem',
+                right: '16px',
+                bottom: '14px',
+                fontSize: '1.3rem',
                 color: 'rgba(255, 255, 255, 0.5)',
                 pointerEvents: 'none'
               }}>
                 ✨
               </div>
             </div>
+
+            {/* School Selection */}
+            <div style={{
+              marginBottom: '32px'
+            }}>
+              <label style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '1rem',
+                fontWeight: '600',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <School size={20} />
+                {t('selectYourSchool', currentLanguage)}
+              </label>
+              
+              {loadingSchools ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}>
+                  {t('loadingSchools', currentLanguage)}...
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gap: '12px',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  padding: '4px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent'
+                }}>
+                  {schools.map((school) => (
+                    <button
+                      key={school.id}
+                      type="button"
+                      onClick={() => {
+                        audioService.buttonClick();
+                        setSelectedSchool(school);
+                      }}
+                      style={{
+                        background: selectedSchool?.id === school.id
+                          ? 'rgba(255, 255, 255, 0.3)'
+                          : 'rgba(255, 255, 255, 0.1)',
+                        border: selectedSchool?.id === school.id
+                          ? '2px solid rgba(255, 255, 255, 0.6)'
+                          : '2px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        textAlign: 'left',
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedSchool?.id !== school.id) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedSchool?.id !== school.id) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <div style={{
+                        fontSize: '1.5rem',
+                        flexShrink: 0
+                      }}>
+                        🏫
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          color: 'white',
+                          fontWeight: '600',
+                          fontSize: '1rem',
+                          marginBottom: '4px'
+                        }}>
+                          {currentLanguage === 'th' ? school.nameTh : (school.nameEn || school.nameTh)}
+                        </div>
+                        {school.province && (
+                          <div style={{
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <MapPin size={12} />
+                            {school.district ? `${school.district}, ${school.province}` : school.province}
+                          </div>
+                        )}
+                      </div>
+                      {selectedSchool?.id === school.id && (
+                        <div style={{
+                          fontSize: '1.2rem',
+                          flexShrink: 0
+                        }}>
+                          ✅
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             
             <button
               type="submit"
-              disabled={!name.trim() || isLoading}
+              disabled={!name.trim() || !selectedSchool || isLoading}
               style={{
                 width: '100%',
-                background: name.trim() && !isLoading
+                background: name.trim() && selectedSchool && !isLoading
                   ? 'linear-gradient(135deg, #ec4899, #be185d)'
                   : 'rgba(255, 255, 255, 0.1)',
-                color: name.trim() && !isLoading ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                color: name.trim() && selectedSchool && !isLoading ? 'white' : 'rgba(255, 255, 255, 0.5)',
                 border: 'none',
                 borderRadius: '20px',
                 padding: '20px 32px',
                 fontSize: '1.2rem',
                 fontWeight: 'bold',
-                cursor: name.trim() && !isLoading ? 'pointer' : 'not-allowed',
+                cursor: name.trim() && selectedSchool && !isLoading ? 'pointer' : 'not-allowed',
                 transition: 'all 0.3s ease',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
-                boxShadow: name.trim() && !isLoading 
+                boxShadow: name.trim() && selectedSchool && !isLoading 
                   ? '0 10px 25px rgba(236, 72, 153, 0.3)' 
                   : 'none'
               }}
               onMouseEnter={(e) => {
-                if (name.trim() && !isLoading) {
+                if (name.trim() && selectedSchool && !isLoading) {
                   e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
                   e.currentTarget.style.boxShadow = '0 15px 35px rgba(236, 72, 153, 0.4)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (name.trim() && !isLoading) {
+                if (name.trim() && selectedSchool && !isLoading) {
                   e.currentTarget.style.transform = 'translateY(0) scale(1)';
                   e.currentTarget.style.boxShadow = '0 10px 25px rgba(236, 72, 153, 0.3)';
                 }
@@ -359,6 +514,22 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
         
         input::placeholder {
           color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Custom scrollbar */
+        *::-webkit-scrollbar {
+          width: 8px;
+        }
+        *::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        *::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 10px;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
         }
       `}</style>
     </div>
