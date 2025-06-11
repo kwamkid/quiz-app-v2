@@ -1,4 +1,4 @@
-// src/components/admin/QuizEditor.jsx - รองรับ 2 ภาษา
+// src/components/admin/QuizEditor.jsx - ปรับปรุง UI และรองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Save, Upload, Globe } from 'lucide-react';
 import QuizImport from './QuizImport';
@@ -179,11 +179,11 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
     await audioService.wrongAnswer();
     
     if (quizData.questions.length <= 1) {
-      alert('❌ ต้องมีอย่างน้อย 1 คำถาม');
+      alert(t('mustHaveOneQuestion', currentLanguage));
       return;
     }
     
-    const confirmed = confirm('🗑️ คุณต้องการลบคำถามนี้หรือไม่?');
+    const confirmed = confirm(t('confirmDeleteQuestion', currentLanguage));
     if (confirmed) {
       setQuizData(prev => ({
         ...prev,
@@ -198,7 +198,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
       questions: importedQuestions
     }));
     setShowImportModal(false);
-    alert(`🎉 นำเข้าคำถามเรียบร้อยแล้ว! รวม ${importedQuestions.length} ข้อ`);
+    alert(`${t('importSuccess', currentLanguage)} ${importedQuestions.length} ${t('questions', currentLanguage)}`);
   };
 
   const handleSave = async () => {
@@ -258,7 +258,9 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
   };
 
   const emojiOptions = ['📚', '🧮', '🔬', '🌟', '🇬🇧', '🎯', '💡', '🎨'];
-  const difficultyOptions = ['ง่าย', 'ปานกลาง', 'ยาก'];
+  const difficultyOptions = currentLanguage === 'th' 
+    ? ['ง่าย', 'ปานกลาง', 'ยาก']
+    : ['Easy', 'Medium', 'Hard'];
 
   return (
     <div style={{
@@ -272,7 +274,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
     }}>
       <div style={{
         padding: '20px',
-        maxWidth: '1000px',
+        maxWidth: '1400px',
         margin: '0 auto'
       }}>
         {/* Header */}
@@ -280,8 +282,8 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
           background: 'rgba(255, 255, 255, 0.05)',
           backdropFilter: 'blur(10px)',
           borderRadius: '24px',
-          padding: '24px',
-          marginBottom: '24px',
+          padding: '32px',
+          marginBottom: '32px',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
         }}>
@@ -294,7 +296,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
             marginBottom: '24px'
           }}>
             <h1 style={{
-              fontSize: '2rem',
+              fontSize: '2.5rem',
               fontWeight: 'bold',
               color: 'white',
               display: 'flex',
@@ -310,7 +312,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 background: 'rgba(255, 255, 255, 0.1)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: 'rgba(255, 255, 255, 0.7)',
-                padding: '8px 16px',
+                padding: '12px 20px',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
@@ -320,12 +322,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 fontSize: '0.9rem'
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = 'white';
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
               }}
             >
               <ArrowLeft size={16} />
@@ -333,7 +335,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
             </button>
           </div>
           
-          {/* Import Button */}
+          {/* Import & Bilingual Toggle Buttons */}
           <div style={{
             display: 'flex',
             gap: '12px',
@@ -356,12 +358,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
               }}
             >
               <Upload size={16} />
@@ -390,7 +392,10 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
               }}
             >
               <Globe size={16} />
-              {showBilingualFields ? '🌐 2 ภาษา' : '🇹🇭 ภาษาเดียว'}
+              {showBilingualFields 
+                ? currentLanguage === 'th' ? '🌐 คำถาม 2 ภาษา' : '🌐 Bilingual Questions'
+                : currentLanguage === 'th' ? '🇹🇭 คำถามภาษาเดียว' : '🇹🇭 Single Language'
+              }
             </button>
           </div>
         </div>
@@ -410,7 +415,9 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
               fontSize: '1.1rem',
               fontWeight: 'bold',
               marginBottom: '12px'
-            }}>❌ กรุณาแก้ไขข้อผิดพลาดต่อไปนี้:</h3>
+            }}>
+              ❌ {t('pleaseFixErrors', currentLanguage)}
+            </h3>
             <ul style={{ color: '#fca5a5', paddingLeft: '20px' }}>
               {errors.map((error, index) => (
                 <li key={index} style={{ marginBottom: '4px' }}>{error}</li>
@@ -434,12 +441,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
             fontWeight: 'bold',
             marginBottom: '20px'
           }}>
-            📝 ข้อมูลพื้นฐานข้อสอบ
+            📝 {t('quizBasicInfo', currentLanguage)}
           </h2>
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
             gap: '20px'
           }}>
             {/* Quiz Title Thai */}
@@ -457,7 +464,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 type="text"
                 value={quizData.titleTh}
                 onChange={(e) => handleQuizInfoChange('titleTh', e.target.value)}
-                placeholder="เช่น คณิตศาสตร์ ป.6"
+                placeholder={currentLanguage === 'th' ? "เช่น คณิตศาสตร์ ป.6" : "e.g. Mathematics Grade 6"}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -513,7 +520,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 marginBottom: '8px',
                 display: 'block'
               }}>
-                อีโมจิ
+                {t('emoji', currentLanguage)}
               </label>
               <div style={{
                 display: 'grid',
@@ -588,7 +595,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 marginBottom: '8px',
                 display: 'block'
               }}>
-                หมวดหมู่วิชา <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>*</span>
+                {t('subjectCategory', currentLanguage)} <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>*</span>
               </label>
               <select
                 value={quizData.categoryId}
@@ -631,7 +638,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
             fontWeight: 'bold',
             marginBottom: '20px'
           }}>
-            🎯 คำถาม ({quizData.questions.length} ข้อ)
+            🎯 {t('questions', currentLanguage)} ({quizData.questions.length} {t('questions', currentLanguage).toLowerCase()})
           </h2>
 
           {quizData.questions.map((question, questionIndex) => (
@@ -702,7 +709,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                     <textarea
                       value={question.questionTh}
                       onChange={(e) => handleQuestionChange(questionIndex, 'questionTh', e.target.value)}
-                      placeholder="ใส่คำถามภาษาไทยที่นี่..."
+                      placeholder={currentLanguage === 'th' ? "ใส่คำถามภาษาไทยที่นี่..." : "Enter Thai question here..."}
                       rows={2}
                       style={{
                         width: '100%',
@@ -763,7 +770,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                   marginBottom: '12px',
                   display: 'block'
                 }}>
-                  ตัวเลือก (A และ B บังคับ, C และ D ไม่บังคับ)
+                  {t('optionsInfo', currentLanguage)}
                 </label>
                 
                 {['A', 'B', 'C', 'D'].map((letter, optionIndex) => (
@@ -793,7 +800,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                           type="text"
                           value={question.optionsTh[optionIndex]}
                           onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value, 'th')}
-                          placeholder={`ตัวเลือก ${letter} (ภาษาไทย)${optionIndex < 2 ? ' *' : ''}`}
+                          placeholder={`${t('option', currentLanguage)} ${letter} (${t('thai', currentLanguage)})${optionIndex < 2 ? ' *' : ''}`}
                           style={{
                             width: '100%',
                             padding: '10px 14px',
@@ -844,7 +851,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
               {/* Correct Answer and Points */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '16px'
               }}>
                 <div>
@@ -900,7 +907,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                     marginBottom: '6px',
                     display: 'block'
                   }}>
-                    คะแนน
+                    {t('points', currentLanguage)}
                   </label>
                   <input
                     type="number"
@@ -946,12 +953,12 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
                 boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                e.target.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(59, 130, 246, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
               }}
             >
               <Plus size={20} />
@@ -989,14 +996,14 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
             }}
             onMouseEnter={(e) => {
               if (!isLoading) {
-                e.target.style.transform = 'translateY(-3px) scale(1.05)';
-                e.target.style.boxShadow = '0 16px 40px rgba(16, 185, 129, 0.5)';
+                e.currentTarget.style.transform = 'translateY(-3px) scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 16px 40px rgba(16, 185, 129, 0.5)';
               }
             }}
             onMouseLeave={(e) => {
               if (!isLoading) {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.4)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.4)';
               }
             }}
           >
