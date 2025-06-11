@@ -1,6 +1,6 @@
 // src/components/student/StudentLogin.jsx
-import React, { useState, useEffect } from 'react';
-import { User, ArrowLeft, School, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, ArrowLeft, School, MapPin, Search, ChevronDown, Check } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { saveToLocalStorage } from '../../utils/helpers';
@@ -12,28 +12,73 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
   const [schools, setSchools] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingSchools, setLoadingSchools] = useState(true);
+  
+  // States for dropdown
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredSchools, setFilteredSchools] = useState([]);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     loadSchools();
   }, []);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter schools based on search
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredSchools(schools);
+    } else {
+      const filtered = schools.filter(school => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          school.nameTh?.toLowerCase().includes(searchLower) ||
+          school.nameEn?.toLowerCase().includes(searchLower) ||
+          school.province?.toLowerCase().includes(searchLower)
+        );
+      });
+      setFilteredSchools(filtered);
+    }
+  }, [searchTerm, schools]);
 
   const loadSchools = async () => {
     try {
       setLoadingSchools(true);
       const schoolsData = await FirebaseService.getAllSchools();
       setSchools(schoolsData);
+      setFilteredSchools(schoolsData);
     } catch (error) {
       console.error('Error loading schools:', error);
       // ถ้าโหลดไม่ได้ ใช้ default schools
-      setSchools([
-        { id: 'codelab-rama2', nameTh: 'CodeLab พระราม 2', nameEn: 'CodeLab Rama 2' },
-        { id: 'codelab-muangthong', nameTh: 'CodeLab เมืองทอง', nameEn: 'CodeLab Muang Thong' },
-        { id: 'dbs', nameTh: 'โรงเรียนนานาชาติ DBS', nameEn: 'DBS International School' },
-        { id: 'shrewsbury', nameTh: 'โรงเรียนนานาชาติชรูสเบอรี', nameEn: 'Shrewsbury International School' }
-      ]);
+      const defaultSchools = [
+        { id: 'codelab-rama2', nameTh: 'CodeLab พระราม 2', nameEn: 'CodeLab Rama 2', province: 'กรุงเทพมหานคร' },
+        { id: 'codelab-muangthong', nameTh: 'CodeLab เมืองทอง', nameEn: 'CodeLab Muang Thong', province: 'นนทบุรี' },
+        { id: 'dbs', nameTh: 'โรงเรียนนานาชาติ DBS', nameEn: 'DBS International School', province: 'กรุงเทพมหานคร' },
+        { id: 'shrewsbury', nameTh: 'โรงเรียนนานาชาติชรูสเบอรี', nameEn: 'Shrewsbury International School', province: 'กรุงเทพมหานคร' }
+      ];
+      setSchools(defaultSchools);
+      setFilteredSchools(defaultSchools);
     } finally {
       setLoadingSchools(false);
     }
+  };
+
+  const handleSelectSchool = (school) => {
+    audioService.buttonClick();
+    setSelectedSchool(school);
+    setSearchTerm('');
+    setShowDropdown(false);
   };
 
   const handleSubmit = async (e) => {
@@ -246,10 +291,11 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
               </div>
             </div>
 
-            {/* School Selection */}
+            {/* School Selection - Dropdown Style */}
             <div style={{
-              marginBottom: '32px'
-            }}>
+              marginBottom: '32px',
+              position: 'relative'
+            }} ref={dropdownRef}>
               <label style={{
                 color: 'rgba(255, 255, 255, 0.9)',
                 fontSize: '1rem',
@@ -267,98 +313,197 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
                 <div style={{
                   textAlign: 'center',
                   padding: '20px',
-                  color: 'rgba(255, 255, 255, 0.7)'
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px',
+                  border: '2px solid rgba(255, 255, 255, 0.2)'
                 }}>
                   {t('loadingSchools', currentLanguage)}...
                 </div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gap: '12px',
-                  maxHeight: '300px',
-                  overflowY: 'auto',
-                  padding: '4px',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgba(255, 255, 255, 0.3) transparent'
-                }}>
-                  {schools.map((school) => (
-                    <button
-                      key={school.id}
-                      type="button"
-                      onClick={() => {
-                        audioService.buttonClick();
-                        setSelectedSchool(school);
-                      }}
-                      style={{
-                        background: selectedSchool?.id === school.id
-                          ? 'rgba(255, 255, 255, 0.3)'
-                          : 'rgba(255, 255, 255, 0.1)',
-                        border: selectedSchool?.id === school.id
-                          ? '2px solid rgba(255, 255, 255, 0.6)'
-                          : '2px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '16px',
-                        padding: '16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        textAlign: 'left',
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedSchool?.id !== school.id) {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (selectedSchool?.id !== school.id) {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }
-                      }}
-                      disabled={isLoading}
-                    >
-                      <div style={{
-                        fontSize: '1.5rem',
-                        flexShrink: 0
-                      }}>
-                        🏫
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          color: 'white',
-                          fontWeight: '600',
+                <>
+                  {/* Selected School Display / Search Input */}
+                  <div style={{ position: 'relative' }}>
+                    {selectedSchool ? (
+                      // Show selected school
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDropdown(!showDropdown);
+                          setSearchTerm('');
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '16px 20px',
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          border: '2px solid rgba(255, 255, 255, 0.5)',
+                          borderRadius: '16px',
                           fontSize: '1rem',
-                          marginBottom: '4px'
-                        }}>
-                          {currentLanguage === 'th' ? school.nameTh : (school.nameEn || school.nameTh)}
-                        </div>
-                        {school.province && (
-                          <div style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: '0.85rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            <MapPin size={12} />
-                            {school.district ? `${school.district}, ${school.province}` : school.province}
+                          fontWeight: '500',
+                          color: 'white',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '12px',
+                          transition: 'all 0.3s ease',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                          <span style={{ fontSize: '1.2rem' }}>🏫</span>
+                          <div>
+                            <div style={{ fontWeight: '600' }}>
+                              {currentLanguage === 'th' ? selectedSchool.nameTh : (selectedSchool.nameEn || selectedSchool.nameTh)}
+                            </div>
+                            {selectedSchool.province && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                                📍 {selectedSchool.province}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      {selectedSchool?.id === school.id && (
+                        </div>
                         <div style={{
-                          fontSize: '1.2rem',
-                          flexShrink: 0
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
                         }}>
-                          ✅
+                          <Check size={18} color="#10b981" />
+                          <ChevronDown size={20} style={{
+                            transform: showDropdown ? 'rotate(180deg)' : 'rotate(0)',
+                            transition: 'transform 0.3s'
+                          }} />
+                        </div>
+                      </button>
+                    ) : (
+                      // Show search input
+                      <div style={{ position: 'relative' }}>
+                        <Search size={20} style={{
+                          position: 'absolute',
+                          left: '16px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: 'rgba(255, 255, 255, 0.5)'
+                        }} />
+                        <input
+                          type="text"
+                          placeholder={currentLanguage === 'th' ? "🔍 ค้นหาหรือเลือกโรงเรียน..." : "🔍 Search or select school..."}
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onFocus={() => setShowDropdown(true)}
+                          disabled={isLoading}
+                          style={{
+                            width: '100%',
+                            padding: '16px 20px 16px 48px',
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            border: '2px solid rgba(255, 255, 255, 0.3)',
+                            borderRadius: '16px',
+                            fontSize: '1rem',
+                            fontWeight: '500',
+                            color: 'white',
+                            outline: 'none',
+                            transition: 'all 0.3s ease',
+                            backdropFilter: 'blur(5px)',
+                            fontFamily: 'inherit'
+                          }}
+                          onFocusCapture={(e) => {
+                            e.target.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                            e.target.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.2)';
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        />
+                        <ChevronDown size={20} style={{
+                          position: 'absolute',
+                          right: '16px',
+                          top: '50%',
+                          transform: `translateY(-50%) ${showDropdown ? 'rotate(180deg)' : 'rotate(0)'}`,
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          transition: 'transform 0.3s',
+                          cursor: 'pointer'
+                        }} onClick={() => setShowDropdown(!showDropdown)} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dropdown List */}
+                  {showDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '8px',
+                      background: 'rgba(30, 30, 30, 0.98)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      maxHeight: '280px',
+                      overflowY: 'auto',
+                      zIndex: 10,
+                      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+                      animation: 'dropdownSlide 0.3s ease-out'
+                    }}>
+                      {filteredSchools.length > 0 ? (
+                        filteredSchools.map((school, index) => (
+                          <div
+                            key={school.id}
+                            onClick={() => handleSelectSchool(school)}
+                            style={{
+                              padding: '16px 20px',
+                              cursor: 'pointer',
+                              borderBottom: index < filteredSchools.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <span style={{ fontSize: '1.2rem' }}>🏫</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ 
+                                color: 'white', 
+                                fontWeight: '500',
+                                fontSize: '1rem'
+                              }}>
+                                {currentLanguage === 'th' ? school.nameTh : (school.nameEn || school.nameTh)}
+                              </div>
+                              {school.province && (
+                                <div style={{ 
+                                  color: 'rgba(255, 255, 255, 0.6)', 
+                                  fontSize: '0.85rem',
+                                  marginTop: '2px'
+                                }}>
+                                  📍 {school.province}
+                                </div>
+                              )}
+                            </div>
+                            {selectedSchool?.id === school.id && (
+                              <Check size={18} color="#10b981" />
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{
+                          padding: '24px',
+                          textAlign: 'center',
+                          color: 'rgba(255, 255, 255, 0.5)'
+                        }}>
+                          {currentLanguage === 'th' ? 'ไม่พบโรงเรียนที่ค้นหา' : 'No schools found'}
                         </div>
                       )}
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             
@@ -494,6 +639,17 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
           }
         }
         
+        @keyframes dropdownSlide {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
         @keyframes glow {
           from {
             box-shadow: 0 15px 30px rgba(251, 191, 36, 0.3);
@@ -516,19 +672,19 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
           color: rgba(255, 255, 255, 0.6);
         }
 
-        /* Custom scrollbar */
-        *::-webkit-scrollbar {
+        /* Custom scrollbar for dropdown */
+        div::-webkit-scrollbar {
           width: 8px;
         }
-        *::-webkit-scrollbar-track {
+        div::-webkit-scrollbar-track {
           background: rgba(255, 255, 255, 0.1);
           border-radius: 10px;
         }
-        *::-webkit-scrollbar-thumb {
+        div::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.3);
           border-radius: 10px;
         }
-        *::-webkit-scrollbar-thumb:hover {
+        div::-webkit-scrollbar-thumb:hover {
           background: rgba(255, 255, 255, 0.5);
         }
       `}</style>

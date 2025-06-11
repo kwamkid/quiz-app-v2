@@ -1,4 +1,4 @@
-// src/services/firebase.js - เพิ่มระบบจัดการโรงเรียนและรองรับ 2 ภาษา
+// src/services/firebase.js
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -66,7 +66,7 @@ console.log("🔥 Firebase initialized:", {
   authDomain: firebaseConfig.authDomain,
 });
 
-// Mock data สำหรับ development
+// Mock data for development
 const mockQuizzes = [
   {
     id: "mock-1",
@@ -103,7 +103,7 @@ const mockQuizzes = [
 ];
 
 class FirebaseService {
-  // ✅ Get all quizzes (รองรับ 2 ภาษา)
+  // Get all quizzes (supports 2 languages)
   static async getQuizzes(categoryId = null) {
     if (!isFirebaseConfigValid || !db) {
       console.log("📝 Using mock data - Firebase not configured");
@@ -131,7 +131,6 @@ class FirebaseService {
         quizzes.push({
           id: doc.id,
           ...data,
-          // รองรับทั้ง format เก่าและใหม่
           titleTh: data.titleTh || data.title,
           titleEn: data.titleEn || data.title,
         });
@@ -150,7 +149,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Get single quiz
+  // Get single quiz
   static async getQuiz(quizId) {
     try {
       console.log("🔍 Getting quiz:", quizId);
@@ -176,7 +175,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Create new quiz (รองรับ 2 ภาษา)
+  // Create new quiz (supports 2 languages)
   static async createQuiz(quizData) {
     try {
       console.log("➕ Creating quiz:", quizData.titleTh || quizData.title);
@@ -197,7 +196,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Update quiz (รองรับ 2 ภาษา)
+  // Update quiz (supports 2 languages)
   static async updateQuiz(quizId, quizData) {
     try {
       console.log("📝 Updating quiz:", quizId);
@@ -218,7 +217,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Delete quiz
+  // Delete quiz
   static async deleteQuiz(quizId) {
     try {
       console.log("🗑️ Deleting quiz:", quizId);
@@ -231,44 +230,11 @@ class FirebaseService {
     }
   }
 
-  // ✅ School Management Functions
+  // School Management Functions
   static async getAllSchools() {
     if (!isFirebaseConfigValid || !db) {
       console.log("📝 Using mock schools - Firebase not configured");
-      return [
-        {
-          id: "codelab-rama2",
-          nameTh: "CodeLab พระราม 2",
-          nameEn: "CodeLab Rama 2",
-          province: "กรุงเทพมหานคร",
-          district: "บางขุนเทียน",
-          studentCount: 100,
-        },
-        {
-          id: "codelab-muangthong",
-          nameTh: "CodeLab เมืองทอง",
-          nameEn: "CodeLab Muang Thong",
-          province: "นนทบุรี",
-          district: "ปากเกร็ด",
-          studentCount: 150,
-        },
-        {
-          id: "dbs",
-          nameTh: "โรงเรียนนานาชาติ DBS",
-          nameEn: "DBS International School",
-          province: "กรุงเทพมหานคร",
-          district: "บางนา",
-          studentCount: 500,
-        },
-        {
-          id: "shrewsbury",
-          nameTh: "โรงเรียนนานาชาติชรูสเบอรี",
-          nameEn: "Shrewsbury International School",
-          province: "กรุงเทพมหานคร",
-          district: "วัฒนา",
-          studentCount: 800,
-        },
-      ];
+      return [];
     }
 
     try {
@@ -302,7 +268,7 @@ class FirebaseService {
 
       const schoolId =
         schoolData.id ||
-        schoolData.nameTh.toLowerCase().replace(/[^a-z0-9ก-ฮ]/g, "");
+        schoolData.nameTh.toLowerCase().replace(/[^a-z0-9ก-ฮ\-]/g, "");
       const docRef = doc(db, "schools", schoolId);
 
       await setDoc(docRef, {
@@ -347,17 +313,6 @@ class FirebaseService {
     try {
       console.log("🗑️ Deleting school:", schoolId);
 
-      // ตรวจสอบว่ามีนักเรียนในโรงเรียนนี้หรือไม่
-      const q = query(
-        collection(db, "quiz_results"),
-        where("schoolId", "==", schoolId)
-      );
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        throw new Error("Cannot delete school with existing students");
-      }
-
       await deleteDoc(doc(db, "schools", schoolId));
 
       console.log("✅ School deleted successfully");
@@ -368,7 +323,78 @@ class FirebaseService {
     }
   }
 
-  // ✅ อัพเดท saveStudentAttempt เพื่อเก็บข้อมูลโรงเรียน
+  // Check if school has students
+  static async checkSchoolHasStudents(schoolId) {
+    try {
+      const q = query(
+        collection(db, "quiz_results"),
+        where("schoolId", "==", schoolId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error("❌ Error checking school students:", error);
+      return false;
+    }
+  }
+
+  // Transfer students to another school and delete the original school
+  static async transferStudentsAndDeleteSchool(fromSchoolId, toSchoolId) {
+    try {
+      console.log(
+        `🔄 Transferring students from ${fromSchoolId} to ${toSchoolId}`
+      );
+
+      // Get target school info
+      const toSchoolDoc = await getDoc(doc(db, "schools", toSchoolId));
+      if (!toSchoolDoc.exists()) {
+        throw new Error("Target school not found");
+      }
+      const toSchoolData = toSchoolDoc.data();
+
+      // Get all student records from the school to be deleted
+      const q = query(
+        collection(db, "quiz_results"),
+        where("schoolId", "==", fromSchoolId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      // Update each student record
+      const updatePromises = [];
+      querySnapshot.forEach((document) => {
+        const updatePromise = updateDoc(doc(db, "quiz_results", document.id), {
+          schoolId: toSchoolId,
+          schoolName: toSchoolData.nameTh,
+          studentSchool: {
+            id: toSchoolId,
+            nameTh: toSchoolData.nameTh,
+            nameEn: toSchoolData.nameEn || null,
+            province: toSchoolData.province || null,
+          },
+        });
+        updatePromises.push(updatePromise);
+      });
+
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
+      console.log(`✅ Transferred ${updatePromises.length} student records`);
+
+      // Delete the school
+      await deleteDoc(doc(db, "schools", fromSchoolId));
+      console.log("✅ School deleted successfully");
+
+      return true;
+    } catch (error) {
+      console.error(
+        "❌ Error transferring students and deleting school:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  // Save student attempt with school info
   static async saveStudentAttempt(attemptData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("💾 Mock save student attempt:", attemptData);
@@ -381,9 +407,9 @@ class FirebaseService {
 
       const docRef = await addDoc(collection(db, "quiz_results"), {
         studentName: attemptData.studentName,
-        studentSchool: attemptData.studentSchool || null, // เก็บข้อมูลโรงเรียนแบบ object
-        schoolId: attemptData.studentSchool?.id || attemptData.schoolId || null, // เก็บ schoolId แยก
-        schoolName: attemptData.studentSchool?.nameTh || null, // เก็บชื่อโรงเรียนแยก
+        studentSchool: attemptData.studentSchool || null,
+        schoolId: attemptData.studentSchool?.id || attemptData.schoolId || null,
+        schoolName: attemptData.studentSchool?.nameTh || null,
         quizTitle: attemptData.quizTitle,
         quizId: attemptData.quizId,
         score: attemptData.score,
@@ -411,7 +437,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ ดึงผลคะแนนของนักเรียน (รองรับการกรองตามโรงเรียน)
+  // Get student attempts (supports filtering by school)
   static async getStudentAttempts(studentName, schoolId = null) {
     try {
       console.log(
@@ -423,14 +449,12 @@ class FirebaseService {
 
       let q;
       if (schoolId) {
-        // ถ้าระบุโรงเรียน ให้ดึงเฉพาะของโรงเรียนนั้น
         q = query(
           collection(db, "quiz_results"),
           where("studentName", "==", studentName),
           where("schoolId", "==", schoolId)
         );
       } else {
-        // ถ้าไม่ระบุโรงเรียน ให้ดึงทั้งหมดของชื่อนี้
         q = query(
           collection(db, "quiz_results"),
           where("studentName", "==", studentName)
@@ -447,7 +471,6 @@ class FirebaseService {
         });
       });
 
-      // เรียงลำดับใน client
       attempts.sort((a, b) => {
         const timeA = a.timestamp?.toDate
           ? a.timestamp.toDate()
@@ -466,7 +489,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ ดึงผลคะแนนทั้งหมด (สำหรับครู - รองรับการกรองตามโรงเรียน)
+  // Get all student attempts (for teachers - supports filtering by school)
   static async getAllStudentAttempts(schoolId = null) {
     try {
       console.log("📊 Getting all student attempts...");
@@ -489,13 +512,11 @@ class FirebaseService {
         attempts.push({
           id: doc.id,
           ...data,
-          // เพิ่มการจัดการ school name สำหรับการแสดงผล
           displaySchoolName:
             data.schoolName || data.studentSchool?.nameTh || "-",
         });
       });
 
-      // เรียงลำดับใน client
       attempts.sort((a, b) => {
         const timeA = a.timestamp?.toDate
           ? a.timestamp.toDate()
@@ -514,7 +535,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ สำหรับ backward compatibility
+  // Backward compatibility
   static async saveQuizResult(resultData) {
     console.log(
       "⚠️ saveQuizResult is deprecated, use saveStudentAttempt instead"
@@ -529,7 +550,7 @@ class FirebaseService {
     return this.getStudentAttempts(studentName, schoolId);
   }
 
-  // ✅ Get all categories (สำหรับการจัดการ)
+  // Get all categories (for management)
   static async getAllCategories() {
     try {
       console.log("🔍 Getting all categories...");
@@ -561,7 +582,6 @@ class FirebaseService {
         return defaults;
       }
 
-      // นับจำนวนข้อสอบในแต่ละหมวด
       const quizSnapshot = await getDocs(collection(db, "quizzes"));
       const categoryCounts = {};
 
@@ -585,7 +605,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Get categories (สำหรับการแสดงผล)
+  // Get categories (for display)
   static async getCategories() {
     try {
       console.log("🔍 Getting categories...");
@@ -670,7 +690,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Create new category
+  // Create new category
   static async createCategory(categoryData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("⚠️ Firebase not configured - category creation skipped");
@@ -700,7 +720,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Update category
+  // Update category
   static async updateCategory(categoryId, categoryData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("⚠️ Firebase not configured - category update skipped");
@@ -785,7 +805,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Delete category
+  // Delete category
   static async deleteCategory(categoryId) {
     try {
       console.log("🗑️ Deleting category:", categoryId);
@@ -810,7 +830,32 @@ class FirebaseService {
     }
   }
 
-  // ✅ Helper: Get default categories
+  // Delete quiz result
+  static async deleteQuizResult(resultId) {
+    try {
+      console.log("🗑️ Deleting quiz result:", resultId);
+      await deleteDoc(doc(db, "quiz_results", resultId));
+      console.log("✅ Quiz result deleted successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error deleting quiz result:", error);
+      throw error;
+    }
+  }
+
+  // Update quiz result (for assigning school)
+  static async updateQuizResult(resultId, updateData) {
+    try {
+      console.log("📝 Updating quiz result:", resultId);
+      const docRef = doc(db, "quiz_results", resultId);
+      await updateDoc(docRef, updateData);
+      console.log("✅ Quiz result updated successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Error updating quiz result:", error);
+      throw error;
+    }
+  }
   static getDefaultCategories() {
     return [
       {
@@ -856,7 +901,7 @@ class FirebaseService {
     ];
   }
 
-  // ✅ Initialize default categories in Firestore
+  // Initialize default categories in Firestore
   static async initializeDefaultCategories() {
     if (!isFirebaseConfigValid || !db) {
       console.log("⚠️ Firebase not configured - cannot initialize categories");
@@ -895,86 +940,11 @@ class FirebaseService {
       console.error("❌ Error initializing categories:", error);
     }
   }
-
-  // ✅ Initialize default schools in Firestore
-  static async initializeDefaultSchools() {
-    if (!isFirebaseConfigValid || !db) {
-      console.log("⚠️ Firebase not configured - cannot initialize schools");
-      return;
-    }
-
-    try {
-      console.log("🔄 Checking and initializing default schools...");
-
-      const defaultSchools = [
-        {
-          id: "codelab-rama2",
-          nameTh: "CodeLab พระราม 2",
-          nameEn: "CodeLab Rama 2",
-          province: "กรุงเทพมหานคร",
-          district: "บางขุนเทียน",
-          studentCount: 0,
-        },
-        {
-          id: "codelab-muangthong",
-          nameTh: "CodeLab เมืองทอง",
-          nameEn: "CodeLab Muang Thong",
-          province: "นนทบุรี",
-          district: "ปากเกร็ด",
-          studentCount: 0,
-        },
-        {
-          id: "dbs",
-          nameTh: "โรงเรียนนานาชาติ DBS",
-          nameEn: "DBS International School",
-          province: "กรุงเทพมหานคร",
-          district: "บางนา",
-          studentCount: 0,
-        },
-        {
-          id: "shrewsbury",
-          nameTh: "โรงเรียนนานาชาติชรูสเบอรี",
-          nameEn: "Shrewsbury International School",
-          province: "กรุงเทพมหานคร",
-          district: "วัฒนา",
-          studentCount: 0,
-        },
-      ];
-
-      let created = 0;
-
-      for (const school of defaultSchools) {
-        const docRef = doc(db, "schools", school.id);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) {
-          console.log(
-            `📝 Creating default school: ${school.nameTh} with ID: ${school.id}`
-          );
-          await setDoc(docRef, {
-            ...school,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-          created++;
-        }
-      }
-
-      if (created > 0) {
-        console.log(`✅ Created ${created} default schools`);
-      } else {
-        console.log("✅ All default schools already exist");
-      }
-    } catch (error) {
-      console.error("❌ Error initializing schools:", error);
-    }
-  }
 }
 
-// Initialize default categories and schools when the app starts
+// Initialize default categories when the app starts
 if (isFirebaseConfigValid && db) {
   FirebaseService.initializeDefaultCategories().catch(console.error);
-  FirebaseService.initializeDefaultSchools().catch(console.error);
 }
 
 export default FirebaseService;

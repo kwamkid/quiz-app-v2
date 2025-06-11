@@ -8,8 +8,7 @@ import FirebaseService from '../../services/firebase';
 import { formatDate } from '../../utils/helpers';
 import QRCodeModal from './QRCodeModal';
 
-const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, onManageCategories, onBack, onLogout }) => {
-  const [quizzes, setQuizzes] = useState([]);
+const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, onManageCategories, onManageSchools, onBack, onLogout }) => {  const [quizzes, setQuizzes] = useState([]);
   const [filteredQuizzes, setFilteredQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -515,7 +514,7 @@ public/
               </button>
             )}
 
-            
+
           </div>
         </div>
 

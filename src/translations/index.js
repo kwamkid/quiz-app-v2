@@ -308,5 +308,18 @@ export const t = (key, language = "th", params = {}) => {
   return translation;
 };
 
+// Helper function to get localized field from an object
+export const getLocalizedField = (obj, fieldName, language = "th") => {
+  if (!obj) return "";
+
+  // Try to get the field in the requested language
+  const localizedFieldName = `${fieldName}${
+    language.charAt(0).toUpperCase() + language.slice(1)
+  }`;
+
+  // Return localized field if it exists, otherwise return the default field
+  return obj[localizedFieldName] || obj[fieldName] || "";
+};
+
 // Export translations object for direct access if needed
 export { translations };

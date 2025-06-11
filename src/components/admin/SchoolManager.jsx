@@ -1,40 +1,43 @@
-// src/components/admin/SchoolManager.jsx
+// src/components/admin/SchoolManager.jsx - ปรับให้เรียบง่ายขึ้น
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Edit, Trash2, Save, X, School, Users, MapPin } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, School, Search, Save, X } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
-import { t } from '../../translations';
 
-const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
+const SchoolManager = ({ onBack }) => {
   const [schools, setSchools] = useState([]);
+  const [filteredSchools, setFilteredSchools] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
   const [editingSchool, setEditingSchool] = useState(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newSchool, setNewSchool] = useState({
+  const [searchTerm, setSearchTerm] = useState('');
+  const [formData, setFormData] = useState({
     nameTh: '',
     nameEn: '',
-    province: '',
-    district: '',
-    studentCount: 0
+    province: ''
   });
-
-  // รายชื่อจังหวัดในประเทศไทย (ตัวอย่าง)
-  const provinces = [
-    'กรุงเทพมหานคร', 'นนทบุรี', 'ปทุมธานี', 'สมุทรปราการ', 'สมุทรสาคร', 'สมุทรสงคราม',
-    'นครปฐม', 'ราชบุรี', 'กาญจนบุรี', 'สุพรรณบุรี', 'เชียงใหม่', 'เชียงราย', 'ลำปาง',
-    'ภูเก็ต', 'สุราษฎร์ธานี', 'นครศรีธรรมราช', 'สงขลา', 'ขอนแก่น', 'อุดรธานี', 'นครราชสีมา'
-  ].sort();
+  
+  // State for transfer modal
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [schoolToDelete, setSchoolToDelete] = useState(null);
+  const [targetSchoolId, setTargetSchoolId] = useState('');
+  const [transferring, setTransferring] = useState(false);
 
   useEffect(() => {
     loadSchools();
   }, []);
+
+  useEffect(() => {
+    filterSchools();
+  }, [searchTerm, schools]);
 
   const loadSchools = async () => {
     try {
       setLoading(true);
       const schoolsData = await FirebaseService.getAllSchools();
       setSchools(schoolsData);
+      setFilteredSchools(schoolsData);
     } catch (error) {
       console.error('Error loading schools:', error);
     } finally {
@@ -42,92 +45,21 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
     }
   };
 
-  const handleAddSchool = async () => {
-    if (!newSchool.nameTh.trim()) {
-      await audioService.wrongAnswer();
-      alert(t('pleaseEnterSchoolName', currentLanguage));
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await audioService.correctAnswer();
-      
-      const schoolData = {
-        ...newSchool,
-        id: newSchool.nameTh.toLowerCase().replace(/[^a-z0-9ก-ฮ]/g, ''),
-        createdAt: new Date()
-      };
-
-      await FirebaseService.createSchool(schoolData);
-      
-      setShowAddForm(false);
-      setNewSchool({
-        nameTh: '',
-        nameEn: '',
-        province: '',
-        district: '',
-        studentCount: 0
-      });
-      
-      await loadSchools();
-      alert(t('saveSuccess', currentLanguage));
-    } catch (error) {
-      console.error('Error adding school:', error);
-      alert(t('errorOccurred', currentLanguage));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateSchool = async () => {
-    if (!editingSchool.nameTh.trim()) {
-      await audioService.wrongAnswer();
-      alert(t('pleaseEnterSchoolName', currentLanguage));
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await audioService.correctAnswer();
-      
-      await FirebaseService.updateSchool(editingSchool.id, {
-        nameTh: editingSchool.nameTh,
-        nameEn: editingSchool.nameEn,
-        province: editingSchool.province,
-        district: editingSchool.district,
-        studentCount: editingSchool.studentCount
-      });
-      
-      setEditingSchool(null);
-      await loadSchools();
-      alert(t('saveSuccess', currentLanguage));
-    } catch (error) {
-      console.error('Error updating school:', error);
-      alert(t('errorOccurred', currentLanguage));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteSchool = async (school) => {
-    const confirmMsg = t('confirmDelete', currentLanguage, { item: school.nameTh });
-    const confirmed = confirm(`🗑️ ${confirmMsg}`);
+  const filterSchools = () => {
+    let filtered = [...schools];
     
-    if (confirmed) {
-      try {
-        setLoading(true);
-        await audioService.wrongAnswer();
-        await FirebaseService.deleteSchool(school.id);
-        await loadSchools();
-        alert(t('deleteSuccess', currentLanguage));
-      } catch (error) {
-        console.error('Error deleting school:', error);
-        alert(t('errorOccurred', currentLanguage));
-      } finally {
-        setLoading(false);
-      }
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(school => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          school.nameTh?.toLowerCase().includes(searchLower) ||
+          school.nameEn?.toLowerCase().includes(searchLower) ||
+          school.province?.toLowerCase().includes(searchLower)
+        );
+      });
     }
+    
+    setFilteredSchools(filtered);
   };
 
   const handleBack = async () => {
@@ -135,16 +67,151 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
     onBack();
   };
 
+  const handleAddSchool = async () => {
+    await audioService.buttonClick();
+    setEditingSchool(null);
+    setFormData({
+      nameTh: '',
+      nameEn: '',
+      province: ''
+    });
+    setShowForm(true);
+  };
+
+  const handleEditSchool = async (school) => {
+    await audioService.buttonClick();
+    setEditingSchool(school);
+    setFormData({
+      nameTh: school.nameTh || '',
+      nameEn: school.nameEn || '',
+      province: school.province || ''
+    });
+    setShowForm(true);
+  };
+
+  const handleDeleteSchool = async (school) => {
+    await audioService.wrongAnswer();
+    
+    try {
+      const hasStudents = await FirebaseService.checkSchoolHasStudents(school.id);
+      
+      if (hasStudents) {
+        // ถ้ามีนักเรียน แสดง modal ให้เลือกโรงเรียนที่จะย้ายไป
+        const otherSchools = schools.filter(s => s.id !== school.id);
+        
+        if (otherSchools.length === 0) {
+          alert('❌ ไม่สามารถลบโรงเรียนนี้ได้ เนื่องจากมีนักเรียนอยู่และไม่มีโรงเรียนอื่นให้ย้าย');
+          return;
+        }
+        
+        setSchoolToDelete(school);
+        setTargetSchoolId('');
+        setShowTransferModal(true);
+        
+      } else {
+        // ถ้าไม่มีนักเรียน ลบได้เลย
+        const confirmed = confirm(`คุณต้องการลบ "${school.nameTh}" ใช่หรือไม่?`);
+        
+        if (confirmed) {
+          setLoading(true);
+          await FirebaseService.deleteSchool(school.id);
+          await audioService.correctAnswer();
+          alert('✅ ลบเรียบร้อยแล้ว');
+          await loadSchools();
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting school:', error);
+      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTransferAndDelete = async () => {
+    if (!targetSchoolId) {
+      alert('กรุณาเลือกโรงเรียนที่ต้องการย้ายนักเรียนไป');
+      return;
+    }
+    
+    setTransferring(true);
+    
+    try {
+      await FirebaseService.transferStudentsAndDeleteSchool(schoolToDelete.id, targetSchoolId);
+      await audioService.correctAnswer();
+      
+      const targetSchool = schools.find(s => s.id === targetSchoolId);
+      alert(`✅ ย้ายนักเรียนไปที่ ${targetSchool.nameTh} และลบโรงเรียนเรียบร้อยแล้ว`);
+      
+      setShowTransferModal(false);
+      setSchoolToDelete(null);
+      setTargetSchoolId('');
+      await loadSchools();
+      
+    } catch (error) {
+      console.error('Error transferring students:', error);
+      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  const handleSaveSchool = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.nameTh.trim()) {
+      alert('กรุณาใส่ชื่อโรงเรียน (ภาษาไทย)');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const schoolData = {
+        nameTh: formData.nameTh.trim(),
+        nameEn: formData.nameEn.trim() || null,
+        province: formData.province.trim() || null
+      };
+      
+      if (editingSchool) {
+        await FirebaseService.updateSchool(editingSchool.id, schoolData);
+      } else {
+        await FirebaseService.createSchool(schoolData);
+      }
+      
+      await audioService.correctAnswer();
+      alert('✅ บันทึกเรียบร้อยแล้ว');
+      setShowForm(false);
+      await loadSchools();
+      
+    } catch (error) {
+      console.error('Error saving school:', error);
+      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelForm = async () => {
+    await audioService.navigation();
+    setShowForm(false);
+    setEditingSchool(null);
+    setFormData({
+      nameTh: '',
+      nameEn: '',
+      province: ''
+    });
+  };
+
   if (loading) {
-    return <LoadingSpinner message={t('loading', currentLanguage)} />;
+    return <LoadingSpinner message="กำลังโหลด..." />;
   }
 
   return (
     <div style={{
       minHeight: '100vh',
       width: '100vw',
-      background: 'linear-gradient(135deg, #1f2937 0%, #4c1d95 50%, #7c2d12 100%)',
-      paddingTop: '60px', // เพิ่มที่ว่างสำหรับ GlobalHeader
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
       position: 'relative',
       overflow: 'auto',
       fontFamily: 'IBM Plex Sans Thai, Noto Sans Thai, sans-serif'
@@ -156,12 +223,12 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
       }}>
         {/* Header */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           borderRadius: '24px',
           padding: '32px',
           marginBottom: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
         }}>
           <div style={{
@@ -169,8 +236,7 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '20px',
-            marginBottom: '24px'
+            gap: '20px'
           }}>
             <div>
               <h1 style={{
@@ -183,14 +249,14 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
                 alignItems: 'center',
                 gap: '16px'
               }}>
-                <span style={{ fontSize: '3rem' }}>🏫</span>
-                {t('schoolManagement', currentLanguage)}
+                <School size={40} />
+                จัดการโรงเรียน
               </h1>
               <p style={{
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                {t('manageSchoolsDesc', currentLanguage)}
+                เพิ่ม แก้ไข หรือลบข้อมูลโรงเรียน
               </p>
             </div>
             
@@ -198,7 +264,7 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
               onClick={handleBack}
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
                 color: 'rgba(255, 255, 255, 0.7)',
                 padding: '12px 20px',
                 borderRadius: '12px',
@@ -209,513 +275,170 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
                 gap: '8px'
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = 'white';
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
               }}
             >
               <ArrowLeft size={16} />
-              {t('back', currentLanguage)}
+              กลับ
             </button>
           </div>
-          
-          {/* Add Button */}
-          {!showAddForm && (
-            <button
-              onClick={() => {
-                audioService.buttonClick();
-                setShowAddForm(true);
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '16px',
-                padding: '16px 24px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                fontSize: '1.1rem',
-                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                e.target.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0) scale(1)';
-                e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
-              }}
-            >
-              <Plus size={20} />
-              ✨ {t('addSchool', currentLanguage)}
-            </button>
-          )}
         </div>
 
-        {/* Add Form */}
-        {showAddForm && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '20px',
-            padding: '24px',
-            marginBottom: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <h2 style={{
+        {/* Actions Bar */}
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          marginBottom: '24px',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={handleAddSchool}
+            style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
               color: 'white',
-              fontSize: '1.5rem',
+              border: 'none',
+              borderRadius: '16px',
+              padding: '16px 24px',
               fontWeight: 'bold',
-              marginBottom: '20px'
-            }}>
-              ➕ {t('addSchool', currentLanguage)}
-            </h2>
-            
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '20px',
-              marginBottom: '24px'
-            }}>
-              {/* Thai Name */}
-              <div>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>
-                  {t('schoolNameTh', currentLanguage)} <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newSchool.nameTh}
-                  onChange={(e) => setNewSchool({...newSchool, nameTh: e.target.value})}
-                  placeholder="เช่น โรงเรียนสุขศึกษา"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
+            }}
+          >
+            <Plus size={20} />
+            เพิ่มโรงเรียน
+          </button>
 
-              {/* English Name */}
-              <div>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>
-                  {t('schoolNameEn', currentLanguage)}
-                </label>
-                <input
-                  type="text"
-                  value={newSchool.nameEn}
-                  onChange={(e) => setNewSchool({...newSchool, nameEn: e.target.value})}
-                  placeholder="e.g. Suksuksa School"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
-
-              {/* Province */}
-              <div>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>
-                  {t('province', currentLanguage)}
-                </label>
-                <select
-                  value={newSchool.province}
-                  onChange={(e) => setNewSchool({...newSchool, province: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit'
-                  }}
-                >
-                  <option value="" style={{ background: '#374151', color: 'white' }}>
-                    -- {t('selectProvince', currentLanguage)} --
-                  </option>
-                  {provinces.map((province) => (
-                    <option key={province} value={province} style={{ background: '#374151', color: 'white' }}>
-                      {province}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* District */}
-              <div>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>
-                  {t('district', currentLanguage)}
-                </label>
-                <input
-                  type="text"
-                  value={newSchool.district}
-                  onChange={(e) => setNewSchool({...newSchool, district: e.target.value})}
-                  placeholder="เช่น เมือง"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
-
-              {/* Student Count */}
-              <div>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  marginBottom: '8px',
-                  display: 'block'
-                }}>
-                  {t('studentCount', currentLanguage)}
-                </label>
-                <input
-                  type="number"
-                  value={newSchool.studentCount}
-                  onChange={(e) => setNewSchool({...newSchool, studentCount: parseInt(e.target.value) || 0})}
-                  placeholder="0"
-                  min="0"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleAddSchool}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '12px 24px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <Save size={16} />
-                {t('save', currentLanguage)}
-              </button>
-              
-              <button
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewSchool({
-                    nameTh: '',
-                    nameEn: '',
-                    province: '',
-                    district: '',
-                    studentCount: 0
-                  });
-                }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  borderRadius: '12px',
-                  padding: '12px 24px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('cancel', currentLanguage)}
-              </button>
-            </div>
+          <div style={{
+            position: 'relative',
+            flex: 1,
+            minWidth: '300px'
+          }}>
+            <Search size={20} style={{
+              position: 'absolute',
+              left: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'rgba(255, 255, 255, 0.5)'
+            }} />
+            <input
+              type="text"
+              placeholder="ค้นหาโรงเรียน..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '16px 16px 16px 48px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '16px',
+                color: 'white',
+                outline: 'none',
+                fontSize: '1rem'
+              }}
+            />
           </div>
-        )}
+        </div>
 
         {/* Schools List */}
-        <div style={{
-          display: 'grid',
-          gap: '16px'
-        }}>
-          {schools.map((school) => (
-            <div 
-              key={school.id} 
-              style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {editingSchool?.id === school.id ? (
-                // Edit Mode
-                <div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '16px',
-                    marginBottom: '20px'
-                  }}>
-                    <input
-                      type="text"
-                      value={editingSchool.nameTh}
-                      onChange={(e) => setEditingSchool({...editingSchool, nameTh: e.target.value})}
-                      placeholder={t('schoolNameTh', currentLanguage)}
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none'
-                      }}
-                    />
-                    
-                    <input
-                      type="text"
-                      value={editingSchool.nameEn}
-                      onChange={(e) => setEditingSchool({...editingSchool, nameEn: e.target.value})}
-                      placeholder={t('schoolNameEn', currentLanguage)}
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none'
-                      }}
-                    />
-
-                    <select
-                      value={editingSchool.province}
-                      onChange={(e) => setEditingSchool({...editingSchool, province: e.target.value})}
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <option value="" style={{ background: '#374151' }}>
-                        -- {t('selectProvince', currentLanguage)} --
-                      </option>
-                      {provinces.map((province) => (
-                        <option key={province} value={province} style={{ background: '#374151' }}>
-                          {province}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="text"
-                      value={editingSchool.district}
-                      onChange={(e) => setEditingSchool({...editingSchool, district: e.target.value})}
-                      placeholder={t('district', currentLanguage)}
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none'
-                      }}
-                    />
-
-                    <input
-                      type="number"
-                      value={editingSchool.studentCount}
-                      onChange={(e) => setEditingSchool({...editingSchool, studentCount: parseInt(e.target.value) || 0})}
-                      placeholder={t('studentCount', currentLanguage)}
-                      min="0"
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button
-                      onClick={handleUpdateSchool}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '10px',
-                        padding: '8px 16px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Save size={14} />
-                      {t('save', currentLanguage)}
-                    </button>
-                    
-                    <button
-                      onClick={() => setEditingSchool(null)}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        color: 'white',
-                        borderRadius: '10px',
-                        padding: '8px 16px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {t('cancel', currentLanguage)}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // Display Mode
+        {filteredSchools.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <School size={80} style={{ color: 'rgba(255, 255, 255, 0.5)', margin: '0 auto 24px' }} />
+            <h3 style={{
+              fontSize: '2rem',
+              color: 'white',
+              marginBottom: '12px'
+            }}>
+              {searchTerm ? 'ไม่พบโรงเรียนที่ค้นหา' : 'ยังไม่มีข้อมูลโรงเรียน'}
+            </h3>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: '1.2rem'
+            }}>
+              {searchTerm ? 'ลองค้นหาด้วยคำอื่น' : 'เริ่มเพิ่มโรงเรียนแรก!'}
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gap: '16px'
+          }}>
+            {filteredSchools.map((school) => (
+              <div
+                key={school.id}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '20px',
+                  padding: '24px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '16px'
                 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '20px',
-                    flex: 1
-                  }}>
-                    <div style={{ 
-                      fontSize: '3rem',
-                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3))',
-                      padding: '16px',
-                      borderRadius: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '80px',
-                      minHeight: '80px'
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{
+                      fontSize: '1.5rem',
+                      fontWeight: 'bold',
+                      color: 'white',
+                      marginBottom: '8px'
                     }}>
-                      🏫
-                    </div>
-                    <div>
-                      <h3 style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold',
-                        color: 'white',
+                      {school.nameTh}
+                    </h3>
+                    {school.nameEn && (
+                      <p style={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '1rem',
                         marginBottom: '8px'
                       }}>
-                        {currentLanguage === 'th' 
-                          ? school.nameTh 
-                          : (school.nameEn || school.nameTh)}
-                      </h3>
-                      {school.nameEn && currentLanguage === 'th' && (
-                        <p style={{
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          fontSize: '0.9rem',
-                          marginBottom: '8px'
-                        }}>
-                          {school.nameEn}
-                        </p>
-                      )}
-                      <div style={{
-                        display: 'flex',
-                        gap: '20px',
-                        flexWrap: 'wrap'
+                        {school.nameEn}
+                      </p>
+                    )}
+                    {school.province && (
+                      <p style={{
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        fontSize: '0.9rem'
                       }}>
-                        {(school.province || school.district) && (
-                          <p style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '0.9rem'
-                          }}>
-                            <MapPin size={14} />
-                            {[school.district, school.province].filter(Boolean).join(', ')}
-                          </p>
-                        )}
-                        <p style={{
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '0.9rem'
-                        }}>
-                          <Users size={14} />
-                          {school.studentCount || 0} {t('students', currentLanguage)}
-                        </p>
-                      </div>
-                    </div>
+                        📍 {school.province}
+                      </p>
+                    )}
                   </div>
                   
                   <div style={{
@@ -723,32 +446,28 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
                     gap: '12px'
                   }}>
                     <button
-                      onClick={() => {
-                        audioService.buttonClick();
-                        setEditingSchool(school);
-                      }}
+                      onClick={() => handleEditSchool(school)}
                       style={{
                         background: 'rgba(251, 191, 36, 0.2)',
                         border: '1px solid rgba(251, 191, 36, 0.3)',
                         color: '#fbbf24',
-                        padding: '10px 18px',
-                        borderRadius: '10px',
+                        padding: '10px 16px',
+                        borderRadius: '12px',
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: '500'
+                        gap: '6px'
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.background = 'rgba(251, 191, 36, 0.3)';
+                        e.currentTarget.style.background = 'rgba(251, 191, 36, 0.3)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.background = 'rgba(251, 191, 36, 0.2)';
+                        e.currentTarget.style.background = 'rgba(251, 191, 36, 0.2)';
                       }}
                     >
-                      <Edit size={14} />
-                      {t('edit', currentLanguage)}
+                      <Edit size={16} />
+                      แก้ไข
                     </button>
                     
                     <button
@@ -757,58 +476,389 @@ const SchoolManager = ({ onBack, currentLanguage = 'th' }) => {
                         background: 'rgba(239, 68, 68, 0.2)',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         color: '#ef4444',
-                        padding: '10px 18px',
-                        borderRadius: '10px',
+                        padding: '10px 16px',
+                        borderRadius: '12px',
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: '500'
+                        gap: '6px'
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
                       }}
                     >
-                      <Trash2 size={14} />
-                      {t('delete', currentLanguage)}
+                      <Trash2 size={16} />
+                      ลบ
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-        {schools.length === 0 && !showAddForm && (
+        {/* Add/Edit Form Modal */}
+        {showForm && (
           <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
           }}>
-            <div style={{ fontSize: '5rem', marginBottom: '24px' }}>🏫</div>
-            <h3 style={{
-              fontSize: '2rem',
-              color: 'white',
-              marginBottom: '12px',
-              fontWeight: 'bold'
+            <div style={{
+              background: 'linear-gradient(135deg, #1f2937, #374151)',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '600px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
             }}>
-              {t('noSchoolsYet', currentLanguage)}
-            </h3>
-            <p style={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '1.2rem'
+              <h2 style={{
+                fontSize: '1.8rem',
+                fontWeight: 'bold',
+                color: 'white',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <School size={28} />
+                {editingSchool ? 'แก้ไขโรงเรียน' : 'เพิ่มโรงเรียนใหม่'}
+              </h2>
+
+              <form onSubmit={handleSaveSchool}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '0.9rem',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    ชื่อโรงเรียน (ภาษาไทย) *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nameTh}
+                    onChange={(e) => setFormData({ ...formData, nameTh: e.target.value })}
+                    placeholder="เช่น โรงเรียนวัดดอนเมือง"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '12px',
+                      color: 'white',
+                      outline: 'none',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '0.9rem',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    ชื่อโรงเรียน (ภาษาอังกฤษ)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nameEn}
+                    onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                    placeholder="เช่น Wat Don Mueang School"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '12px',
+                      color: 'white',
+                      outline: 'none',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '32px' }}>
+                  <label style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '0.9rem',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    จังหวัด
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.province}
+                    onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                    placeholder="เช่น กรุงเทพมหานคร"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '12px',
+                      color: 'white',
+                      outline: 'none',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '16px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={handleCancelForm}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      padding: '14px 24px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      fontWeight: 'bold'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                  >
+                    <X size={20} />
+                    ยกเลิก
+                  </button>
+                  
+                  <button
+                    type="submit"
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '14px 24px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      fontWeight: 'bold',
+                      boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
+                    }}
+                  >
+                    <Save size={20} />
+                    บันทึก
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Transfer Modal */}
+        {showTransferModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #1f2937, #374151)',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
             }}>
-              {t('startAddingSchool', currentLanguage)}
-            </p>
+              <h2 style={{
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                color: 'white',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                ⚠️ ย้ายนักเรียนก่อนลบโรงเรียน
+              </h2>
+
+              <div style={{
+                background: 'rgba(251, 191, 36, 0.1)',
+                border: '1px solid rgba(251, 191, 36, 0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '24px'
+              }}>
+                <p style={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  margin: 0
+                }}>
+                  โรงเรียน <strong>"{schoolToDelete?.nameTh}"</strong> มีนักเรียนลงทะเบียนอยู่ 
+                  กรุณาเลือกโรงเรียนที่ต้องการย้ายนักเรียนไป
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: '0.9rem',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  เลือกโรงเรียนปลายทาง
+                </label>
+                <select
+                  value={targetSchoolId}
+                  onChange={(e) => setTargetSchoolId(e.target.value)}
+                  disabled={transferring}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '12px',
+                    color: 'white',
+                    outline: 'none',
+                    fontSize: '1rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="" style={{ background: '#374151', color: 'white' }}>
+                    -- เลือกโรงเรียน --
+                  </option>
+                  {schools.filter(s => s.id !== schoolToDelete?.id).map(school => (
+                    <option key={school.id} value={school.id} style={{ background: '#374151', color: 'white' }}>
+                      {school.nameTh} {school.province ? `(${school.province})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '16px'
+              }}>
+                <button
+                  onClick={() => {
+                    setShowTransferModal(false);
+                    setSchoolToDelete(null);
+                    setTargetSchoolId('');
+                  }}
+                  disabled={transferring}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    padding: '14px 24px',
+                    borderRadius: '12px',
+                    cursor: transferring ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontWeight: 'bold',
+                    opacity: transferring ? 0.5 : 1
+                  }}
+                >
+                  ยกเลิก
+                </button>
+                
+                <button
+                  onClick={handleTransferAndDelete}
+                  disabled={!targetSchoolId || transferring}
+                  style={{
+                    flex: 1,
+                    background: !targetSchoolId || transferring
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    border: 'none',
+                    color: 'white',
+                    padding: '14px 24px',
+                    borderRadius: '12px',
+                    cursor: !targetSchoolId || transferring ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontWeight: 'bold',
+                    opacity: !targetSchoolId || transferring ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {transferring ? (
+                    <>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }} />
+                      กำลังย้ายข้อมูล...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      ย้ายและลบ
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
