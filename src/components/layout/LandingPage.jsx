@@ -126,23 +126,26 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        padding: '80px 20px 20px 20px', // เพิ่ม padding-top เพื่อหลีก GlobalHeader
+        padding: '20px', // ลด padding ให้เท่ากันทุกด้าน
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
+        boxSizing: 'border-box'
       }}>
         <div style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           borderRadius: '32px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          padding: '40px 32px',
-          maxWidth: '500px',
-          width: '100%',
+          padding: '36px 28px',
+          maxWidth: '480px',
+          width: 'calc(100% - 40px)', // ลดความกว้างเพื่อให้มี space ข้าง
+          maxHeight: 'calc(100vh - 200px)', // เพิ่ม space บนล่างมากขึ้น
           textAlign: 'center',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           animation: 'slideUp 1s ease-out',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          margin: '20px auto 60px auto' // เพิ่ม margin bottom เป็น 60px
         }}>
           {/* Decorative corner elements */}
           <div style={{
@@ -163,11 +166,11 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
           </div>
 
           {/* Logo and Title */}
-          <div style={{ marginBottom: '30px' }}>
+          <div style={{ marginBottom: '24px' }}>
             {/* Logo with effects */}
             <div style={{
               position: 'relative',
-              marginBottom: '24px',
+              marginBottom: '20px',
               display: 'inline-block',
               animation: 'logoFloat 3s ease-in-out infinite'
             }}>
@@ -177,8 +180,8 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: '120px',
-                height: '120px',
+                width: '100px',
+                height: '100px',
                 background: 'linear-gradient(135deg, #ff6b6b, #ff5252)',
                 borderRadius: '50%',
                 boxShadow: '0 0 40px rgba(255, 82, 82, 0.5), 0 10px 30px rgba(255, 82, 82, 0.3)',
@@ -191,7 +194,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 alt="Quiz Quest Logo"
                 onLoad={() => setIsLogoLoaded(true)}
                 style={{
-                  width: '80px',
+                  width: '65px',
                   height: 'auto',
                   position: 'relative',
                   zIndex: 1,
@@ -206,37 +209,37 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
               <div style={{
                 position: 'absolute',
                 top: '-5px',
-                right: '15px',
+                right: '10px',
                 animation: 'sparkle 2s ease-in-out infinite'
               }}>
-                <Sparkles size={24} color="#fbbf24" />
+                <Sparkles size={20} color="#fbbf24" />
               </div>
               
               <div style={{
                 position: 'absolute',
-                bottom: '10px',
-                left: '5px',
+                bottom: '8px',
+                left: '3px',
                 animation: 'sparkle 2s ease-in-out infinite 0.5s'
               }}>
-                <Star size={20} color="#f59e0b" />
+                <Star size={16} color="#f59e0b" />
               </div>
 
               <div style={{
                 position: 'absolute',
-                top: '20px',
-                left: '-10px',
+                top: '15px',
+                left: '-8px',
                 animation: 'sparkle 2s ease-in-out infinite 1s'
               }}>
-                <Zap size={16} color="#fbbf24" />
+                <Zap size={14} color="#fbbf24" />
               </div>
             </div>
             
             {/* Tagline */}
             <p style={{
               color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: '1.3rem',
+              fontSize: '1.2rem',
               fontWeight: '500',
-              marginTop: '16px',
+              marginTop: '12px',
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
               animation: 'fadeInUp 1s ease-out 0.5s both'
             }}>
@@ -261,7 +264,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 border: 'none',
                 borderRadius: '20px',
                 padding: '16px 24px',
-                fontSize: '1.5rem',
+                fontSize: '1.1rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
@@ -319,7 +322,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
                 border: 'none',
                 borderRadius: '20px',
                 padding: '16px 24px',
-                fontSize: '1.5rem',
+                fontSize: '1.1rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
@@ -371,6 +374,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
           {/* Animated dots */}
           <div style={{
             marginTop: '24px',
+            marginBottom: '20px', // เพิ่ม margin bottom
             display: 'flex',
             justifyContent: 'center',
             gap: '12px',
