@@ -119,25 +119,6 @@ const AdminScores = ({ onBack }) => {
         setQuizzes(quizzesData);
         setSchools(schoolsData);
         
-        // Calculate stats
-        if (attempts.length > 0) {
-          // Unique students (ต้องดูทั้งชื่อและโรงเรียน)
-          const uniqueStudents = new Set(
-            attempts.map(attempt => `${attempt.studentName}_${attempt.schoolId || 'no-school'}`)
-          ).size;
-          
-          const totalScore = attempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
-          const averageScore = Math.round(totalScore / attempts.length);
-          const topScore = Math.max(...attempts.map(attempt => attempt.percentage || 0));
-          
-          setStats({
-            totalStudents: uniqueStudents,
-            totalAttempts: attempts.length,
-            averageScore,
-            topScore
-          });
-        }
-        
         console.log('✅ Admin scores loaded:', attempts.length, 'attempts,', quizzesData.length, 'quizzes,', schoolsData.length, 'schools');
       } catch (error) {
         console.error('❌ Error loading admin scores:', error);
@@ -159,6 +140,35 @@ const AdminScores = ({ onBack }) => {
   useEffect(() => {
     filterAttempts();
   }, [filterAttempts]);
+
+  // คำนวณ stats ตาม filtered data
+  useEffect(() => {
+    if (filteredAttempts.length > 0) {
+      // Unique students (ต้องดูทั้งชื่อและโรงเรียน)
+      const uniqueStudents = new Set(
+        filteredAttempts.map(attempt => `${attempt.studentName}_${attempt.schoolId || 'no-school'}`)
+      ).size;
+      
+      const totalScore = filteredAttempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
+      const averageScore = Math.round(totalScore / filteredAttempts.length);
+      const topScore = Math.max(...filteredAttempts.map(attempt => attempt.percentage || 0));
+      
+      setStats({
+        totalStudents: uniqueStudents,
+        totalAttempts: filteredAttempts.length,
+        averageScore,
+        topScore
+      });
+    } else {
+      // ถ้าไม่มีข้อมูลหลัง filter
+      setStats({
+        totalStudents: 0,
+        totalAttempts: 0,
+        averageScore: 0,
+        topScore: 0
+      });
+    }
+  }, [filteredAttempts]);
 
   const handleBack = async () => {
     await audioService.navigation();
