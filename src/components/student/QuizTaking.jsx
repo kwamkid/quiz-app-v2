@@ -24,6 +24,13 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
   const originalTotalQuestions = quiz.originalTotalQuestions || totalQuestions;
   const selectedQuestionCount = quiz.selectedQuestionCount || totalQuestions;
 
+  // Debug logs
+  console.log('🌐 QuizTaking - currentLanguage:', currentLanguage);
+  console.log('📝 Current quiz:', quiz);
+  if (questions[currentQuestionIndex]) {
+    console.log('📝 Current question:', questions[currentQuestionIndex]);
+  }
+
   // ตรวจสอบและเล่นเพลงต่อจากที่เล่นอยู่
   useEffect(() => {
     const initializeMusic = async () => {
@@ -385,8 +392,8 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
               lineHeight: '1.4'
             }}>
               {currentLanguage === 'th' 
-                ? (currentQuestion.questionTextTh || currentQuestion.question)
-                : (currentQuestion.questionTextEn || currentQuestion.question)}
+                ? (currentQuestion.questionTh || currentQuestion.question)
+                : (currentQuestion.questionEn || currentQuestion.question)}
             </h2>
           </div>
 
@@ -401,12 +408,16 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
             maxHeight: window.innerWidth < 768 ? 'calc(100vh - 380px)' : 'auto'
           }}>
             {currentQuestion.options.map((option, index) => {
-              // ตรวจสอบว่า option เป็น object หรือ string
-              const optionText = typeof option === 'object' 
-                ? (currentLanguage === 'th' 
-                    ? (option.textTh || option.text || option) 
-                    : (option.textEn || option.text || option))
-                : option;
+              // ตรวจสอบว่ามี optionsEn หรือไม่
+              let optionText;
+              if (currentLanguage === 'en' && currentQuestion.optionsEn && currentQuestion.optionsEn[index]) {
+                optionText = currentQuestion.optionsEn[index];
+              } else if (currentLanguage === 'th' && currentQuestion.options && currentQuestion.options[index]) {
+                optionText = currentQuestion.options[index];
+              } else {
+                // fallback
+                optionText = option;
+              }
                 
               if (optionText && optionText.toString().trim() !== "") {
                 let buttonStyle = {

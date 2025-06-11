@@ -11,7 +11,7 @@ const translations = {
     welcomeTitle: "Quiz Quest",
     welcomeSubtitle: "เกมทำข้อสอบสุดมันส์!",
     iAmStudent: "ฉันเป็นนักเรียน",
-    iAmTeacher: "ฉันเป็นครูคนดี",
+    iAmTeacher: "ฉันเป็นครู",
 
     // Student Login
     welcome: "ยินดีต้อนรับ!",
@@ -91,6 +91,16 @@ const translations = {
     bestScore: "คะแนนที่ดีที่สุด",
     streakCount: "ครั้งที่ผ่านติดต่อกัน",
     allQuizHistory: "ประวัติการทำข้อสอบทั้งหมด",
+
+    // Direct Quiz Access
+    quizNotFound: "ไม่พบข้อสอบ",
+    errorLoadingQuiz: "เกิดข้อผิดพลาดในการโหลดข้อสอบ",
+    noQuestionsAlert: "ข้อสอบนี้ยังไม่มีคำถาม กรุณาติดต่อครูเพื่อเพิ่มคำถาม",
+    difficulty: "ระดับ",
+    quizHasMany:
+      "ข้อสอบนี้มี {count} ข้อ คุณสามารถเลือกจำนวนข้อที่ต้องการทำได้",
+    selectAndStart: "เลือกจำนวนข้อและเริ่ม",
+    goToQuizList: "ไปหน้าเลือกข้อสอบอื่น",
 
     // Difficulty
     easy: "ง่าย",
@@ -188,6 +198,17 @@ const translations = {
     bestScore: "Best Score",
     streakCount: "Pass Streak",
     allQuizHistory: "All Quiz History",
+
+    // Direct Quiz Access
+    quizNotFound: "Quiz not found",
+    errorLoadingQuiz: "Error loading quiz",
+    noQuestionsAlert:
+      "This quiz has no questions yet. Please contact teacher to add questions",
+    difficulty: "Difficulty",
+    quizHasMany:
+      "This quiz has {count} questions. You can select how many to take",
+    selectAndStart: "Select amount and start",
+    goToQuizList: "Go to other quizzes",
 
     // Difficulty
     easy: "Easy",

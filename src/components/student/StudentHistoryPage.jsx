@@ -1,11 +1,12 @@
-// src/components/student/StudentHistoryPage.jsx - หน้าดูประวัติคะแนนจริง
+// src/components/student/StudentHistoryPage.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trophy, Star, Calendar, Clock, Target, Award, TrendingUp, BarChart } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import FirebaseService from '../../services/firebase';
 import audioService from '../../services/simpleAudio';
+import { t } from '../../translations';
 
-const StudentHistoryPage = ({ studentName, onBack }) => {
+const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -93,10 +94,12 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
   };
 
   const formatDate = (timestamp) => {
-    if (!timestamp) return 'ไม่ทราบวันที่';
+    if (!timestamp) return t('noDate', currentLanguage);
     
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return new Intl.DateTimeFormat('th-TH', {
+    const locale = currentLanguage === 'th' ? 'th-TH' : 'en-US';
+    
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -112,7 +115,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดประวัติคะแนน..." />;
+    return <LoadingSpinner message={t('loading', currentLanguage)} />;
   }
 
   return (
@@ -191,13 +194,13 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                   fontSize: '3rem',
                   animation: 'bounce 3s infinite'
                 }}>🏆</span>
-                ประวัติคะแนน {studentName}
+                {t('scoreHistory', currentLanguage)} {studentName}
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                ดูผลงานและความก้าวหน้าของคุณ 📈
+                {t('viewProgressHistory', currentLanguage)} 📈
               </p>
             </div>
             
@@ -226,7 +229,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
               }}
             >
               <ArrowLeft size={16} />
-              กลับ
+              {t('back', currentLanguage)}
             </button>
           </div>
         </div>
@@ -252,13 +255,13 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                 marginBottom: '12px',
                 fontWeight: 'bold'
               }}>
-                ยังไม่มีประวัติการทำข้อสอบ
+                {t('noHistoryYet', currentLanguage)}
               </h3>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.7)',
                 fontSize: '1.2rem'
               }}>
-                ลองทำข้อสอบสักข้อแล้วกลับมาดูกันนะ! 🎯
+                {t('tryQuizFirst', currentLanguage)} 🎯
               </p>
             </div>
           </div>
@@ -285,7 +288,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                 <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
                   {stats.totalQuizzes}
                 </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>ข้อสอบที่ทำ</p>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('quizzesDone', currentLanguage)}</p>
               </div>
 
               {/* Average Score */}
@@ -301,7 +304,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                 <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
                   {stats.averageScore}%
                 </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>คะแนนเฉลี่ย</p>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('averageScore', currentLanguage)}</p>
               </div>
 
               {/* Best Score */}
@@ -317,7 +320,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                 <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
                   {stats.bestScore}%
                 </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>คะแนนที่ดีที่สุด</p>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('bestScore', currentLanguage)}</p>
               </div>
 
               {/* Recent Streak */}
@@ -333,7 +336,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                 <h3 style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold', margin: '8px 0' }}>
                   {stats.recentStreak}
                 </h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>ครั้งที่ผ่านติดต่อกัน</p>
+                <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('streakCount', currentLanguage)}</p>
               </div>
             </div>
 
@@ -352,7 +355,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                 gap: '12px'
               }}>
                 <BarChart size={24} />
-                ประวัติการทำข้อสอบทั้งหมด
+                {t('allQuizHistory', currentLanguage)}
               </h2>
 
               <div style={{
@@ -441,7 +444,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                               color: 'rgba(255, 255, 255, 0.7)',
                               fontSize: '0.9rem'
                             }}>
-                              คะแนน
+                              {t('score', currentLanguage)}
                             </div>
                           </div>
                           
@@ -457,7 +460,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                               color: 'rgba(255, 255, 255, 0.7)',
                               fontSize: '0.9rem'
                             }}>
-                              เปอร์เซ็นต์
+                              {t('percentage', currentLanguage)}
                             </div>
                           </div>
                           
@@ -478,7 +481,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                               color: 'rgba(255, 255, 255, 0.7)',
                               fontSize: '0.9rem'
                             }}>
-                              เวลาที่ใช้
+                              {t('timeUsed', currentLanguage)}
                             </div>
                           </div>
                         </div>
@@ -501,7 +504,7 @@ const StudentHistoryPage = ({ studentName, onBack }) => {
                             color: 'rgba(255, 255, 255, 0.7)',
                             fontSize: '0.8rem'
                           }}>
-                            ข้อ
+                            {t('questions', currentLanguage)}
                           </div>
                         </div>
                       </div>

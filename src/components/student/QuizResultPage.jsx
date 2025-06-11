@@ -1,10 +1,11 @@
-// src/components/student/QuizResultPage.jsx
+// src/components/student/QuizResultPage.jsx - รองรับ 2 ภาษา
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Star, Trophy, Zap, Target } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
+import { t } from '../../translations';
 
-const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
+const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage = 'th' }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -44,27 +45,27 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
     const percentage = results.percentage || 0;
     
     if (percentage >= 90) return { 
-      message: "🏆 เยี่ยมมาก! คุณเก่งจริงๆ!", 
+      message: t('excellent', currentLanguage), 
       emoji: "🎉", 
       color: "text-yellow-300" 
     };
     if (percentage >= 80) return { 
-      message: "🌟 ดีมาก! เก่งแล้ว!", 
+      message: t('veryGood', currentLanguage), 
       emoji: "⭐", 
       color: "text-green-300" 
     };
     if (percentage >= 70) return { 
-      message: "👍 ดีแล้ว! พอใจ!", 
+      message: t('good', currentLanguage), 
       emoji: "😊", 
       color: "text-blue-300" 
     };
     if (percentage >= 60) return { 
-      message: "💪 ไม่เป็นไร ลองใหม่นะ!", 
+      message: t('keepTrying', currentLanguage), 
       emoji: "🤗", 
       color: "text-orange-300" 
     };
     return { 
-      message: "📚 อย่าท้อ! ฝึกเพิ่มเติมนะ", 
+      message: t('moreStudy', currentLanguage), 
       emoji: "💪", 
       color: "text-red-300" 
     };
@@ -134,7 +135,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
               marginBottom: '8px',
               textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
             }}>
-              เสร็จแล้ว!
+              {t('completed', currentLanguage)}
             </h1>
             <p style={{
               fontSize: '1.8rem',
@@ -164,25 +165,25 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
                 <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
                   {results.score}
                 </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>คะแนนที่ได้</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('scoreObtained', currentLanguage)}</div>
               </div>
               <div>
                 <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
                   {results.totalQuestions * 10}
                 </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>คะแนนเต็ม</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('fullScore', currentLanguage)}</div>
               </div>
               <div>
                 <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
                   {results.totalQuestions}
                 </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>จำนวนข้อ</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('totalQuestions', currentLanguage)}</div>
               </div>
               <div>
                 <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
                   {Math.floor(results.totalTime / 60)}:{(results.totalTime % 60).toString().padStart(2, '0')}
                 </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>เวลาที่ใช้</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('timeUsed', currentLanguage)}</div>
               </div>
             </div>
           </div>
@@ -207,7 +208,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
               📚 {results.quizTitle}
             </h3>
             <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-              โดย {results.studentName}
+              {t('by', currentLanguage)} {results.studentName}
             </p>
           </div>
 
@@ -217,7 +218,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
               marginBottom: '24px',
               color: 'rgba(255, 255, 255, 0.8)'
             }}>
-              กำลังบันทึกผลคะแนน...
+              {t('savingScore', currentLanguage)}
             </div>
           )}
           
@@ -227,7 +228,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
               color: '#10b981',
               fontWeight: 'bold'
             }}>
-              ✅ บันทึกผลคะแนนเรียบร้อย
+              ✅ {t('scoreSaved', currentLanguage)}
             </div>
           )}
 
@@ -265,7 +266,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
               }}
             >
               <ArrowLeft size={20} />
-              กลับหน้าหลัก
+              {t('backToHome', currentLanguage)}
             </button>
             
             <button
@@ -300,7 +301,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory }) => {
               }}
             >
               <Trophy size={20} />
-              ดูประวัติคะแนนทั้งหมด
+              {t('viewAllScores', currentLanguage)}
             </button>
           </div>
         </div>

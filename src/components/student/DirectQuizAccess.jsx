@@ -1,12 +1,13 @@
-// src/components/student/DirectQuizAccess.jsx
+// src/components/student/DirectQuizAccess.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
 import { Play, AlertCircle, Loader } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import QuizSelectionModal from './QuizSelectionModal';
 import FirebaseService from '../../services/firebase';
 import audioService from '../../services/simpleAudio';
+import { t } from '../../translations';
 
-const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
+const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLanguage = 'th' }) => {
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,11 +28,11 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
         setQuiz(quizData);
         console.log('✅ Quiz loaded:', quizData.title);
       } else {
-        throw new Error('ไม่พบข้อสอบที่ต้องการ');
+        throw new Error(t('quizNotFound', currentLanguage));
       }
     } catch (error) {
       console.error('❌ Error loading quiz:', error);
-      setError(error.message || 'เกิดข้อผิดพลาดในการโหลดข้อสอบ');
+      setError(error.message || t('errorLoadingQuiz', currentLanguage));
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
       }
     } else {
       await audioService.wrongAnswer();
-      alert('❌ ข้อสอบนี้ยังไม่มีคำถาม กรุณาติดต่อครูเพื่อเพิ่มคำถาม');
+      alert(t('noQuestionsAlert', currentLanguage));
     }
   };
 
@@ -80,7 +81,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อสอบ..." />;
+    return <LoadingSpinner message={t('loading', currentLanguage)} />;
   }
 
   if (error) {
@@ -118,7 +119,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
             color: 'white',
             marginBottom: '16px'
           }}>
-            ไม่พบข้อสอบ
+            {t('quizNotFound', currentLanguage)}
           </h2>
           
           <div style={{
@@ -164,12 +165,17 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
               e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
             }}
           >
-            🏠 ไปหน้าหลัก
+            🏠 {t('backToHome', currentLanguage)}
           </button>
         </div>
       </div>
     );
   }
+
+  // แสดงชื่อข้อสอบตามภาษา
+  const quizTitle = currentLanguage === 'th' 
+    ? (quiz.title || quiz.titleTh)
+    : (quiz.titleEn || quiz.title);
 
   return (
     <div style={{
@@ -234,7 +240,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
             marginBottom: '16px',
             textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
           }}>
-            {quiz.title}
+            {quizTitle}
           </h1>
           
           <p style={{
@@ -242,7 +248,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
             color: 'rgba(255, 255, 255, 0.9)',
             marginBottom: '32px'
           }}>
-            👋 สวัสดี {studentName}!
+            👋 {t('hello', currentLanguage)} {studentName}!
           </p>
 
           {/* Quiz Info */}
@@ -272,7 +278,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
                   color: 'rgba(255, 255, 255, 0.8)',
                   fontSize: '1rem'
                 }}>
-                  คำถาม
+                  {t('questions', currentLanguage)}
                 </div>
               </div>
               
@@ -289,7 +295,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
                   color: 'rgba(255, 255, 255, 0.8)',
                   fontSize: '1rem'
                 }}>
-                  คะแนนเต็ม
+                  {t('fullScore', currentLanguage)}
                 </div>
               </div>
               
@@ -300,13 +306,13 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
                   color: 'white',
                   marginBottom: '8px'
                 }}>
-                  {quiz.difficulty}
+                  {t(quiz.difficulty?.toLowerCase() || 'easy', currentLanguage)}
                 </div>
                 <div style={{
                   color: 'rgba(255, 255, 255, 0.8)',
                   fontSize: '1rem'
                 }}>
-                  ระดับ
+                  {t('difficulty', currentLanguage)}
                 </div>
               </div>
             </div>
@@ -326,7 +332,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
                 margin: 0,
                 fontSize: '1rem'
               }}>
-                💡 ข้อสอบนี้มี {quiz.questions.length} ข้อ คุณสามารถเลือกจำนวนข้อที่ต้องการทำได้
+                💡 {t('quizHasMany', currentLanguage).replace('{count}', quiz.questions.length)}
               </p>
             </div>
           )}
@@ -370,7 +376,9 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
             }}
           >
             <Play size={24} />
-            {quiz.questions?.length > 20 ? 'เลือกจำนวนข้อและเริ่ม' : '🚀 เริ่มทำข้อสอบ'}
+            {quiz.questions?.length > 20 
+              ? t('selectAndStart', currentLanguage) 
+              : `🚀 ${t('startQuiz', currentLanguage)}`}
           </button>
 
           {/* Alternative Actions */}
@@ -401,7 +409,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
                 e.currentTarget.style.background = 'transparent';
               }}
             >
-              ไปหน้าเลือกข้อสอบอื่น
+              {t('goToQuizList', currentLanguage)}
             </button>
           </div>
         </div>
@@ -414,6 +422,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError }) => {
         allQuizzes={quiz ? [quiz] : []}
         onClose={() => setShowQuizModal(false)}
         onStart={handleStartQuiz}
+        currentLanguage={currentLanguage}
       />
 
       {/* CSS Animations */}
