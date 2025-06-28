@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Play, AlertCircle } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import { t } from '../../translations';
+import { QUIZ_SETTINGS } from '../../constants'; // เพิ่ม import
 
 const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, currentLanguage = 'th' }) => {
   const [selectedQuestionCount, setSelectedQuestionCount] = useState(20);
@@ -59,18 +60,27 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, curren
     const totalQuestions = quiz.questions.length;
     const options = [];
     
-    // ถ้ามีคำถามน้อยกว่า 20 ข้อ ให้ทำหมดเลย
-    if (totalQuestions < 20) {
+    // กำหนดตัวเลือกจำนวนข้อที่ต้องการ
+    const availableOptions = [8, 20, 50, 80];
+    
+    // หาตัวเลือกที่น้อยที่สุด
+    const minOption = Math.min(...availableOptions);
+    
+    // ถ้ามีคำถามน้อยกว่าตัวเลือกที่น้อยที่สุด ให้ทำหมดเลย
+    if (totalQuestions < minOption) {
       options.push(totalQuestions);
     } else {
-      // ถ้ามี 20 ข้อขึ้นไป ให้เลือกได้ 20, 30, 40, 50
-      const fixedOptions = [20, 30, 40, 50];
-      
-      fixedOptions.forEach(option => {
+      // กรองเฉพาะตัวเลือกที่น้อยกว่าหรือเท่ากับจำนวนข้อทั้งหมด
+      availableOptions.forEach(option => {
         if (option <= totalQuestions) {
           options.push(option);
         }
       });
+      
+      // ถ้าจำนวนข้อทั้งหมดไม่ตรงกับตัวเลือกใดเลย ให้เพิ่มจำนวนทั้งหมดเข้าไป
+      if (!options.includes(totalQuestions)) {
+        options.push(totalQuestions);
+      }
     }
     
     return options;
@@ -367,7 +377,7 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, curren
           }}>
             🎯 {t('fullScore', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * 10}</strong> {t('score', currentLanguage)}
             <br />
-            ⏱️ {t('timeEstimate', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * 30}</strong> {t('seconds', currentLanguage)}
+            ⏱️ {t('timeEstimate', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * QUIZ_SETTINGS.MINUTES_PER_QUESTION}</strong> {currentLanguage === 'th' ? 'นาที' : 'minutes'}
             {totalQuestions >= 20 && (
               <>
                 <br />
@@ -376,6 +386,28 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, curren
             )}
           </p>
         </div>
+
+        {/* Notice - แสดงเมื่อมีข้อน้อยกว่า 8 ข้อ หรือมีมากกว่า 80 ข้อ */}
+        {(totalQuestions < 8 || totalQuestions > 80) && (
+          <div style={{
+            background: 'rgba(251, 191, 36, 0.2)',
+            borderRadius: '16px',
+            padding: '16px',
+            marginBottom: '24px',
+            border: '1px solid rgba(251, 191, 36, 0.3)'
+          }}>
+            <p style={{
+              color: '#fde68a',
+              margin: 0,
+              fontSize: '1rem'
+            }}>
+              {totalQuestions < 8 
+                ? `💡 ข้อสอบนี้มีเพียง ${totalQuestions} ข้อ จึงต้องทำทั้งหมด`
+                : `💡 ${t('quizHasMany', currentLanguage).replace('{count}', totalQuestions)}`
+              }
+            </p>
+          </div>
+        )}
       </div>
 
       {/* CSS Animations */}

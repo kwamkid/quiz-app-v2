@@ -1,12 +1,15 @@
 // src/components/student/StudentLogin.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, ArrowLeft, School, MapPin, Search, ChevronDown, Check } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { saveToLocalStorage } from '../../utils/helpers';
 import { t } from '../../translations';
 
-const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
+const StudentLogin = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [name, setName] = useState('');
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [schools, setSchools] = useState([]);
@@ -105,9 +108,17 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
       saveToLocalStorage('studentName', name.trim());
       saveToLocalStorage('studentSchool', selectedSchool);
       
+      // Check if there's a quiz ID in the URL
+      const urlParams = new URLSearchParams(location.search);
+      const quizId = urlParams.get('quiz');
+      
       // Simulate loading delay for better UX
       setTimeout(() => {
-        onNameSubmit(name.trim(), selectedSchool);
+        if (quizId) {
+          navigate(`/quiz/direct/${quizId}`);
+        } else {
+          navigate('/student/categories');
+        }
         setIsLoading(false);
       }, 1000);
       
@@ -119,7 +130,7 @@ const StudentLogin = ({ onNameSubmit, onBack, currentLanguage = 'th' }) => {
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate('/');
   };
 
   return (

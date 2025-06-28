@@ -1,18 +1,33 @@
 // src/components/student/QuizResultPage.jsx - รองรับ 2 ภาษา
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Trophy, Zap, Target } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { t } from '../../translations';
 
-const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage = 'th' }) => {
+const QuizResultPage = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  
+  // รับ results จาก location.state
+  const results = location.state?.results;
+
+  // ถ้าไม่มี results ให้กลับไปหน้า categories
+  useEffect(() => {
+    if (!results) {
+      navigate('/student/categories');
+    }
+  }, [results, navigate]);
 
   useEffect(() => {
-    playSound('success');
-    saveResults();
-  }, []);
+    if (results) {
+      playSound('success');
+      saveResults();
+    }
+  }, [results]);
 
   const playSound = async (type) => {
     try {
@@ -42,7 +57,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage 
   };
 
   const getScoreMessage = () => {
-    const percentage = results.percentage || 0;
+    const percentage = results?.percentage || 0;
     
     if (percentage >= 90) return { 
       message: t('excellent', currentLanguage), 
@@ -70,6 +85,20 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage 
       color: "text-red-300" 
     };
   };
+
+  const handleBackToHome = async () => {
+    await audioService.buttonClick();
+    navigate('/student/quizzes');
+  };
+
+  const handleViewHistory = async () => {
+    await audioService.buttonClick();
+    navigate('/student/history');
+  };
+
+  if (!results) {
+    return null;
+  }
 
   const scoreInfo = getScoreMessage();
   
@@ -210,6 +239,13 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage 
             <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
               {t('by', currentLanguage)} {results.studentName}
             </p>
+            {results.studentSchool && (
+              <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', marginTop: '4px' }}>
+                🏫 {currentLanguage === 'th' 
+                  ? results.studentSchool.nameTh 
+                  : (results.studentSchool.nameEn || results.studentSchool.nameTh)}
+              </p>
+            )}
           </div>
 
           {/* Save Status */}
@@ -235,10 +271,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage 
           {/* Action Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <button
-              onClick={async () => {
-                await audioService.buttonClick();
-                onBackToHome();
-              }}
+              onClick={handleBackToHome}
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
@@ -270,10 +303,7 @@ const QuizResultPage = ({ results, onBackToHome, onViewHistory, currentLanguage 
             </button>
             
             <button
-              onClick={async () => {
-                await audioService.buttonClick();
-                onViewHistory();
-              }}
+              onClick={handleViewHistory}
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',

@@ -1,17 +1,25 @@
 // src/components/student/DirectQuizAccess.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Play, AlertCircle, Loader } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import QuizSelectionModal from './QuizSelectionModal';
 import FirebaseService from '../../services/firebase';
 import audioService from '../../services/simpleAudio';
 import { t } from '../../translations';
+import { getFromLocalStorage } from '../../utils/helpers';
+import { QUIZ_SETTINGS } from '../../constants'; // เพิ่ม import
 
-const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLanguage = 'th' }) => {
+const DirectQuizAccess = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
+  const { quizId } = useParams();
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
+
+  // ดึงข้อมูลจาก localStorage
+  const studentName = getFromLocalStorage('studentName') || '';
 
   useEffect(() => {
     loadQuiz();
@@ -54,7 +62,11 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLa
       };
       
       setShowQuizModal(false);
-      onStartQuiz(quizWithSelectedQuestions);
+      
+      // Save quiz data to sessionStorage for QuizTaking to use
+      sessionStorage.setItem('currentQuiz', JSON.stringify(quizWithSelectedQuestions));
+      
+      navigate(`/student/quiz/${quiz.id}/take`);
     }
   };
 
@@ -77,7 +89,7 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLa
 
   const handleGoToHome = async () => {
     await audioService.navigation();
-    onError();
+    navigate('/');
   };
 
   if (loading) {
@@ -243,13 +255,15 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLa
             {quizTitle}
           </h1>
           
-          <p style={{
-            fontSize: '1.3rem',
-            color: 'rgba(255, 255, 255, 0.9)',
-            marginBottom: '32px'
-          }}>
-            👋 {t('hello', currentLanguage)} {studentName}!
-          </p>
+          {studentName && (
+            <p style={{
+              fontSize: '1.3rem',
+              color: 'rgba(255, 255, 255, 0.9)',
+              marginBottom: '32px'
+            }}>
+              👋 {t('hello', currentLanguage)} {studentName}!
+            </p>
+          )}
 
           {/* Quiz Info */}
           <div style={{
@@ -306,6 +320,23 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLa
                   color: 'white',
                   marginBottom: '8px'
                 }}>
+                  {(quiz.questions?.length || 0) * QUIZ_SETTINGS.MINUTES_PER_QUESTION}
+                </div>
+                <div style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '1rem'
+                }}>
+                  {currentLanguage === 'th' ? 'นาที' : 'Minutes'}
+                </div>
+              </div>
+              
+              <div>
+                <div style={{
+                  fontSize: '2rem',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  marginBottom: '8px'
+                }}>
                   {t(quiz.difficulty?.toLowerCase() || 'easy', currentLanguage)}
                 </div>
                 <div style={{
@@ -337,49 +368,101 @@ const DirectQuizAccess = ({ quizId, studentName, onStartQuiz, onError, currentLa
             </div>
           )}
 
+          {/* Login Status Check */}
+          {!studentName && (
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.2)',
+              borderRadius: '16px',
+              padding: '16px',
+              marginBottom: '24px',
+              border: '1px solid rgba(59, 130, 246, 0.3)'
+            }}>
+              <p style={{
+                color: '#93c5fd',
+                margin: 0,
+                fontSize: '1rem'
+              }}>
+                📝 กรุณาล็อกอินก่อนทำข้อสอบ
+              </p>
+            </div>
+          )}
+
           {/* Start Button */}
-          <button
-            onClick={handleQuickStart}
-            disabled={!quiz.questions || quiz.questions.length === 0}
-            style={{
-              width: '100%',
-              background: quiz.questions?.length > 0 
-                ? 'linear-gradient(135deg, #10b981, #059669)' 
-                : 'rgba(255, 255, 255, 0.1)',
-              color: quiz.questions?.length > 0 ? 'white' : 'rgba(255, 255, 255, 0.5)',
-              border: 'none',
-              borderRadius: '20px',
-              padding: '20px 32px',
-              fontSize: '1.3rem',
-              fontWeight: 'bold',
-              cursor: quiz.questions?.length > 0 ? 'pointer' : 'not-allowed',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              boxShadow: quiz.questions?.length > 0 
-                ? '0 12px 30px rgba(16, 185, 129, 0.4)' 
-                : 'none'
-            }}
-            onMouseEnter={(e) => {
-              if (quiz.questions?.length > 0) {
+          {studentName ? (
+            <button
+              onClick={handleQuickStart}
+              disabled={!quiz.questions || quiz.questions.length === 0}
+              style={{
+                width: '100%',
+                background: quiz.questions?.length > 0 
+                  ? 'linear-gradient(135deg, #10b981, #059669)' 
+                  : 'rgba(255, 255, 255, 0.1)',
+                color: quiz.questions?.length > 0 ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '20px 32px',
+                fontSize: '1.3rem',
+                fontWeight: 'bold',
+                cursor: quiz.questions?.length > 0 ? 'pointer' : 'not-allowed',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: quiz.questions?.length > 0 
+                  ? '0 12px 30px rgba(16, 185, 129, 0.4)' 
+                  : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (quiz.questions?.length > 0) {
+                  e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 16px 40px rgba(16, 185, 129, 0.5)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (quiz.questions?.length > 0) {
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.4)';
+                }
+              }}
+            >
+              <Play size={24} />
+              {quiz.questions?.length > 20 
+                ? t('selectAndStart', currentLanguage) 
+                : `🚀 ${t('startQuiz', currentLanguage)}`}
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/student')}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '20px 32px',
+                fontSize: '1.3rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: '0 12px 30px rgba(59, 130, 246, 0.4)'
+              }}
+              onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-3px) scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 16px 40px rgba(16, 185, 129, 0.5)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (quiz.questions?.length > 0) {
+                e.currentTarget.style.boxShadow = '0 16px 40px rgba(59, 130, 246, 0.5)';
+              }}
+              onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.4)';
-              }
-            }}
-          >
-            <Play size={24} />
-            {quiz.questions?.length > 20 
-              ? t('selectAndStart', currentLanguage) 
-              : `🚀 ${t('startQuiz', currentLanguage)}`}
-          </button>
+                e.currentTarget.style.boxShadow = '0 12px 30px rgba(59, 130, 246, 0.4)';
+              }}
+            >
+              🔐 ล็อกอินเพื่อทำข้อสอบ
+            </button>
+          )}
 
           {/* Alternative Actions */}
           <div style={{

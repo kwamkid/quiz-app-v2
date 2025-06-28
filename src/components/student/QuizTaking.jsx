@@ -1,32 +1,96 @@
-// src/components/student/QuizTaking.jsx - รองรับ 2 ภาษา และแก้ไขการคำนวณคะแนน
+// src/components/student/QuizTaking.jsx - ใช้เวลารวมทั้งชุดข้อสอบ
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
+import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
-import { getTimerColor, calculatePercentage } from '../../utils/helpers';
+import FirebaseService from '../../services/firebase';
+import { getTimerColor, calculatePercentage, getFromLocalStorage } from '../../utils/helpers';
 import { QUIZ_SETTINGS } from '../../constants';
 import { t } from '../../translations';
 
-const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 'th' }) => {
+const QuizTaking = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
+  const { quizId } = useParams();
+  
+  // State
+  const [quiz, setQuiz] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [score, setScore] = useState(0);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(QUIZ_SETTINGS.TIME_PER_QUESTION);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(0); // เวลารวมทั้งหมด
   const [quizStartTime] = useState(Date.now());
   const [answers, setAnswers] = useState([]);
   const [musicWasPlaying, setMusicWasPlaying] = useState(false);
 
+  // ดึงข้อมูลจาก localStorage
+  const studentName = getFromLocalStorage('studentName') || '';
+  const studentSchool = getFromLocalStorage('studentSchool') || null;
+
+  // ตรวจสอบว่ามีข้อมูล student หรือไม่
+  useEffect(() => {
+    if (!studentName) {
+      navigate('/student');
+    }
+  }, [studentName, navigate]);
+
+  // โหลด quiz data
+  useEffect(() => {
+    const loadQuiz = async () => {
+      try {
+        setLoading(true);
+        
+        // ลองดึงจาก sessionStorage ก่อน (จาก QuizList)
+        const sessionQuiz = sessionStorage.getItem('currentQuiz');
+        if (sessionQuiz) {
+          const quizData = JSON.parse(sessionQuiz);
+          if (quizData.id === quizId) {
+            setQuiz(quizData);
+            // คำนวณเวลารวม: 1 นาทีต่อข้อ
+            const totalMinutes = quizData.questions.length * QUIZ_SETTINGS.MINUTES_PER_QUESTION;
+            setTotalTimeLeft(totalMinutes * 60); // แปลงเป็นวินาที
+            sessionStorage.removeItem('currentQuiz'); // ลบออกหลังใช้
+            return;
+          }
+        }
+        
+        // ถ้าไม่มีใน sessionStorage ให้โหลดจาก Firebase
+        const quizData = await FirebaseService.getQuiz(quizId);
+        if (quizData) {
+          setQuiz(quizData);
+          // คำนวณเวลารวม: 1 นาทีต่อข้อ
+          const totalMinutes = quizData.questions.length * QUIZ_SETTINGS.MINUTES_PER_QUESTION;
+          setTotalTimeLeft(totalMinutes * 60); // แปลงเป็นวินาที
+        } else {
+          throw new Error('Quiz not found');
+        }
+        
+      } catch (error) {
+        console.error('Error loading quiz:', error);
+        alert(t('errorLoadingQuiz', currentLanguage));
+        navigate(-1);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuiz();
+  }, [quizId, currentLanguage, navigate]);
+
   // คำถามถูกสุ่มแล้วจาก QuizList
-  const questions = quiz.questions || [];
+  const questions = quiz?.questions || [];
   const totalQuestions = questions.length;
-  const originalTotalQuestions = quiz.originalTotalQuestions || totalQuestions;
-  const selectedQuestionCount = quiz.selectedQuestionCount || totalQuestions;
+  const originalTotalQuestions = quiz?.originalTotalQuestions || totalQuestions;
+  const selectedQuestionCount = quiz?.selectedQuestionCount || totalQuestions;
 
   // Debug logs
   console.log('🌐 QuizTaking - currentLanguage:', currentLanguage);
   console.log('📝 Current quiz:', quiz);
+  console.log('⏱️ Total time left:', totalTimeLeft);
   if (questions[currentQuestionIndex]) {
     console.log('📝 Current question:', questions[currentQuestionIndex]);
   }
@@ -43,26 +107,33 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
     initializeMusic();
   }, []);
 
-  // Timer countdown
+  // Timer countdown - นับถอยหลังเวลารวม
   useEffect(() => {
-    if (timeLeft > 0 && !showFeedback) {
+    if (totalTimeLeft > 0 && !showFeedback) {
       const timer = setTimeout(() => {
-        const newTime = timeLeft - 1;
-        setTimeLeft(newTime);
+        const newTime = totalTimeLeft - 1;
+        setTotalTimeLeft(newTime);
         
-        if (newTime === 10) {
+        // เตือนเมื่อเหลือเวลา 1 นาที
+        if (newTime === 60) {
           audioService.timeWarning();
         }
-        if (newTime <= 5 && newTime > 0) {
+        // เตือนเมื่อเหลือเวลา 30 วินาที
+        if (newTime === 30) {
+          audioService.timeWarning();
+        }
+        // เตือนทุกวินาทีเมื่อเหลือ 10 วินาทีสุดท้าย
+        if (newTime <= 10 && newTime > 0) {
           audioService.timeWarning();
         }
       }, 1000);
       
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !showFeedback) {
-      handleAnswerSubmit(null);
+    } else if (totalTimeLeft === 0 && !showFeedback) {
+      // หมดเวลาแล้ว - จบข้อสอบทันที
+      handleTimeUp();
     }
-  }, [timeLeft, showFeedback]);
+  }, [totalTimeLeft, showFeedback]);
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -89,7 +160,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
       correctAnswer: currentQuestion.correctAnswer,
       isCorrect: correct,
       points: questionScore,
-      timeUsed: QUIZ_SETTINGS.TIME_PER_QUESTION - timeLeft
+      timeUsed: Math.round((Date.now() - quizStartTime) / 1000) // เวลาที่ใช้จากเริ่มต้น
     };
     
     setAnswers(prev => [...prev, answerRecord]);
@@ -109,63 +180,70 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
       setShowFeedback(false);
-      setTimeLeft(QUIZ_SETTINGS.TIME_PER_QUESTION);
     } else {
       // จบข้อสอบแล้ว
-      await audioService.quizComplete();
-      
-      console.log('🏆 Quiz completed - keeping music playing');
-      
-      const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
-      
-      // 🔧 แก้ไข: คำนวณคะแนนจากคำตอบที่บันทึกไว้ ไม่ใช่จาก state score
-      const finalAnswers = [...answers, {
-        questionIndex: currentQuestionIndex,
-        question: currentQuestion.question,
-        selectedAnswer: null,
-        correctAnswer: currentQuestion.correctAnswer,
-        isCorrect: false,
-        points: 0,
-        timeUsed: QUIZ_SETTINGS.TIME_PER_QUESTION - timeLeft
-      }];
-      
-      // คำนวณคะแนนรวมจาก answers ทั้งหมด
-      const finalScore = finalAnswers.reduce((sum, answer) => sum + (answer.points || 0), 0);
-      
-      // คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ (ไม่ใช่ 10 คะแนนเสมอไป)
-      const maxScore = questions.reduce((sum, question) => 
-        sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
-      );
-      
-      const percentage = Math.round((finalScore / maxScore) * 100);
-      
-      console.log('📊 Final score calculation:', {
-        finalScore,
-        maxScore,
-        percentage,
-        totalAnswered: finalAnswers.length,
-        correctAnswers: finalAnswers.filter(a => a.isCorrect).length
-      });
-      
-      const results = {
-        quizId: quiz.id || 'unknown',
-        quizTitle: quiz.title,
-        studentName: studentName,
-        score: finalScore,
-        totalQuestions: totalQuestions,
-        percentage: percentage,
-        totalTime: totalTime,
-        completedAt: new Date(),
-        selectedQuestionCount: selectedQuestionCount,
-        originalTotalQuestions: originalTotalQuestions,
-        answers: finalAnswers,
-        difficulty: quiz.difficulty || 'ง่าย',
-        emoji: quiz.emoji || '📚'
-      };
-      
-      console.log('🏆 Quiz completed with full results:', results);
-      onQuizEnd(results);
+      finishQuiz();
     }
+  };
+
+  const handleTimeUp = async () => {
+    // หมดเวลา - บันทึกคำตอบปัจจุบัน (ถ้ามี) และจบข้อสอบ
+    if (!showFeedback && selectedAnswer !== null) {
+      await handleAnswerSubmit(selectedAnswer);
+    }
+    
+    // รอสักครู่แล้วจบข้อสอบ
+    setTimeout(() => {
+      finishQuiz();
+    }, 2000);
+  };
+
+  const finishQuiz = async () => {
+    await audioService.quizComplete();
+    
+    console.log('🏆 Quiz completed - keeping music playing');
+    
+    const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+    
+    // คำนวณคะแนนรวมจาก answers ทั้งหมด
+    const finalScore = answers.reduce((sum, answer) => sum + (answer.points || 0), 0);
+    
+    // คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ
+    const maxScore = questions.reduce((sum, question) => 
+      sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
+    );
+    
+    const percentage = Math.round((finalScore / maxScore) * 100);
+    
+    console.log('📊 Final score calculation:', {
+      finalScore,
+      maxScore,
+      percentage,
+      totalAnswered: answers.length,
+      correctAnswers: answers.filter(a => a.isCorrect).length
+    });
+    
+    const results = {
+      quizId: quiz.id || 'unknown',
+      quizTitle: quiz.title,
+      studentName: studentName,
+      studentSchool: studentSchool,
+      score: finalScore,
+      totalQuestions: totalQuestions,
+      percentage: percentage,
+      totalTime: totalTime,
+      completedAt: new Date(),
+      selectedQuestionCount: selectedQuestionCount,
+      originalTotalQuestions: originalTotalQuestions,
+      answers: answers,
+      difficulty: quiz.difficulty || 'ง่าย',
+      emoji: quiz.emoji || '📚'
+    };
+    
+    console.log('🏆 Quiz completed with full results:', results);
+    
+    // Navigate to result page with state
+    navigate('/student/quiz/result', { state: { results } });
   };
 
   const handleBack = async () => {
@@ -180,7 +258,7 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
         console.log('🎵 Keeping music playing on quiz exit (was playing before)');
       }
       
-      onBack();
+      navigate(-1);
     }
   };
 
@@ -188,7 +266,28 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
     return ((currentQuestionIndex + 1) / totalQuestions) * 100;
   };
 
-  if (questions.length === 0) {
+  // ฟังก์ชันแปลงวินาทีเป็น นาที:วินาที
+  const formatTimeDisplay = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  // ฟังก์ชันคำนวณสีของเวลา
+  const getTimeColor = (seconds) => {
+    const totalSeconds = totalQuestions * QUIZ_SETTINGS.MINUTES_PER_QUESTION * 60;
+    const percentageLeft = (seconds / totalSeconds) * 100;
+    
+    if (percentageLeft > 50) return '#22c55e'; // Green
+    if (percentageLeft > 25) return '#eab308'; // Yellow
+    return '#ef4444'; // Red
+  };
+
+  if (loading) {
+    return <LoadingSpinner message={t('loading', currentLanguage)} />;
+  }
+
+  if (!quiz || questions.length === 0) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -374,22 +473,32 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
             </div>
           </div>
 
+          {/* Timer Display - แสดงเวลารวม */}
           <div style={{
             textAlign: 'center'
           }}>
             <div style={{
               fontSize: window.innerWidth < 768 ? '1.8rem' : '2.5rem',
               fontWeight: 'bold',
-              color: getTimerColor(timeLeft),
+              color: getTimeColor(totalTimeLeft),
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              animation: timeLeft <= 5 ? 'shake 0.5s infinite' : 'none'
+              animation: totalTimeLeft <= 60 ? 'shake 0.5s infinite' : 'none'
             }}>
-              <Clock size={window.innerWidth < 768 ? 24 : 32} className={timeLeft <= 10 ? 'animate-pulse' : ''} />
-              <span className={timeLeft <= 5 ? 'animate-pulse' : ''}>{timeLeft}s</span>
+              <Clock size={window.innerWidth < 768 ? 24 : 32} className={totalTimeLeft <= 60 ? 'animate-pulse' : ''} />
+              <span className={totalTimeLeft <= 10 ? 'animate-pulse' : ''}>
+                {formatTimeDisplay(totalTimeLeft)}
+              </span>
             </div>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: window.innerWidth < 768 ? '0.7rem' : '0.8rem',
+              marginTop: '4px'
+            }}>
+              เวลารวมทั้งหมด
+            </p>
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 // src/components/student/QuizList.jsx - รองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Trophy } from 'lucide-react';
 import QuizSelectionModal from './QuizSelectionModal';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -7,12 +8,30 @@ import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 import { t } from '../../translations';
+import { getFromLocalStorage } from '../../utils/helpers';
 
-const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout, onViewHistory, onBackToCategories, currentLanguage = 'th' }) => {
+const QuizList = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
+  const [categoryInfo, setCategoryInfo] = useState(null);
+
+  // ดึงข้อมูลจาก localStorage
+  const studentName = getFromLocalStorage('studentName') || '';
+  
+  // ดึง categoryId จาก URL query params
+  const queryParams = new URLSearchParams(location.search);
+  const categoryId = queryParams.get('category');
+
+  // ตรวจสอบว่ามีข้อมูล student หรือไม่
+  useEffect(() => {
+    if (!studentName) {
+      navigate('/student');
+    }
+  }, [studentName, navigate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -21,6 +40,22 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
       try {
         console.log('🔄 Loading quizzes for category:', categoryId);
         setLoading(true);
+        
+        // Load category info if not "all"
+        if (categoryId && categoryId !== 'all') {
+          const categories = await FirebaseService.getAllCategories();
+          const category = categories.find(c => c.id === categoryId);
+          if (category) {
+            setCategoryInfo(category);
+          }
+        } else {
+          setCategoryInfo({
+            id: 'all',
+            name: t('allSubjects', currentLanguage),
+            emoji: '📖'
+          });
+        }
+        
         const quizzesData = await FirebaseService.getQuizzes(categoryId);
         
         if (isMounted) {
@@ -41,7 +76,7 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
     return () => {
       isMounted = false;
     };
-  }, [categoryId]);
+  }, [categoryId, currentLanguage]);
 
   const handleQuizClick = async (quiz) => {
     if (quiz.questions?.length > 0) {
@@ -74,7 +109,10 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
       
       console.log('🎮 Starting quiz - keeping music status:', musicService.isCurrentlyPlaying());
       
-      onStartQuiz(quizWithSelectedQuestions);
+      // Save quiz data to sessionStorage for QuizTaking to use
+      sessionStorage.setItem('currentQuiz', JSON.stringify(quizWithSelectedQuestions));
+      
+      navigate(`/student/quiz/${selectedQuiz.id}/take`);
     }
   };
 
@@ -92,12 +130,21 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
       console.log('🔇 Music stopped on logout');
     }
     
-    onLogout();
+    // Clear localStorage
+    localStorage.removeItem('studentName');
+    localStorage.removeItem('studentSchool');
+    
+    navigate('/');
   };
 
   const handleViewHistory = async () => {
     await audioService.buttonClick();
-    onViewHistory();
+    navigate('/student/history');
+  };
+
+  const handleBackToCategories = async () => {
+    await audioService.navigation();
+    navigate('/student/categories');
   };
 
   if (loading) {
@@ -186,7 +233,7 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                {categoryName ? `${categoryName}` : t('selectQuiz', currentLanguage)} 🎮
+                {categoryInfo ? `${categoryInfo.emoji} ${categoryInfo.name}` : t('selectQuiz', currentLanguage)} 🎮
               </p>
             </div>
             
@@ -196,38 +243,33 @@ const QuizList = ({ studentName, categoryId, categoryName, onStartQuiz, onLogout
               alignItems: 'center'
             }}>
               {/* Back to Categories Button */}
-              {onBackToCategories && (
-                <button
-                  onClick={async () => {
-                    await audioService.navigation();
-                    onBackToCategories();
-                  }}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    padding: '12px 20px',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '0.9rem'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.color = 'white';
-                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.color = 'rgba(255, 255, 255, 0.7)';
-                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  {t('backToCategories', currentLanguage)}
-                </button>
-              )}
+              <button
+                onClick={handleBackToCategories}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.9rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.color = 'white';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.color = 'rgba(255, 255, 255, 0.7)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                }}
+              >
+                <ArrowLeft size={16} />
+                {t('backToCategories', currentLanguage)}
+              </button>
 
               {/* Logout Button */}
               <button

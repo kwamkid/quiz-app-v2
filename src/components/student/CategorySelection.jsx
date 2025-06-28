@@ -1,11 +1,13 @@
 // src/components/student/CategorySelection.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Brain, Calculator, Globe, Palette, Music2, Dumbbell, ChevronRight, School } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 import { t } from '../../translations';
+import { getFromLocalStorage } from '../../utils/helpers';
 
 // Icon mapping for categories
 const categoryIcons = {
@@ -19,10 +21,22 @@ const categoryIcons = {
   'default': BookOpen
 };
 
-const CategorySelection = ({ studentName, studentSchool, onSelectCategory, onLogout, currentLanguage = 'th' }) => {
+const CategorySelection = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(false);
+  
+  // ดึงข้อมูลจาก localStorage
+  const studentName = getFromLocalStorage('studentName') || '';
+  const studentSchool = getFromLocalStorage('studentSchool') || null;
+
+  // ตรวจสอบว่ามีข้อมูล student หรือไม่
+  useEffect(() => {
+    if (!studentName) {
+      navigate('/student');
+    }
+  }, [studentName, navigate]);
 
   // ตรวจสอบสถานะเพลงเมื่อ component mount
   useEffect(() => {
@@ -100,7 +114,7 @@ const CategorySelection = ({ studentName, studentSchool, onSelectCategory, onLog
 
   const handleCategorySelect = async (category) => {
     await audioService.buttonClick();
-    onSelectCategory(category);
+    navigate(`/student/quizzes?category=${category.id}`);
   };
 
   const handleLogout = async () => {
@@ -110,7 +124,11 @@ const CategorySelection = ({ studentName, studentSchool, onSelectCategory, onLog
       musicService.stop();
     }
     
-    onLogout();
+    // Clear localStorage
+    localStorage.removeItem('studentName');
+    localStorage.removeItem('studentSchool');
+    
+    navigate('/');
   };
 
   // เพิ่มฟังก์ชันสำหรับอัพเดทสถานะเพลงแบบ real-time

@@ -1,14 +1,15 @@
 // src/components/student/StudentHistoryPage.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Target, Calendar, Clock, TrendingUp, Award, Zap } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
-import { formatDate, getGradeInfo } from '../../utils/helpers';
+import { formatDate, getGradeInfo, getFromLocalStorage } from '../../utils/helpers';
 import { t } from '../../translations';
-import { getFromLocalStorage } from '../../utils/helpers';
 
-const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => {
+const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -20,13 +21,23 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
     streak: 0
   });
 
-  // ดึงข้อมูลโรงเรียนจาก localStorage
+  // ดึงข้อมูลจาก localStorage
+  const studentName = getFromLocalStorage('studentName') || '';
   const studentSchool = getFromLocalStorage('studentSchool');
   const schoolId = studentSchool?.id || null;
 
+  // ตรวจสอบว่ามีข้อมูล student หรือไม่
   useEffect(() => {
-    loadStudentHistory();
-  }, []);
+    if (!studentName) {
+      navigate('/student');
+    }
+  }, [studentName, navigate]);
+
+  useEffect(() => {
+    if (studentName) {
+      loadStudentHistory();
+    }
+  }, [studentName]);
 
   const loadStudentHistory = async () => {
     try {
@@ -76,7 +87,7 @@ const StudentHistoryPage = ({ studentName, onBack, currentLanguage = 'th' }) => 
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate(-1);
   };
 
   const getScoreColor = (percentage) => {
