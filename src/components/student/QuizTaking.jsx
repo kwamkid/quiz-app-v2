@@ -131,7 +131,12 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
       
       // คำนวณคะแนนรวมจาก answers ทั้งหมด
       const finalScore = finalAnswers.reduce((sum, answer) => sum + (answer.points || 0), 0);
-      const maxScore = totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION;
+      
+      // คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ (ไม่ใช่ 10 คะแนนเสมอไป)
+      const maxScore = questions.reduce((sum, question) => 
+        sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
+      );
+      
       const percentage = Math.round((finalScore / maxScore) * 100);
       
       console.log('📊 Final score calculation:', {

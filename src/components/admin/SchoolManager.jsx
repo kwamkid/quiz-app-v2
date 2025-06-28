@@ -1,11 +1,13 @@
 // src/components/admin/SchoolManager.jsx - ปรับให้เรียบง่ายขึ้น
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, School, Search, Save, X } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 
-const SchoolManager = ({ onBack }) => {
+const SchoolManager = () => {
+  const navigate = useNavigate();
   const [schools, setSchools] = useState([]);
   const [filteredSchools, setFilteredSchools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,7 @@ const SchoolManager = ({ onBack }) => {
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate('/admin/dashboard');
   };
 
   const handleAddSchool = async () => {

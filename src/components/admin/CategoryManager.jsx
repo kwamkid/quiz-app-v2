@@ -1,11 +1,13 @@
 // src/components/admin/CategoryManager.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, Palette } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 
-const CategoryManager = ({ onBack }) => {
+const CategoryManager = () => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -158,7 +160,7 @@ const CategoryManager = ({ onBack }) => {
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate('/admin/dashboard');
   };
 
   if (loading) {
