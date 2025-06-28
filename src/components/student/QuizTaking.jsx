@@ -1,4 +1,4 @@
-// src/components/student/QuizTaking.jsx - รองรับ 2 ภาษา
+// src/components/student/QuizTaking.jsx - รองรับ 2 ภาษา และแก้ไขการคำนวณคะแนน
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Target, Clock, Trophy } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
@@ -117,21 +117,43 @@ const QuizTaking = ({ quiz, studentName, onQuizEnd, onBack, currentLanguage = 't
       console.log('🏆 Quiz completed - keeping music playing');
       
       const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+      
+      // 🔧 แก้ไข: คำนวณคะแนนจากคำตอบที่บันทึกไว้ ไม่ใช่จาก state score
+      const finalAnswers = [...answers, {
+        questionIndex: currentQuestionIndex,
+        question: currentQuestion.question,
+        selectedAnswer: null,
+        correctAnswer: currentQuestion.correctAnswer,
+        isCorrect: false,
+        points: 0,
+        timeUsed: QUIZ_SETTINGS.TIME_PER_QUESTION - timeLeft
+      }];
+      
+      // คำนวณคะแนนรวมจาก answers ทั้งหมด
+      const finalScore = finalAnswers.reduce((sum, answer) => sum + (answer.points || 0), 0);
       const maxScore = totalQuestions * QUIZ_SETTINGS.POINTS_PER_QUESTION;
-      const percentage = Math.round((score / maxScore) * 100);
+      const percentage = Math.round((finalScore / maxScore) * 100);
+      
+      console.log('📊 Final score calculation:', {
+        finalScore,
+        maxScore,
+        percentage,
+        totalAnswered: finalAnswers.length,
+        correctAnswers: finalAnswers.filter(a => a.isCorrect).length
+      });
       
       const results = {
         quizId: quiz.id || 'unknown',
         quizTitle: quiz.title,
         studentName: studentName,
-        score: score,
+        score: finalScore,
         totalQuestions: totalQuestions,
         percentage: percentage,
         totalTime: totalTime,
         completedAt: new Date(),
         selectedQuestionCount: selectedQuestionCount,
         originalTotalQuestions: originalTotalQuestions,
-        answers: answers,
+        answers: finalAnswers,
         difficulty: quiz.difficulty || 'ง่าย',
         emoji: quiz.emoji || '📚'
       };
