@@ -6,7 +6,7 @@ import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import { DEFAULT_ADMIN } from '../../constants';
 
-const AdminLogin = ({ onLoginSuccess, onBack }) => {
+const AdminLogin = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +47,7 @@ const AdminLogin = ({ onLoginSuccess, onBack }) => {
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    window.history.back(); // หรือใช้ navigate('/') ถ้าต้องการกลับหน้าแรกเสมอ
   };
 
   const togglePassword = () => {

@@ -1,12 +1,14 @@
 // src/components/admin/AdminScores.jsx - เพิ่มการแสดงข้อมูลโรงเรียน
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Download, School } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { formatDate } from '../../utils/helpers';
 
-const AdminScores = ({ onBack }) => {
+const AdminScores = () => {
+  const navigate = useNavigate();
   const [allAttempts, setAllAttempts] = useState([]);
   const [filteredAttempts, setFilteredAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -172,7 +174,7 @@ const AdminScores = ({ onBack }) => {
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate('/admin/dashboard');
   };
 
   const getScoreColor = (percentage) => {

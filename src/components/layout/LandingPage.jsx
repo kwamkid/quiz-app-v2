@@ -16,7 +16,7 @@ const LandingPage = ({ onSelectRole, currentLanguage = 'th' }) => {
 
   const handleRoleSelect = async (role) => {
     await audioService.buttonClick();
-    onSelectRole(role);
+    onSelectRole(role); // onSelectRole จะ navigate ให้จาก App.jsx
   };
 
   // Generate random stars for background

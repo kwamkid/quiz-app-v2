@@ -1,5 +1,6 @@
 // src/components/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, BarChart3, ArrowLeft, Target, Calendar, Users, BookOpen, Filter, Tag, Volume2, VolumeX, QrCode } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
@@ -8,7 +9,9 @@ import FirebaseService from '../../services/firebase';
 import { formatDate } from '../../utils/helpers';
 import QRCodeModal from './QRCodeModal';
 
-const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, onManageCategories, onManageSchools, onBack, onLogout }) => {  const [quizzes, setQuizzes] = useState([]);
+const AdminDashboard = ({ onLogout }) => {
+  const navigate = useNavigate();
+  const [quizzes, setQuizzes] = useState([]);
   const [filteredQuizzes, setFilteredQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -119,12 +122,12 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
 
   const handleCreateQuiz = async () => {
     await audioService.buttonClick();
-    onCreateQuiz();
+    navigate('/admin/quiz/new');
   };
 
   const handleEditQuiz = async (quiz) => {
     await audioService.buttonClick();
-    onEditQuiz(quiz);
+    navigate(`/admin/quiz/edit/${quiz.id}`);
   };
 
   const handleDeleteQuiz = async (quizId, quizTitle) => {
@@ -162,12 +165,22 @@ const AdminDashboard = ({ onCreateQuiz, onEditQuiz, onDeleteQuiz, onViewScores, 
 
   const handleViewScores = async () => {
     await audioService.buttonClick();
-    onViewScores();
+    navigate('/admin/scores');
+  };
+
+  const handleManageCategories = async () => {
+    await audioService.buttonClick();
+    navigate('/admin/categories');
+  };
+
+  const handleManageSchools = async () => {
+    await audioService.buttonClick();
+    navigate('/admin/schools');
   };
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate('/');
   };
 
   const handleLogout = async () => {
@@ -450,71 +463,65 @@ public/
               📊 ดูคะแนนนักเรียน
             </button>
 
-            {onManageCategories && (
-              <button
-                onClick={onManageCategories}
-                style={{
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '16px',
-                  padding: '16px 24px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  fontSize: '1.1rem',
-                  boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                  e.currentTarget.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
-                }}
-              >
-                <BookOpen size={20} />
-                📂 จัดการหมวดหมู่
-              </button>
-            )}
+            <button
+              onClick={handleManageCategories}
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '16px 24px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '1.1rem',
+                boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(139, 92, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
+              }}
+            >
+              <BookOpen size={20} />
+              📂 จัดการหมวดหมู่
+            </button>
 
-            {onManageSchools && (
-              <button
-                onClick={onManageSchools}
-                style={{
-                  background: 'linear-gradient(135deg, #ec4899, #db2777)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '16px',
-                  padding: '16px 24px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  fontSize: '1.1rem',
-                  boxShadow: '0 8px 20px rgba(236, 72, 153, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                  e.currentTarget.style.boxShadow = '0 12px 25px rgba(236, 72, 153, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(236, 72, 153, 0.3)';
-                }}
-              >
-                <Users size={20} />
-                🏫 จัดการโรงเรียน
-              </button>
-            )}
-
-
+            <button
+              onClick={handleManageSchools}
+              style={{
+                background: 'linear-gradient(135deg, #ec4899, #db2777)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '16px 24px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '1.1rem',
+                boxShadow: '0 8px 20px rgba(236, 72, 153, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 12px 25px rgba(236, 72, 153, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(236, 72, 153, 0.3)';
+              }}
+            >
+              <Users size={20} />
+              🏫 จัดการโรงเรียน
+            </button>
           </div>
         </div>
 

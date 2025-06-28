@@ -1,12 +1,16 @@
 // src/components/admin/QuizEditor.jsx - ปรับปรุง UI และรองรับ 2 ภาษา
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Upload, Globe } from 'lucide-react';
 import QuizImport from './QuizImport';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { t } from '../../translations';
 
-const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => {
+const QuizEditor = ({ currentLanguage = 'th' }) => {
+  const navigate = useNavigate();
+  const { id } = useParams(); // รับ quiz id จาก URL
+  const [quiz, setQuiz] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -40,39 +44,57 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
     loadCategories();
   }, []);
 
-  // Load quiz data if editing
+  // Load quiz if editing
   useEffect(() => {
-    if (quiz) {
-      setQuizData({
-        title: quiz.title || '',
-        titleTh: quiz.titleTh || quiz.title || '',
-        titleEn: quiz.titleEn || '',
-        emoji: quiz.emoji || '📚',
-        difficulty: quiz.difficulty || 'ง่าย',
-        categoryId: quiz.categoryId || 'uncategorized',
-        questions: quiz.questions?.length > 0 ? quiz.questions.map(q => ({
-          ...q,
-          question: q.question || '',
-          questionTh: q.questionTh || q.question || '',
-          questionEn: q.questionEn || '',
-          options: q.options || ['', '', '', ''],
-          optionsTh: q.optionsTh || q.options || ['', '', '', ''],
-          optionsEn: q.optionsEn || ['', '', '', '']
-        })) : [
-          {
-            question: '',
-            questionTh: '',
-            questionEn: '',
-            options: ['', '', '', ''],
-            optionsTh: ['', '', '', ''],
-            optionsEn: ['', '', '', ''],
-            correctAnswer: 0,
-            points: 10
-          }
-        ]
-      });
+    if (id) {
+      loadQuiz();
     }
-  }, [quiz]);
+  }, [id]);
+
+  const loadQuiz = async () => {
+    try {
+      setIsLoading(true);
+      const quizData = await FirebaseService.getQuiz(id);
+      if (quizData) {
+        setQuiz(quizData);
+        // Set quizData state from loaded quiz
+        setQuizData({
+          title: quizData.title || '',
+          titleTh: quizData.titleTh || quizData.title || '',
+          titleEn: quizData.titleEn || '',
+          emoji: quizData.emoji || '📚',
+          difficulty: quizData.difficulty || 'ง่าย',
+          categoryId: quizData.categoryId || 'uncategorized',
+          questions: quizData.questions?.length > 0 ? quizData.questions.map(q => ({
+            ...q,
+            question: q.question || '',
+            questionTh: q.questionTh || q.question || '',
+            questionEn: q.questionEn || '',
+            options: q.options || ['', '', '', ''],
+            optionsTh: q.optionsTh || q.options || ['', '', '', ''],
+            optionsEn: q.optionsEn || ['', '', '', '']
+          })) : [
+            {
+              question: '',
+              questionTh: '',
+              questionEn: '',
+              options: ['', '', '', ''],
+              optionsTh: ['', '', '', ''],
+              optionsEn: ['', '', '', ''],
+              correctAnswer: 0,
+              points: 10
+            }
+          ]
+        });
+      }
+    } catch (error) {
+      console.error('Error loading quiz:', error);
+      alert('ไม่สามารถโหลดข้อสอบได้');
+      navigate('/admin/dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -242,7 +264,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
         alert(t('createQuizSuccess', currentLanguage));
       }
       
-      onSave({ ...dataToSave, id: savedQuizId });
+      navigate('/admin/dashboard');
     } catch (error) {
       console.error('Error saving quiz:', error);
       await audioService.wrongAnswer();
@@ -254,7 +276,7 @@ const QuizEditor = ({ quiz = null, onSave, onBack, currentLanguage = 'th' }) => 
 
   const handleBack = async () => {
     await audioService.navigation();
-    onBack();
+    navigate('/admin/dashboard');
   };
 
   const emojiOptions = ['📚', '🧮', '🔬', '🌟', '🇬🇧', '🎯', '💡', '🎨'];
