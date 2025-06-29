@@ -7,7 +7,9 @@ import FirebaseService from '../../services/firebase';
 import { saveToLocalStorage } from '../../utils/helpers';
 import { t } from '../../translations';
 
-const StudentLogin = ({ currentLanguage = 'th' }) => {
+const StudentLogin = ({ onNameSubmit, currentLanguage = 'th' }) => {
+
+
   const navigate = useNavigate();
   const location = useLocation();
   const [name, setName] = useState('');
@@ -86,6 +88,10 @@ const StudentLogin = ({ currentLanguage = 'th' }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+      console.log('🚀 Form submitted');
+  console.log('📝 Name:', name);
+  console.log('🏫 School:', selectedSchool);
     
     if (!name.trim()) {
       await audioService.wrongAnswer();
@@ -114,10 +120,9 @@ const StudentLogin = ({ currentLanguage = 'th' }) => {
       
       // Simulate loading delay for better UX
       setTimeout(() => {
-        if (quizId) {
-          navigate(`/quiz/direct/${quizId}`);
-        } else {
-          navigate('/student/categories');
+        // เรียก callback แทนการ navigate เอง
+        if (onNameSubmit) {
+          onNameSubmit(name.trim(), selectedSchool);
         }
         setIsLoading(false);
       }, 1000);

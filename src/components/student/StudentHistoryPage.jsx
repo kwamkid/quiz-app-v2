@@ -5,8 +5,9 @@ import { ArrowLeft, Trophy, Target, Calendar, Clock, TrendingUp, Award, Zap } fr
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
+import AnswerReview from '../common/AnswerReview';
 import { formatDate, getGradeInfo, getFromLocalStorage } from '../../utils/helpers';
-import { t } from '../../translations';
+import { t, getLocalizedField } from '../../translations';
 
 const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
   const navigate = useNavigate();
@@ -20,6 +21,9 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
     passingCount: 0,
     streak: 0
   });
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [showAnswerReview, setShowAnswerReview] = useState(false);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
 
   // ดึงข้อมูลจาก localStorage
   const studentName = getFromLocalStorage('studentName') || '';
@@ -94,6 +98,32 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
     if (percentage >= 80) return '#22c55e';
     if (percentage >= 60) return '#eab308';
     return '#ef4444';
+  };
+
+  // ฟังก์ชันโหลด quiz data และเปิด modal
+  const handleViewAnswers = async (attempt) => {
+    setLoadingQuiz(true);
+    try {
+      // โหลด quiz data จาก Firebase ถ้ายังไม่มี
+      if (!attempt.quiz && attempt.quizId) {
+        console.log('📚 Loading quiz data for:', attempt.quizId);
+        const quizData = await FirebaseService.getQuiz(attempt.quizId);
+        setSelectedReview({
+          ...attempt,
+          quiz: quizData // เพิ่ม quiz object
+        });
+      } else {
+        setSelectedReview(attempt);
+      }
+      setShowAnswerReview(true);
+    } catch (error) {
+      console.error('❌ Error loading quiz:', error);
+      // ถ้าโหลดไม่ได้ก็แสดงเฉพาะข้อมูลที่มี
+      setSelectedReview(attempt);
+      setShowAnswerReview(true);
+    } finally {
+      setLoadingQuiz(false);
+    }
   };
 
   if (loading) {
@@ -172,7 +202,7 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.2rem'
               }}>
-                {studentName} - {studentSchool ? (currentLanguage === 'th' ? studentSchool.nameTh : studentSchool.nameEn || studentSchool.nameTh) : 'ทุกโรงเรียน'}
+                {studentName} - {studentSchool ? getLocalizedField(studentSchool, 'name', currentLanguage) : t('allSchools', currentLanguage)}
               </p>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.7)',
@@ -363,7 +393,7 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                           alignItems: 'center',
                           gap: '8px'
                         }}>
-                          {attempt.emoji || '📝'} {attempt.quizTitle}
+                          {attempt.emoji || '📝'} {getLocalizedField(attempt, 'quizTitle', currentLanguage)}
                         </div>
                         <div style={{
                           color: 'rgba(255, 255, 255, 0.7)',
@@ -391,7 +421,7 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                           color: 'rgba(255, 255, 255, 0.7)',
                           fontSize: '0.9rem'
                         }}>
-                          {attempt.score}/{attempt.totalQuestions * 10} คะแนน
+                          {attempt.score}/{attempt.totalQuestions * 10} {t('score', currentLanguage)}
                         </div>
                       </div>
 
@@ -407,7 +437,7 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                           marginBottom: '4px'
                         }}>
                           <Clock size={14} />
-                          เวลาที่ใช้
+                          {t('timeUsed', currentLanguage)}
                         </div>
                         <div style={{ color: 'white', fontWeight: 'bold' }}>
                           {Math.floor((attempt.totalTime || 0) / 60)}:{((attempt.totalTime || 0) % 60).toString().padStart(2, '0')}
@@ -421,12 +451,52 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                           fontSize: '0.9rem',
                           marginBottom: '4px'
                         }}>
-                          จำนวนข้อ
+                          {t('totalQuestions', currentLanguage)}
                         </div>
                         <div style={{ color: 'white', fontWeight: 'bold' }}>
-                          {attempt.selectedQuestionCount || attempt.totalQuestions} ข้อ
+                          {attempt.selectedQuestionCount || attempt.totalQuestions} {t('questions', currentLanguage)}
                         </div>
                       </div>
+                      
+                      {/* View Answers Button */}
+                      {attempt.answers && attempt.answers.length > 0 && (
+                        <div style={{ textAlign: 'center' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewAnswers(attempt);
+                              audioService.buttonClick();
+                            }}
+                            disabled={loadingQuiz}
+                            style={{
+                              background: 'rgba(139, 92, 246, 0.2)',
+                              border: '1px solid rgba(139, 92, 246, 0.4)',
+                              color: '#a78bfa',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              cursor: loadingQuiz ? 'wait' : 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: '500',
+                              transition: 'all 0.3s ease',
+                              opacity: loadingQuiz ? 0.7 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!loadingQuiz) {
+                                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!loadingQuiz) {
+                                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }
+                            }}
+                          >
+                            📋 {loadingQuiz ? t('loading', currentLanguage) : t('viewAnswers', currentLanguage)}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -435,6 +505,25 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
           )}
         </div>
       </div>
+      
+      {/* Answer Review Modal */}
+      {selectedReview && (
+        <AnswerReview
+          isOpen={showAnswerReview}
+          onClose={() => {
+            setShowAnswerReview(false);
+            setSelectedReview(null);
+          }}
+          answers={selectedReview.answers || []}
+          quiz={selectedReview.quiz}
+          quizTitle={getLocalizedField(selectedReview, 'quizTitle', currentLanguage)}
+          studentName={selectedReview.studentName}
+          score={selectedReview.score}
+          percentage={selectedReview.percentage}
+          totalTime={selectedReview.totalTime}
+          currentLanguage={currentLanguage}
+        />
+      )}
 
       {/* CSS Animations */}
       <style>{`

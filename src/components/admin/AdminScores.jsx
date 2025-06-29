@@ -5,6 +5,7 @@ import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Down
 import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
+import AnswerReview from '../common/AnswerReview';
 import { formatDate } from '../../utils/helpers';
 
 const AdminScores = () => {
@@ -26,6 +27,8 @@ const AdminScores = () => {
     averageScore: 0,
     topScore: 0
   });
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [showAnswerReview, setShowAnswerReview] = useState(false);
 
   // ใช้ useCallback เพื่อป้องกัน function ถูกสร้างใหม่
   const filterAttempts = useCallback(() => {
@@ -785,6 +788,44 @@ const AdminScores = () => {
                         {Math.floor((attempt.totalTime || 0) / 60)}:{((attempt.totalTime || 0) % 60).toString().padStart(2, '0')}
                       </div>
                     </div>
+
+                    {/* View Details Button */}
+                    {attempt.answers && attempt.answers.length > 0 && (
+                      <div style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedReview(attempt);
+                            setShowAnswerReview(true);
+                            audioService.buttonClick();
+                          }}
+                          style={{
+                            background: 'rgba(139, 92, 246, 0.2)',
+                            border: '1px solid rgba(139, 92, 246, 0.4)',
+                            color: '#a78bfa',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          📋 ดูรายละเอียด
+                        </button>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               ))}
@@ -792,6 +833,26 @@ const AdminScores = () => {
           )}
         </div>
       </div>
+
+      {/* Answer Review Modal */}
+      {selectedReview && (
+        <AnswerReview
+          isOpen={showAnswerReview}
+          onClose={() => {
+            setShowAnswerReview(false);
+            setSelectedReview(null);
+          }}
+          answers={selectedReview.answers || []}
+          quiz={selectedReview.quiz} // อาจเป็น undefined สำหรับข้อมูลเก่า
+          quizTitle={selectedReview.quizTitle}
+          studentName={selectedReview.studentName}
+          score={selectedReview.score}
+          percentage={selectedReview.percentage}
+          totalTime={selectedReview.totalTime}
+          currentLanguage="th"
+          isAdmin={true}
+        />
+      )}
     </div>
   );
 };

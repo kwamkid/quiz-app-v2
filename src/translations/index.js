@@ -172,6 +172,17 @@ const translations = {
     importSuccess: "นำเข้าสำเร็จ!",
     pleaseFixErrors: "กรุณาแก้ไขข้อผิดพลาดต่อไปนี้:",
     saving: "กำลังบันทึก...",
+
+    // Answer Review
+    viewAnswers: "ดูเฉลยคำตอบ",
+    answerReview: "เฉลยคำตอบ",
+    yourAnswer: "คุณตอบ:",
+    correctAnswer: "คำตอบที่ถูก:",
+    timeUsedPerQuestion: "ใช้เวลา",
+    secondsUnit: "วินาที",
+    correctCount: "ถูก",
+    ofQuestions: "ข้อ",
+    close: "ปิด",
   },
 
   en: {
@@ -346,6 +357,17 @@ const translations = {
     importSuccess: "Import successful!",
     pleaseFixErrors: "Please fix the following errors:",
     saving: "Saving...",
+
+    // Answer Review
+    viewAnswers: "View Answers",
+    answerReview: "Answer Review",
+    yourAnswer: "You answered:",
+    correctAnswer: "Correct answer:",
+    timeUsedPerQuestion: "Time used",
+    secondsUnit: "seconds",
+    correctCount: "Correct",
+    ofQuestions: "questions",
+    close: "Close",
   },
 };
 

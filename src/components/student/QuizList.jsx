@@ -9,6 +9,8 @@ import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 import { t } from '../../translations';
 import { getFromLocalStorage } from '../../utils/helpers';
+import { getLocalizedField } from '../../translations';
+
 
 const QuizList = ({ currentLanguage = 'th' }) => {
   const navigate = useNavigate();
@@ -418,7 +420,8 @@ const QuizList = ({ currentLanguage = 'th' }) => {
                   marginBottom: '12px',
                   textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
                 }}>
-                  {quiz.title}
+                    {getLocalizedField(quiz, 'title', currentLanguage)}
+
                 </h3>
                 
                 <p style={{

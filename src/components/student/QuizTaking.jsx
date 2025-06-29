@@ -7,8 +7,10 @@ import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
 import { getTimerColor, calculatePercentage, getFromLocalStorage } from '../../utils/helpers';
+import { t, getLocalizedField } from '../../translations';
 import { QUIZ_SETTINGS } from '../../constants';
-import { t } from '../../translations';
+
+
 
 const QuizTaking = ({ currentLanguage = 'th' }) => {
   const navigate = useNavigate();
@@ -156,11 +158,20 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
     const answerRecord = {
       questionIndex: currentQuestionIndex,
       question: currentQuestion.question,
+      questionTh: currentQuestion.questionTh || currentQuestion.question,
+      questionEn: currentQuestion.questionEn || currentQuestion.question,
       selectedAnswer: answerIndex,
       correctAnswer: currentQuestion.correctAnswer,
       isCorrect: correct,
       points: questionScore,
-      timeUsed: Math.round((Date.now() - quizStartTime) / 1000) // เวลาที่ใช้จากเริ่มต้น
+      timeUsed: Math.round((Date.now() - quizStartTime) / 1000),
+      // เพิ่มข้อมูล option text ทั้ง 2 ภาษา
+      selectedOption: currentQuestion.options[answerIndex],
+      selectedOptionTh: currentQuestion.options[answerIndex],
+      selectedOptionEn: currentQuestion.optionsEn?.[answerIndex] || currentQuestion.options[answerIndex],
+      correctOption: currentQuestion.options[currentQuestion.correctAnswer],
+      correctOptionTh: currentQuestion.options[currentQuestion.correctAnswer],
+      correctOptionEn: currentQuestion.optionsEn?.[currentQuestion.correctAnswer] || currentQuestion.options[currentQuestion.correctAnswer]
     };
     
     setAnswers(prev => [...prev, answerRecord]);
@@ -226,6 +237,9 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
     const results = {
       quizId: quiz.id || 'unknown',
       quizTitle: quiz.title,
+      quizTitleTh: quiz.titleTh || quiz.title,  // เพิ่มชื่อภาษาไทย
+      quizTitleEn: quiz.titleEn || quiz.title,  // เพิ่มชื่อภาษาอังกฤษ
+      quiz: quiz,
       studentName: studentName,
       studentSchool: studentSchool,
       score: finalScore,
@@ -392,7 +406,8 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                {quiz.emoji} {quiz.title}
+    
+                {quiz.emoji} {getLocalizedField(quiz, 'title', currentLanguage)}
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',

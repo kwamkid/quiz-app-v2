@@ -4,11 +4,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, Trophy, Zap, Target } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
+import AnswerReview from '../common/AnswerReview';
 import { t } from '../../translations';
+
 
 const QuizResultPage = ({ currentLanguage = 'th' }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showAnswerReview, setShowAnswerReview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   
@@ -333,9 +336,55 @@ const QuizResultPage = ({ currentLanguage = 'th' }) => {
               <Trophy size={20} />
               {t('viewAllScores', currentLanguage)}
             </button>
+
+            <button
+              onClick={() => setShowAnswerReview(true)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '20px 32px',
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 12px 25px rgba(16, 185, 129, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.3)';
+              }}
+            >
+              📋 {t('viewAnswers', currentLanguage)}
+            </button>
+
+
           </div>
         </div>
       </div>
+      {/* Answer Review Modal */}
+      <AnswerReview
+        isOpen={showAnswerReview}
+        onClose={() => setShowAnswerReview(false)}
+        answers={results.answers || []}
+        quiz={results.quiz} // เพิ่ม quiz object
+        quizTitle={results.quizTitle}
+        studentName={results.studentName}
+        score={results.score}
+        percentage={results.percentage}
+        totalTime={results.totalTime}
+        currentLanguage={currentLanguage}
+      />  
 
       {/* CSS Animations */}
       <style>{`

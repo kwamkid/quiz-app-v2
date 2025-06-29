@@ -4,6 +4,7 @@ import { X, Play, AlertCircle } from 'lucide-react';
 import audioService from '../../services/simpleAudio';
 import { t } from '../../translations';
 import { QUIZ_SETTINGS } from '../../constants'; // เพิ่ม import
+import { getLocalizedField } from '../../translations';
 
 const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, currentLanguage = 'th' }) => {
   const [selectedQuestionCount, setSelectedQuestionCount] = useState(20);
@@ -162,7 +163,7 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, curren
             marginBottom: '8px',
             textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
           }}>
-            {quiz.title}
+            {getLocalizedField(quiz, 'title', currentLanguage)}
           </h2>
           <p style={{
             color: 'rgba(255, 255, 255, 0.8)',
