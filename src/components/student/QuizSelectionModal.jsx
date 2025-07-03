@@ -378,7 +378,11 @@ const QuizSelectionModal = ({ isOpen, quiz, allQuizzes, onClose, onStart, curren
           }}>
             🎯 {t('fullScore', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * 10}</strong> {t('score', currentLanguage)}
             <br />
-            ⏱️ {t('timeEstimate', currentLanguage)}: <strong style={{ color: 'white' }}>{selectedQuestionCount * QUIZ_SETTINGS.MINUTES_PER_QUESTION}</strong> {currentLanguage === 'th' ? 'นาที' : 'minutes'}
+            ⏱️ {t('timeEstimate', currentLanguage)}: <strong style={{ color: 'white' }}>
+              {selectedQuestionCount * QUIZ_SETTINGS.MINUTES_PER_QUESTION < 1 
+                ? `${selectedQuestionCount * 30} ${currentLanguage === 'th' ? 'วินาที' : 'seconds'}`
+                : `${selectedQuestionCount * QUIZ_SETTINGS.MINUTES_PER_QUESTION} ${currentLanguage === 'th' ? 'นาที' : 'minutes'}`}
+            </strong>
             {totalQuestions >= 20 && (
               <>
                 <br />

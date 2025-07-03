@@ -395,6 +395,7 @@ class FirebaseService {
   }
 
   // Save student attempt with school info
+  // Save student attempt with school info
   static async saveStudentAttempt(attemptData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("💾 Mock save student attempt:", attemptData);
@@ -411,6 +412,8 @@ class FirebaseService {
         schoolId: attemptData.studentSchool?.id || attemptData.schoolId || null,
         schoolName: attemptData.studentSchool?.nameTh || null,
         quizTitle: attemptData.quizTitle,
+        quizTitleTh: attemptData.quizTitleTh || attemptData.quizTitle, // ✅ เพิ่มบันทึก titleTh
+        quizTitleEn: attemptData.quizTitleEn || attemptData.quizTitle, // ✅ เพิ่มบันทึก titleEn
         quizId: attemptData.quizId,
         score: attemptData.score,
         totalQuestions: attemptData.totalQuestions,

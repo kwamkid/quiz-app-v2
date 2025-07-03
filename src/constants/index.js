@@ -17,8 +17,7 @@ export const DEFAULT_ADMIN = {
 };
 
 export const QUIZ_SETTINGS = {
-  TIME_PER_QUESTION: 30, // เก็บไว้เพื่อ backward compatibility
-  MINUTES_PER_QUESTION: 2, // 1 นาทีต่อข้อ
+  MINUTES_PER_QUESTION: 0.5, // xx นาทีต่อข้อ
   POINTS_PER_QUESTION: 10,
   MIN_QUESTIONS: 1,
   MAX_QUESTIONS: 50,

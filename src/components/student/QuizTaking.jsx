@@ -6,7 +6,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
-import { getTimerColor, calculatePercentage, getFromLocalStorage } from '../../utils/helpers';
+import { getTimerColor, calculatePercentage, getFromLocalStorage, formatTimeDisplay } from '../../utils/helpers';
 import { t, getLocalizedField } from '../../translations';
 import { QUIZ_SETTINGS } from '../../constants';
 
@@ -234,12 +234,13 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
       correctAnswers: answers.filter(a => a.isCorrect).length
     });
     
+    // ✅ แก้ไขตรงนี้ - เพิ่มการบันทึก titleTh และ titleEn แยกกัน
     const results = {
       quizId: quiz.id || 'unknown',
       quizTitle: quiz.title,
-      quizTitleTh: quiz.titleTh || quiz.title,  // เพิ่มชื่อภาษาไทย
-      quizTitleEn: quiz.titleEn || quiz.title,  // เพิ่มชื่อภาษาอังกฤษ
-      quiz: quiz,
+      quizTitleTh: quiz.titleTh || quiz.title,  // บันทึกชื่อภาษาไทย
+      quizTitleEn: quiz.titleEn || quiz.title,  // บันทึกชื่อภาษาอังกฤษ
+      quiz: quiz, // เก็บ quiz object ทั้งหมดไว้ด้วย
       studentName: studentName,
       studentSchool: studentSchool,
       score: finalScore,
@@ -507,12 +508,12 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
                 {formatTimeDisplay(totalTimeLeft)}
               </span>
             </div>
-            <p style={{
+           <p style={{
               color: 'rgba(255, 255, 255, 0.7)',
               fontSize: window.innerWidth < 768 ? '0.7rem' : '0.8rem',
               marginTop: '4px'
             }}>
-              เวลารวมทั้งหมด
+              {currentLanguage === 'th' ? 'เวลารวมทั้งหมด' : 'Total Time'}
             </p>
           </div>
         </div>

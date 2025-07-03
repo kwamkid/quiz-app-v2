@@ -313,6 +313,7 @@ const DirectQuizAccess = ({ currentLanguage = 'th' }) => {
                 </div>
               </div>
               
+              {/* แก้เรื่องการแสดงผลเวลา */}
               <div>
                 <div style={{
                   fontSize: '2rem',
@@ -320,13 +321,17 @@ const DirectQuizAccess = ({ currentLanguage = 'th' }) => {
                   color: 'white',
                   marginBottom: '8px'
                 }}>
-                  {(quiz.questions?.length || 0) * QUIZ_SETTINGS.MINUTES_PER_QUESTION}
+                  {(quiz.questions?.length || 0) * QUIZ_SETTINGS.MINUTES_PER_QUESTION < 1 
+                    ? `${(quiz.questions?.length || 0) * 30}` 
+                    : (quiz.questions?.length || 0) * QUIZ_SETTINGS.MINUTES_PER_QUESTION}
                 </div>
                 <div style={{
                   color: 'rgba(255, 255, 255, 0.8)',
                   fontSize: '1rem'
                 }}>
-                  {currentLanguage === 'th' ? 'นาที' : 'Minutes'}
+                  {(quiz.questions?.length || 0) * QUIZ_SETTINGS.MINUTES_PER_QUESTION < 1 
+                    ? (currentLanguage === 'th' ? 'วินาที' : 'Seconds')
+                    : (currentLanguage === 'th' ? 'นาที' : 'Minutes')}
                 </div>
               </div>
               

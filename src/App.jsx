@@ -410,7 +410,7 @@ function App() {
         
         <Route path="/admin/scores" element={
           <ProtectedAdminRoute isAdminLoggedIn={isAdminLoggedIn}>
-            <AdminScores />
+            <AdminScores currentLanguage={currentLanguage} />
           </ProtectedAdminRoute>
         } />
         

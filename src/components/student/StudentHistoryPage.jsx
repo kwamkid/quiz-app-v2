@@ -468,28 +468,34 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                               audioService.buttonClick();
                             }}
                             disabled={loadingQuiz}
-                            style={{
-                              background: 'rgba(139, 92, 246, 0.2)',
-                              border: '1px solid rgba(139, 92, 246, 0.4)',
-                              color: '#a78bfa',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
+                             style={{
+                              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                              border: 'none',
+                              color: 'white',
+                              padding: '10px 20px',
+                              borderRadius: '12px',
                               cursor: loadingQuiz ? 'wait' : 'pointer',
-                              fontSize: '0.85rem',
-                              fontWeight: '500',
+                              fontSize: '0.9rem',
+                              fontWeight: '600',
                               transition: 'all 0.3s ease',
-                              opacity: loadingQuiz ? 0.7 : 1
+                              opacity: loadingQuiz ? 0.7 : 1,
+                              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
                             }}
                             onMouseEnter={(e) => {
                               if (!loadingQuiz) {
-                                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
-                                e.currentTarget.style.transform = 'scale(1.05)';
+                                e.currentTarget.style.background = 'linear-gradient(135deg, #9333ea, #7e22ce)';
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.4)';
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!loadingQuiz) {
-                                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
-                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
                               }
                             }}
                           >

@@ -1,4 +1,4 @@
-// src/components/admin/AdminScores.jsx - เพิ่มการแสดงข้อมูลโรงเรียน
+// src/components/admin/AdminScores.jsx - รองรับการแสดงผลตามภาษา
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Download, School } from 'lucide-react';
@@ -7,8 +7,9 @@ import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import AnswerReview from '../common/AnswerReview';
 import { formatDate } from '../../utils/helpers';
+import { t, getLocalizedField } from '../../translations';
 
-const AdminScores = () => {
+const AdminScores = ({ currentLanguage = 'th' }) => {
   const navigate = useNavigate();
   const [allAttempts, setAllAttempts] = useState([]);
   const [filteredAttempts, setFilteredAttempts] = useState([]);
@@ -18,7 +19,7 @@ const AdminScores = () => {
   const [selectedSchool, setSelectedSchool] = useState('all');
   const [quizzes, setQuizzes] = useState([]);
   const [schools, setSchools] = useState([]);
-  const [selectedDateRange, setSelectedDateRange] = useState('all'); // all, today, week, month, custom
+  const [selectedDateRange, setSelectedDateRange] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [stats, setStats] = useState({
@@ -29,6 +30,7 @@ const AdminScores = () => {
   });
   const [selectedReview, setSelectedReview] = useState(null);
   const [showAnswerReview, setShowAnswerReview] = useState(false);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
 
   // ใช้ useCallback เพื่อป้องกัน function ถูกสร้างใหม่
   const filterAttempts = useCallback(() => {
@@ -80,7 +82,7 @@ const AdminScores = () => {
             if (customStartDate && customEndDate) {
               const start = new Date(customStartDate);
               const end = new Date(customEndDate);
-              end.setHours(23, 59, 59, 999); // Include entire end day
+              end.setHours(23, 59, 59, 999);
               return attemptDate >= start && attemptDate <= end;
             }
             return true;
@@ -149,7 +151,6 @@ const AdminScores = () => {
   // คำนวณ stats ตาม filtered data
   useEffect(() => {
     if (filteredAttempts.length > 0) {
-      // Unique students (ต้องดูทั้งชื่อและโรงเรียน)
       const uniqueStudents = new Set(
         filteredAttempts.map(attempt => `${attempt.studentName}_${attempt.schoolId || 'no-school'}`)
       ).size;
@@ -165,7 +166,6 @@ const AdminScores = () => {
         topScore
       });
     } else {
-      // ถ้าไม่มีข้อมูลหลัง filter
       setStats({
         totalStudents: 0,
         totalAttempts: 0,
@@ -194,21 +194,55 @@ const AdminScores = () => {
     return '📚';
   };
 
+  // ฟังก์ชันโหลด quiz data และเปิด modal
+  const handleViewAnswers = async (attempt) => {
+    setLoadingQuiz(true);
+    try {
+      // โหลด quiz data จาก Firebase ถ้ายังไม่มี
+      if (!attempt.quiz && attempt.quizId) {
+        console.log('📚 Loading quiz data for:', attempt.quizId);
+        const quizData = await FirebaseService.getQuiz(attempt.quizId);
+        setSelectedReview({
+          ...attempt,
+          quiz: quizData
+        });
+      } else {
+        setSelectedReview(attempt);
+      }
+      setShowAnswerReview(true);
+    } catch (error) {
+      console.error('❌ Error loading quiz:', error);
+      setSelectedReview(attempt);
+      setShowAnswerReview(true);
+    } finally {
+      setLoadingQuiz(false);
+    }
+  };
+
   // Export to CSV function
   const exportToCSV = () => {
     if (filteredAttempts.length === 0) {
-      alert('ไม่มีข้อมูลให้ส่งออก');
+      alert(t('noDataToExport', currentLanguage));
       return;
     }
 
     // Prepare CSV headers
-    const headers = ['ชื่อนักเรียน', 'โรงเรียน', 'ชื่อข้อสอบ', 'คะแนน', 'เปอร์เซ็นต์', 'จำนวนข้อ', 'เวลาที่ใช้ (วินาที)', 'วันที่ทำ'];
+    const headers = [
+      t('studentName', currentLanguage),
+      t('school', currentLanguage),
+      t('quizName', currentLanguage),
+      t('score', currentLanguage),
+      t('percentage', currentLanguage),
+      t('totalQuestions', currentLanguage),
+      t('timeUsedSeconds', currentLanguage),
+      t('dateCompleted', currentLanguage)
+    ];
     
     // Prepare CSV rows
     const rows = filteredAttempts.map(attempt => [
       attempt.studentName,
       attempt.displaySchoolName || attempt.schoolName || '-',
-      attempt.quizTitle,
+      getLocalizedField(attempt, 'quizTitle', currentLanguage),
       attempt.score,
       attempt.percentage + '%',
       attempt.totalQuestions,
@@ -237,7 +271,7 @@ const AdminScores = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner message="กำลังโหลดข้อมูลคะแนน..." />;
+    return <LoadingSpinner message={t('loadingScores', currentLanguage)} />;
   }
 
   return (
@@ -282,13 +316,13 @@ const AdminScores = () => {
                 gap: '12px',
                 marginBottom: '8px'
               }}>
-                📊 ระบบดูคะแนนนักเรียน
+                📊 {t('scoreSystem', currentLanguage)}
               </h1>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
                 fontSize: '1.1rem'
               }}>
-                ติดตามผลการเรียนรู้ของนักเรียนทุกคน
+                {t('trackStudentProgress', currentLanguage)}
               </p>
             </div>
             
@@ -316,7 +350,7 @@ const AdminScores = () => {
                 }}
               >
                 <Download size={18} />
-                ส่งออก CSV
+                {t('exportCSV', currentLanguage)}
               </button>
 
               <button
@@ -343,7 +377,7 @@ const AdminScores = () => {
                 }}
               >
                 <ArrowLeft size={18} />
-                กลับ
+                {t('back', currentLanguage)}
               </button>
             </div>
           </div>
@@ -365,7 +399,7 @@ const AdminScores = () => {
               }} />
               <input
                 type="text"
-                placeholder="🔍 ค้นหาชื่อนักเรียน..."
+                placeholder={`🔍 ${t('searchStudent', currentLanguage)}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -406,11 +440,11 @@ const AdminScores = () => {
                 }}
               >
                 <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  🏫 ทุกโรงเรียน
+                  🏫 {t('allSchools', currentLanguage)}
                 </option>
                 {schools.map((school) => (
                   <option key={school.id} value={school.id} style={{ background: '#374151', color: 'white' }}>
-                    {school.nameTh}
+                    {getLocalizedField(school, 'name', currentLanguage)}
                   </option>
                 ))}
               </select>
@@ -441,11 +475,11 @@ const AdminScores = () => {
                 }}
               >
                 <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  📚 ข้อสอบทั้งหมด
+                  📚 {t('allQuizzes', currentLanguage)}
                 </option>
                 {quizzes.map((quiz) => (
                   <option key={quiz.id} value={quiz.id} style={{ background: '#374151', color: 'white' }}>
-                    {quiz.emoji} {quiz.title}
+                    {quiz.emoji} {getLocalizedField(quiz, 'title', currentLanguage)}
                   </option>
                 ))}
               </select>
@@ -482,19 +516,19 @@ const AdminScores = () => {
                 }}
               >
                 <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  📅 ทุกช่วงเวลา
+                  📅 {t('allTime', currentLanguage)}
                 </option>
                 <option value="today" style={{ background: '#374151', color: 'white' }}>
-                  📆 วันนี้
+                  📆 {t('today', currentLanguage)}
                 </option>
                 <option value="week" style={{ background: '#374151', color: 'white' }}>
-                  📅 7 วันที่ผ่านมา
+                  📅 {t('last7Days', currentLanguage)}
                 </option>
                 <option value="month" style={{ background: '#374151', color: 'white' }}>
-                  📅 30 วันที่ผ่านมา
+                  📅 {t('last30Days', currentLanguage)}
                 </option>
                 <option value="custom" style={{ background: '#374151', color: 'white' }}>
-                  📅 กำหนดเอง
+                  📅 {t('custom', currentLanguage)}
                 </option>
               </select>
             </div>
@@ -519,7 +553,7 @@ const AdminScores = () => {
                   marginBottom: '8px',
                   display: 'block'
                 }}>
-                  วันที่เริ่มต้น
+                  {t('startDate', currentLanguage)}
                 </label>
                 <input
                   type="date"
@@ -544,7 +578,7 @@ const AdminScores = () => {
                   marginBottom: '8px',
                   display: 'block'
                 }}>
-                  วันที่สิ้นสุด
+                  {t('endDate', currentLanguage)}
                 </label>
                 <input
                   type="date"
@@ -586,7 +620,7 @@ const AdminScores = () => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
               {stats.totalStudents}
             </div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>นักเรียนทั้งหมด</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('totalStudents', currentLanguage)}</div>
           </div>
 
           <div style={{
@@ -601,7 +635,7 @@ const AdminScores = () => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
               {stats.topScore}%
             </div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>คะแนนสูงสุด</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('topScore', currentLanguage)}</div>
           </div>
 
           <div style={{
@@ -616,7 +650,7 @@ const AdminScores = () => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
               {stats.averageScore}%
             </div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>คะแนนเฉลี่ย</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('averageScore', currentLanguage)}</div>
           </div>
 
           <div style={{
@@ -631,7 +665,7 @@ const AdminScores = () => {
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
               {stats.totalAttempts}
             </div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>การทำข้อสอบทั้งหมด</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('totalAttempts', currentLanguage)}</div>
           </div>
         </div>
 
@@ -652,17 +686,21 @@ const AdminScores = () => {
             alignItems: 'center',
             gap: '10px'
           }}>
-            📋 รายการคะแนน ({filteredAttempts.length} รายการ)
+            📋 {t('scoreList', currentLanguage)} ({filteredAttempts.length} {t('items', currentLanguage)})
           </h2>
 
           {filteredAttempts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📊</div>
               <h3 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '10px' }}>
-                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลคะแนน'}
+                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' 
+                  ? t('noSearchResults', currentLanguage) 
+                  : t('noScoreData', currentLanguage)}
               </h3>
               <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' : 'รอนักเรียนทำข้อสอบก่อน'}
+                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' 
+                  ? t('tryDifferentFilter', currentLanguage) 
+                  : t('waitForStudents', currentLanguage)}
               </p>
             </div>
           ) : (
@@ -742,13 +780,13 @@ const AdminScores = () => {
                         alignItems: 'center',
                         gap: '8px'
                       }}>
-                        {getGradeEmoji(attempt.percentage || 0)} {attempt.quizTitle}
+                        {getGradeEmoji(attempt.percentage || 0)} {getLocalizedField(attempt, 'quizTitle', currentLanguage)}
                       </div>
                       <div style={{
                         color: 'rgba(255, 255, 255, 0.7)',
                         fontSize: '0.9rem'
                       }}>
-                        {attempt.totalQuestions} คำถาม
+                        {attempt.totalQuestions} {t('questions', currentLanguage)}
                       </div>
                     </div>
 
@@ -766,7 +804,7 @@ const AdminScores = () => {
                         color: 'rgba(255, 255, 255, 0.7)',
                         fontSize: '0.9rem'
                       }}>
-                        {attempt.score}/{attempt.totalQuestions * 10} คะแนน
+                        {attempt.score}/{attempt.totalQuestions * 10} {t('score', currentLanguage)}
                       </div>
                     </div>
 
@@ -782,7 +820,7 @@ const AdminScores = () => {
                         marginBottom: '4px'
                       }}>
                         <Clock size={14} />
-                        เวลาที่ใช้
+                        {t('timeUsed', currentLanguage)}
                       </div>
                       <div style={{ color: 'white', fontWeight: 'bold' }}>
                         {Math.floor((attempt.totalTime || 0) / 60)}:{((attempt.totalTime || 0) % 60).toString().padStart(2, '0')}
@@ -794,34 +832,42 @@ const AdminScores = () => {
                       <div style={{ textAlign: 'center' }}>
                         <button
                           onClick={() => {
-                            setSelectedReview(attempt);
-                            setShowAnswerReview(true);
+                            handleViewAnswers(attempt);
                             audioService.buttonClick();
                           }}
+                          disabled={loadingQuiz}
                           style={{
-                            background: 'rgba(139, 92, 246, 0.2)',
-                            border: '1px solid rgba(139, 92, 246, 0.4)',
-                            color: '#a78bfa',
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem',
-                            fontWeight: '500',
+                            background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                            border: 'none',
+                            color: 'white',
+                            padding: '10px 20px',
+                            borderRadius: '12px',
+                            cursor: loadingQuiz ? 'wait' : 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
                             transition: 'all 0.3s ease',
+                            opacity: loadingQuiz ? 0.7 : 1,
+                            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
-                            e.currentTarget.style.transform = 'scale(1.05)';
+                            if (!loadingQuiz) {
+                              e.currentTarget.style.background = 'linear-gradient(135deg, #9333ea, #7e22ce)';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.4)';
+                            }
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
-                            e.currentTarget.style.transform = 'scale(1)';
+                            if (!loadingQuiz) {
+                              e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6, #7c3aed)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
+                            }
                           }}
                         >
-                          📋 ดูรายละเอียด
+                          📋 {loadingQuiz ? t('loading', currentLanguage) : t('viewDetails', currentLanguage)}
                         </button>
                       </div>
                     )}
@@ -843,13 +889,13 @@ const AdminScores = () => {
             setSelectedReview(null);
           }}
           answers={selectedReview.answers || []}
-          quiz={selectedReview.quiz} // อาจเป็น undefined สำหรับข้อมูลเก่า
-          quizTitle={selectedReview.quizTitle}
+          quiz={selectedReview.quiz}
+          quizTitle={getLocalizedField(selectedReview, 'quizTitle', currentLanguage)}
           studentName={selectedReview.studentName}
           score={selectedReview.score}
           percentage={selectedReview.percentage}
           totalTime={selectedReview.totalTime}
-          currentLanguage="th"
+          currentLanguage={currentLanguage}
           isAdmin={true}
         />
       )}

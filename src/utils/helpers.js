@@ -103,6 +103,33 @@ export const formatTime = (seconds) => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
+// Format Time Display (minutes to "X นาที Y วินาที")
+export const formatTimeDisplay = (totalMinutes, language = "th") => {
+  const totalSeconds = Math.round(totalMinutes * 60);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (language === "th") {
+    if (minutes === 0) {
+      return `${seconds} วินาที`;
+    } else if (seconds === 0) {
+      return `${minutes} นาที`;
+    } else {
+      return `${minutes} นาที ${seconds} วินาที`;
+    }
+  } else {
+    if (minutes === 0) {
+      return `${seconds} second${seconds !== 1 ? "s" : ""}`;
+    } else if (seconds === 0) {
+      return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+    } else {
+      return `${minutes} minute${minutes !== 1 ? "s" : ""} ${seconds} second${
+        seconds !== 1 ? "s" : ""
+      }`;
+    }
+  }
+};
+
 // Get Grade Info
 export const getGradeInfo = (percentage) => {
   if (percentage >= 90) return { grade: "A", emoji: "🏆", color: "#22c55e" };
