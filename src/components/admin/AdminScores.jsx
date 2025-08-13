@@ -219,56 +219,57 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
     }
   };
 
-  // Export to CSV function
   const exportToCSV = () => {
-    if (filteredAttempts.length === 0) {
-      alert(t('noDataToExport', currentLanguage));
-      return;
-    }
+  if (filteredAttempts.length === 0) {
+    alert(t('noDataToExport', currentLanguage));
+    return;
+  }
 
-    // Prepare CSV headers
-    const headers = [
-      t('studentName', currentLanguage),
-      t('school', currentLanguage),
-      t('quizName', currentLanguage),
-      t('score', currentLanguage),
-      t('percentage', currentLanguage),
-      t('totalQuestions', currentLanguage),
-      t('timeUsedSeconds', currentLanguage),
-      t('dateCompleted', currentLanguage)
-    ];
-    
-    // Prepare CSV rows
-    const rows = filteredAttempts.map(attempt => [
-      attempt.studentName,
-      attempt.displaySchoolName || attempt.schoolName || '-',
-      getLocalizedField(attempt, 'quizTitle', currentLanguage),
-      attempt.score,
-      attempt.percentage + '%',
-      attempt.totalQuestions,
-      attempt.totalTime || 0,
-      formatDate(attempt.timestamp)
-    ]);
-    
-    // Convert to CSV string
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-    
-    // Create blob and download
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `quiz-scores-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Prepare CSV headers
+  const headers = [
+    t('studentName', currentLanguage),
+    t('school', currentLanguage),
+    t('quizName', currentLanguage),
+    t('score', currentLanguage),
+    t('maxScore', currentLanguage), // ✅ เพิ่ม header คะแนนเต็ม
+    t('percentage', currentLanguage),
+    t('totalQuestions', currentLanguage),
+    t('timeUsedSeconds', currentLanguage),
+    t('dateCompleted', currentLanguage)
+  ];
+  
+  // Prepare CSV rows
+  const rows = filteredAttempts.map(attempt => [
+    attempt.studentName,
+    attempt.displaySchoolName || attempt.schoolName || '-',
+    getLocalizedField(attempt, 'quizTitle', currentLanguage),
+    attempt.score,
+    attempt.maxScore || attempt.totalQuestions * 10, // ✅ เพิ่มคะแนนเต็ม
+    attempt.percentage + '%',
+    attempt.totalQuestions,
+    attempt.totalTime || 0,
+    formatDate(attempt.timestamp)
+  ]);
+  
+  // Convert to CSV string
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+  ].join('\n');
+  
+  // Create blob and download
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `quiz-scores-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
   if (loading) {
     return <LoadingSpinner message={t('loadingScores', currentLanguage)} />;
@@ -804,7 +805,8 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
                         color: 'rgba(255, 255, 255, 0.7)',
                         fontSize: '0.9rem'
                       }}>
-                        {attempt.score}/{attempt.totalQuestions * 10} {t('score', currentLanguage)}
+                        {/* ✅ แก้ไข: ใช้ maxScore ถ้ามี ถ้าไม่มีให้ใช้ totalQuestions * 10 */}
+                        {attempt.score}/{attempt.maxScore || attempt.totalQuestions * 10} {t('score', currentLanguage)}
                       </div>
                     </div>
 

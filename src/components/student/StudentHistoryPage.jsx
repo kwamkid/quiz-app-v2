@@ -412,16 +412,17 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
                         <div style={{
                           fontSize: '2rem',
                           fontWeight: 'bold',
-                          color: gradeInfo.color,
+                          color: getScoreColor(attempt.percentage || 0),
                           marginBottom: '4px'
                         }}>
-                          {gradeInfo.emoji} {attempt.percentage || 0}%
+                          {attempt.percentage || 0}%
                         </div>
                         <div style={{
                           color: 'rgba(255, 255, 255, 0.7)',
                           fontSize: '0.9rem'
                         }}>
-                          {attempt.score}/{attempt.totalQuestions * 10} {t('score', currentLanguage)}
+                          {/* ✅ แก้ไข: ใช้ maxScore ถ้ามี ถ้าไม่มีให้ใช้ totalQuestions * 10 */}
+                          {attempt.score}/{attempt.maxScore || attempt.totalQuestions * 10} {t('score', currentLanguage)}
                         </div>
                       </div>
 

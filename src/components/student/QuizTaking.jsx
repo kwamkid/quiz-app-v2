@@ -157,6 +157,7 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
 
     const answerRecord = {
       questionIndex: currentQuestionIndex,
+      originalQuestionIndex: currentQuestion.originalIndex || currentQuestionIndex, // เพิ่ม original index
       question: currentQuestion.question,
       questionTh: currentQuestion.questionTh || currentQuestion.question,
       questionEn: currentQuestion.questionEn || currentQuestion.question,
@@ -209,57 +210,60 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
     }, 2000);
   };
 
-  const finishQuiz = async () => {
-    await audioService.quizComplete();
-    
-    console.log('🏆 Quiz completed - keeping music playing');
-    
-    const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
-    
-    // คำนวณคะแนนรวมจาก answers ทั้งหมด
-    const finalScore = answers.reduce((sum, answer) => sum + (answer.points || 0), 0);
-    
-    // คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ
-    const maxScore = questions.reduce((sum, question) => 
-      sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
-    );
-    
-    const percentage = Math.round((finalScore / maxScore) * 100);
-    
-    console.log('📊 Final score calculation:', {
-      finalScore,
-      maxScore,
-      percentage,
-      totalAnswered: answers.length,
-      correctAnswers: answers.filter(a => a.isCorrect).length
-    });
-    
-    // ✅ แก้ไขตรงนี้ - เพิ่มการบันทึก titleTh และ titleEn แยกกัน
-    const results = {
-      quizId: quiz.id || 'unknown',
-      quizTitle: quiz.title,
-      quizTitleTh: quiz.titleTh || quiz.title,  // บันทึกชื่อภาษาไทย
-      quizTitleEn: quiz.titleEn || quiz.title,  // บันทึกชื่อภาษาอังกฤษ
-      quiz: quiz, // เก็บ quiz object ทั้งหมดไว้ด้วย
-      studentName: studentName,
-      studentSchool: studentSchool,
-      score: finalScore,
-      totalQuestions: totalQuestions,
-      percentage: percentage,
-      totalTime: totalTime,
-      completedAt: new Date(),
-      selectedQuestionCount: selectedQuestionCount,
-      originalTotalQuestions: originalTotalQuestions,
-      answers: answers,
-      difficulty: quiz.difficulty || 'ง่าย',
-      emoji: quiz.emoji || '📚'
-    };
-    
-    console.log('🏆 Quiz completed with full results:', results);
-    
-    // Navigate to result page with state
-    navigate('/student/quiz/result', { state: { results } });
+  // ส่วนที่ต้องแก้ใน QuizTaking.jsx
+// ประมาณบรรทัด 290-310 ในฟังก์ชัน finishQuiz
+
+const finishQuiz = async () => {
+  await audioService.quizComplete();
+  
+  console.log('🏆 Quiz completed - keeping music playing');
+  
+  const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+  
+  // คำนวณคะแนนรวมจาก answers ทั้งหมด
+  const finalScore = answers.reduce((sum, answer) => sum + (answer.points || 0), 0);
+  
+  // ✅ แก้ไข: คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ
+  const maxScore = questions.reduce((sum, question) => 
+    sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
+  );
+  
+  const percentage = Math.round((finalScore / maxScore) * 100);
+  
+  console.log('📊 Final score calculation:', {
+    finalScore,
+    maxScore,
+    percentage,
+    totalAnswered: answers.length,
+    correctAnswers: answers.filter(a => a.isCorrect).length
+  });
+  
+  const results = {
+    quizId: quiz.id || 'unknown',
+    quizTitle: quiz.title,
+    quizTitleTh: quiz.titleTh || quiz.title,
+    quizTitleEn: quiz.titleEn || quiz.title,
+    quiz: quiz, // เก็บ quiz object ทั้งหมดไว้ด้วย
+    studentName: studentName,
+    studentSchool: studentSchool,
+    score: finalScore,
+    maxScore: maxScore, // ✅ เพิ่ม maxScore ในผลลัพธ์
+    totalQuestions: totalQuestions,
+    percentage: percentage,
+    totalTime: totalTime,
+    completedAt: new Date(),
+    selectedQuestionCount: selectedQuestionCount,
+    originalTotalQuestions: originalTotalQuestions,
+    answers: answers,
+    difficulty: quiz.difficulty || 'ง่าย',
+    emoji: quiz.emoji || '📚'
   };
+  
+  console.log('🏆 Quiz completed with full results:', results);
+  
+  // Navigate to result page with state
+  navigate('/student/quiz/result', { state: { results } });
+};
 
   const handleBack = async () => {
     const confirmExit = confirm(t('exitQuizConfirm', currentLanguage));

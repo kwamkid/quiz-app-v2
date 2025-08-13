@@ -179,46 +179,50 @@ const QuizResultPage = ({ currentLanguage = 'th' }) => {
             </p>
           </div>
 
-          {/* Score Card */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '20px',
-            padding: '24px',
-            marginBottom: '32px',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '16px',
-              textAlign: 'center'
-            }}>
-              <div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
-                  {results.score}
-                </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('scoreObtained', currentLanguage)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
-                  {results.totalQuestions * 10}
-                </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('fullScore', currentLanguage)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
-                  {results.totalQuestions}
-                </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('totalQuestions', currentLanguage)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
-                  {Math.floor(results.totalTime / 60)}:{(results.totalTime % 60).toString().padStart(2, '0')}
-                </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('timeUsed', currentLanguage)}</div>
-              </div>
-            </div>
-          </div>
+          // ส่วนที่ต้องแก้ใน QuizResultPage.jsx
+// ประมาณบรรทัด 120-180 ในส่วน Score Card
+
+  {/* Score Card */}
+  <div style={{
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '20px',
+    padding: '24px',
+    marginBottom: '32px',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
+  }}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: '16px',
+      textAlign: 'center'
+    }}>
+      <div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+          {results.score}
+        </div>
+        <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('scoreObtained', currentLanguage)}</div>
+      </div>
+      <div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+          {/* ✅ แก้ไข: ใช้ maxScore ที่คำนวณมาจาก QuizTaking แทน totalQuestions * 10 */}
+          {results.maxScore || results.totalQuestions * 10}
+        </div>
+        <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('fullScore', currentLanguage)}</div>
+      </div>
+      <div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+          {results.totalQuestions}
+        </div>
+        <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('totalQuestions', currentLanguage)}</div>
+      </div>
+      <div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white' }}>
+          {Math.floor(results.totalTime / 60)}:{(results.totalTime % 60).toString().padStart(2, '0')}
+        </div>
+        <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{t('timeUsed', currentLanguage)}</div>
+      </div>
+    </div>
+  </div>
 
           {/* Percentage Display */}
           <div style={{

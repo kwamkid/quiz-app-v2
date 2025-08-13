@@ -11,10 +11,21 @@ export const VIEWS = {
   QUIZ_EDITOR: "quizEditor",
 };
 
+// ✅ แก้ไข: ดึง admin credentials จาก environment variables
 export const DEFAULT_ADMIN = {
-  username: "admin",
-  password: "admin123",
+  username: import.meta.env.VITE_ADMIN_USERNAME || "admin",
+  password: import.meta.env.VITE_ADMIN_PASSWORD || "admin123",
 };
+
+// Validation check
+if (
+  !import.meta.env.VITE_ADMIN_USERNAME ||
+  !import.meta.env.VITE_ADMIN_PASSWORD
+) {
+  console.warn(
+    "⚠️ Admin credentials not found in environment variables, using defaults"
+  );
+}
 
 export const QUIZ_SETTINGS = {
   MINUTES_PER_QUESTION: 0.5, // xx นาทีต่อข้อ

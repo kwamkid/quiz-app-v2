@@ -7,10 +7,11 @@ const AnswerReview = ({
   isOpen, 
   onClose, 
   answers, 
-  quiz, // เพิ่ม quiz object เพื่อเข้าถึงข้อมูลคำถาม-ตัวเลือก
+  quiz,
   quizTitle, 
   studentName,
   score,
+  maxScore, // ✅ เพิ่ม prop maxScore ตรงนี้
   percentage,
   totalTime,
   currentLanguage = 'th',
@@ -20,6 +21,22 @@ const AnswerReview = ({
 
   // ใช้ currentLanguage จาก props โดยตรง
   const displayLanguage = currentLanguage;
+
+  // ✅ เพิ่ม helper function คำนวณคะแนนเต็ม
+  const calculateMaxScore = () => {
+    // ถ้ามี maxScore ส่งมาให้ใช้เลย
+    if (maxScore) return maxScore;
+    
+    // ถ้ามี quiz object ให้คำนวณจาก questions
+    if (quiz && quiz.questions) {
+      return quiz.questions.reduce((sum, q) => sum + (q.points || 10), 0);
+    }
+    
+    // ถ้าไม่มีอะไรเลย ใช้จำนวนข้อ × 10 (fallback)
+    return answers.length * 10;
+  };
+
+  const displayMaxScore = calculateMaxScore();
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -143,7 +160,7 @@ const AnswerReview = ({
                   fontSize: '0.9rem',
                   color: 'rgba(255, 255, 255, 0.7)'
                 }}>
-                  <span>💯 {score} {t('score', displayLanguage)} ({percentage}%)</span>
+                  <span>💯 {score}/{displayMaxScore} {t('score', displayLanguage)} ({percentage}%)</span>
                   <span>⏱️ {formatTime(totalTime)}</span>
                   <span>✅ {t('correctCount', displayLanguage)} {answers.filter(a => a.isCorrect).length}/{answers.length} {t('ofQuestions', displayLanguage)}</span>
                 </div>
@@ -194,7 +211,11 @@ const AnswerReview = ({
           }}>
             {answers.map((answer, index) => {
               // ดึงข้อมูลคำถามจาก quiz object (ถ้ามี)
-              const questionData = quiz?.questions?.[answer.questionIndex] || null;
+              // ใช้ originalQuestionIndex ถ้ามี ไม่งั้นใช้ questionIndex
+              const questionIndex = answer.originalQuestionIndex !== undefined 
+                ? answer.originalQuestionIndex 
+                : answer.questionIndex;
+              const questionData = quiz?.questions?.[questionIndex] || null;
               
               return (
                 <div

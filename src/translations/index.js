@@ -115,6 +115,7 @@ const translations = {
     scoreObtained: "คะแนนที่ได้",
     totalQuestions: "จำนวนข้อ",
     timeUsed: "เวลาที่ใช้",
+    maxScore: "คะแนนเต็ม", // ✅ เพิ่มบรรทัดนี้
     by: "โดย",
     savingScore: "กำลังบันทึกผลคะแนน...",
     scoreSaved: "บันทึกผลคะแนนเรียบร้อย",
@@ -330,6 +331,7 @@ const translations = {
     scoreObtained: "Score",
     totalQuestions: "Questions",
     timeUsed: "Time Used",
+    maxScore: "Max Score", // ✅ เพิ่มบรรทัดนี้
     by: "by",
     savingScore: "Saving score...",
     scoreSaved: "Score saved successfully",

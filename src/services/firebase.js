@@ -394,8 +394,9 @@ class FirebaseService {
     }
   }
 
-  // Save student attempt with school info
-  // Save student attempt with school info
+  // ส่วนที่ต้องแก้ใน firebase.js
+  // ในฟังก์ชัน saveStudentAttempt (ประมาณบรรทัด 385-420)
+
   static async saveStudentAttempt(attemptData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("💾 Mock save student attempt:", attemptData);
@@ -412,10 +413,11 @@ class FirebaseService {
         schoolId: attemptData.studentSchool?.id || attemptData.schoolId || null,
         schoolName: attemptData.studentSchool?.nameTh || null,
         quizTitle: attemptData.quizTitle,
-        quizTitleTh: attemptData.quizTitleTh || attemptData.quizTitle, // ✅ เพิ่มบันทึก titleTh
-        quizTitleEn: attemptData.quizTitleEn || attemptData.quizTitle, // ✅ เพิ่มบันทึก titleEn
+        quizTitleTh: attemptData.quizTitleTh || attemptData.quizTitle,
+        quizTitleEn: attemptData.quizTitleEn || attemptData.quizTitle,
         quizId: attemptData.quizId,
         score: attemptData.score,
+        maxScore: attemptData.maxScore || attemptData.totalQuestions * 10, // ✅ เพิ่ม maxScore
         totalQuestions: attemptData.totalQuestions,
         totalTime: attemptData.totalTime,
         percentage: attemptData.percentage,
