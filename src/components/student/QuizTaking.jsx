@@ -10,8 +10,6 @@ import { getTimerColor, calculatePercentage, getFromLocalStorage, formatTimeDisp
 import { t, getLocalizedField } from '../../translations';
 import { QUIZ_SETTINGS } from '../../constants';
 
-
-
 const QuizTaking = ({ currentLanguage = 'th' }) => {
   const navigate = useNavigate();
   const { quizId } = useParams();
@@ -157,7 +155,7 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
 
     const answerRecord = {
       questionIndex: currentQuestionIndex,
-      originalQuestionIndex: currentQuestion.originalIndex || currentQuestionIndex, // เพิ่ม original index
+      originalQuestionIndex: currentQuestion.originalIndex || currentQuestionIndex,
       question: currentQuestion.question,
       questionTh: currentQuestion.questionTh || currentQuestion.question,
       questionEn: currentQuestion.questionEn || currentQuestion.question,
@@ -172,7 +170,10 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
       selectedOptionEn: currentQuestion.optionsEn?.[answerIndex] || currentQuestion.options[answerIndex],
       correctOption: currentQuestion.options[currentQuestion.correctAnswer],
       correctOptionTh: currentQuestion.options[currentQuestion.correctAnswer],
-      correctOptionEn: currentQuestion.optionsEn?.[currentQuestion.correctAnswer] || currentQuestion.options[currentQuestion.correctAnswer]
+      correctOptionEn: currentQuestion.optionsEn?.[currentQuestion.correctAnswer] || currentQuestion.options[currentQuestion.correctAnswer],
+      // เก็บ options ไว้ด้วยเพื่อใช้แสดงผลใน History/Admin
+      options: currentQuestion.options,
+      optionsEn: currentQuestion.optionsEn
     };
     
     setAnswers(prev => [...prev, answerRecord]);
@@ -210,60 +211,57 @@ const QuizTaking = ({ currentLanguage = 'th' }) => {
     }, 2000);
   };
 
-  // ส่วนที่ต้องแก้ใน QuizTaking.jsx
-// ประมาณบรรทัด 290-310 ในฟังก์ชัน finishQuiz
-
-const finishQuiz = async () => {
-  await audioService.quizComplete();
-  
-  console.log('🏆 Quiz completed - keeping music playing');
-  
-  const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
-  
-  // คำนวณคะแนนรวมจาก answers ทั้งหมด
-  const finalScore = answers.reduce((sum, answer) => sum + (answer.points || 0), 0);
-  
-  // ✅ แก้ไข: คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ
-  const maxScore = questions.reduce((sum, question) => 
-    sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
-  );
-  
-  const percentage = Math.round((finalScore / maxScore) * 100);
-  
-  console.log('📊 Final score calculation:', {
-    finalScore,
-    maxScore,
-    percentage,
-    totalAnswered: answers.length,
-    correctAnswers: answers.filter(a => a.isCorrect).length
-  });
-  
-  const results = {
-    quizId: quiz.id || 'unknown',
-    quizTitle: quiz.title,
-    quizTitleTh: quiz.titleTh || quiz.title,
-    quizTitleEn: quiz.titleEn || quiz.title,
-    quiz: quiz, // เก็บ quiz object ทั้งหมดไว้ด้วย
-    studentName: studentName,
-    studentSchool: studentSchool,
-    score: finalScore,
-    maxScore: maxScore, // ✅ เพิ่ม maxScore ในผลลัพธ์
-    totalQuestions: totalQuestions,
-    percentage: percentage,
-    totalTime: totalTime,
-    completedAt: new Date(),
-    selectedQuestionCount: selectedQuestionCount,
-    originalTotalQuestions: originalTotalQuestions,
-    answers: answers,
-    difficulty: quiz.difficulty || 'ง่าย',
-    emoji: quiz.emoji || '📚'
+  const finishQuiz = async () => {
+    await audioService.quizComplete();
+    
+    console.log('🏆 Quiz completed - keeping music playing');
+    
+    const totalTime = Math.round((Date.now() - quizStartTime) / 1000);
+    
+    // คำนวณคะแนนรวมจาก answers ทั้งหมด
+    const finalScore = answers.reduce((sum, answer) => sum + (answer.points || 0), 0);
+    
+    // ✅ แก้ไข: คำนวณคะแนนเต็มจากคะแนนจริงของแต่ละข้อ
+    const maxScore = questions.reduce((sum, question) => 
+      sum + (question.points || QUIZ_SETTINGS.POINTS_PER_QUESTION), 0
+    );
+    
+    const percentage = Math.round((finalScore / maxScore) * 100);
+    
+    console.log('📊 Final score calculation:', {
+      finalScore,
+      maxScore,
+      percentage,
+      totalAnswered: answers.length,
+      correctAnswers: answers.filter(a => a.isCorrect).length
+    });
+    
+    const results = {
+      quizId: quiz.id || 'unknown',
+      quizTitle: quiz.title,
+      quizTitleTh: quiz.titleTh || quiz.title,
+      quizTitleEn: quiz.titleEn || quiz.title,
+      quiz: quiz, // เก็บ quiz object ทั้งหมดไว้ด้วย
+      studentName: studentName,
+      studentSchool: studentSchool,
+      score: finalScore,
+      maxScore: maxScore, // ✅ เพิ่ม maxScore ในผลลัพธ์
+      totalQuestions: totalQuestions,
+      percentage: percentage,
+      totalTime: totalTime,
+      completedAt: new Date(),
+      selectedQuestionCount: selectedQuestionCount,
+      originalTotalQuestions: originalTotalQuestions,
+      answers: answers,
+      difficulty: quiz.difficulty || 'ง่าย',
+      emoji: quiz.emoji || '📚'
+    };
+    
+    console.log('🏆 Quiz completed with full results:', results);
+    
+    // Navigate to result page with state
+    navigate('/student/quiz/result', { state: { results } });
   };
-  
-  console.log('🏆 Quiz completed with full results:', results);
-  
-  // Navigate to result page with state
-  navigate('/student/quiz/result', { state: { results } });
-};
 
   const handleBack = async () => {
     const confirmExit = confirm(t('exitQuizConfirm', currentLanguage));

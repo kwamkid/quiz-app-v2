@@ -42,16 +42,23 @@ const QuizResultPage = ({ currentLanguage = 'th' }) => {
     }
   };
 
-  const saveResults = async () => {
+ const saveResults = async () => {
     try {
       setIsSaving(true);
       console.log('💾 Saving quiz results:', results);
       
+      // เพิ่มข้อมูล quiz ที่สุ่มแล้วเข้าไปด้วย
+      const resultsWithQuiz = {
+        ...results,
+        // บันทึก quiz object ที่มีคำถามเรียงตามลำดับที่สุ่มแล้ว
+        quizData: results.quiz
+      };
+      
       // Save to Firebase
-      await FirebaseService.saveQuizResult(results);
+      await FirebaseService.saveQuizResult(resultsWithQuiz);
       
       setSaved(true);
-      console.log('✅ Results saved successfully');
+      console.log('✅ Results saved successfully with quiz data');
     } catch (error) {
       console.error('❌ Error saving results:', error);
     } finally {
@@ -178,9 +185,6 @@ const QuizResultPage = ({ currentLanguage = 'th' }) => {
               {scoreInfo.message}
             </p>
           </div>
-
-          // ส่วนที่ต้องแก้ใน QuizResultPage.jsx
-// ประมาณบรรทัด 120-180 ในส่วน Score Card
 
   {/* Score Card */}
   <div style={{

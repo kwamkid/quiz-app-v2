@@ -70,7 +70,16 @@ const AnswerReview = ({
 
   // ฟังก์ชันดึงตัวเลือกตามภาษา
   const getOptionText = (answer, questionData, optionIndex, isCorrectAnswer = false, language) => {
-    // ถ้ามี questionData ให้ใช้ก่อน
+    // ถ้ามี options ใน answer ให้ใช้ก่อน (สำหรับกรณีที่มาจาก History/Admin)
+    if (answer.options && answer.options[optionIndex]) {
+      if (language === 'en' && answer.optionsEn && answer.optionsEn[optionIndex]) {
+        return answer.optionsEn[optionIndex];
+      } else {
+        return answer.options[optionIndex];
+      }
+    }
+    
+    // ถ้ามี questionData ให้ใช้
     if (questionData) {
       if (language === 'en' && questionData.optionsEn && questionData.optionsEn[optionIndex]) {
         return questionData.optionsEn[optionIndex];
@@ -210,12 +219,24 @@ const AnswerReview = ({
             gap: '16px'
           }}>
             {answers.map((answer, index) => {
-              // ดึงข้อมูลคำถามจาก quiz object (ถ้ามี)
-              // ใช้ originalQuestionIndex ถ้ามี ไม่งั้นใช้ questionIndex
-              const questionIndex = answer.originalQuestionIndex !== undefined 
-                ? answer.originalQuestionIndex 
-                : answer.questionIndex;
+              // ใช้ questionIndex (ลำดับที่แสดง) แทน originalQuestionIndex
+              const questionIndex = answer.questionIndex !== undefined 
+                ? answer.questionIndex 
+                : index;
+              
+              // ดึงข้อมูลคำถามจาก quiz object โดยใช้ questionIndex
               const questionData = quiz?.questions?.[questionIndex] || null;
+              
+              // สำหรับกรณีที่ไม่มี quiz object (History/Admin) ให้ใช้ข้อมูลจาก answer โดยตรง
+              const displayQuestion = getQuestionText(answer, questionData, displayLanguage);
+              const selectedOptionText = answer.selectedOption || 
+                                       (answer.options && answer.options[answer.selectedAnswer]) ||
+                                       (questionData && getOptionText(answer, questionData, answer.selectedAnswer, false, displayLanguage)) || 
+                                       'N/A';
+              const correctOptionText = answer.correctOption ||
+                                      (answer.options && answer.options[answer.correctAnswer]) ||
+                                      (questionData && getOptionText(answer, questionData, answer.correctAnswer, true, displayLanguage)) ||
+                                      'N/A';
               
               return (
                 <div
@@ -259,7 +280,7 @@ const AnswerReview = ({
                         fontWeight: '600',
                         marginBottom: '4px'
                       }}>
-                        {getQuestionText(answer, questionData, displayLanguage)}
+                        {displayQuestion}
                       </h3>
                       <div style={{
                         display: 'flex',
@@ -325,7 +346,7 @@ const AnswerReview = ({
                           {String.fromCharCode(65 + answer.selectedAnswer)}
                         </span>
                         <span style={{ flex: 1 }}>
-                          {getOptionText(answer, questionData, answer.selectedAnswer, false, displayLanguage)}
+                          {selectedOptionText}
                         </span>
                       </div>
                     </div>
@@ -361,7 +382,7 @@ const AnswerReview = ({
                             {String.fromCharCode(65 + answer.correctAnswer)}
                           </span>
                           <span style={{ flex: 1 }}>
-                            {getOptionText(answer, questionData, answer.correctAnswer, true, displayLanguage)}
+                            {correctOptionText}
                           </span>
                         </div>
                       </div>

@@ -394,9 +394,7 @@ class FirebaseService {
     }
   }
 
-  // ส่วนที่ต้องแก้ใน firebase.js
   // ในฟังก์ชัน saveStudentAttempt (ประมาณบรรทัด 385-420)
-
   static async saveStudentAttempt(attemptData) {
     if (!isFirebaseConfigValid || !db) {
       console.log("💾 Mock save student attempt:", attemptData);
@@ -406,6 +404,14 @@ class FirebaseService {
 
     try {
       console.log("💾 Saving student attempt:", attemptData);
+
+      // Process answers to ensure all data is saved
+      const processedAnswers = (attemptData.answers || []).map((answer) => ({
+        ...answer,
+        // เก็บข้อมูลตัวเลือกไว้ด้วย
+        options: answer.options || null,
+        optionsEn: answer.optionsEn || null,
+      }));
 
       const docRef = await addDoc(collection(db, "quiz_results"), {
         studentName: attemptData.studentName,
@@ -417,7 +423,7 @@ class FirebaseService {
         quizTitleEn: attemptData.quizTitleEn || attemptData.quizTitle,
         quizId: attemptData.quizId,
         score: attemptData.score,
-        maxScore: attemptData.maxScore || attemptData.totalQuestions * 10, // ✅ เพิ่ม maxScore
+        maxScore: attemptData.maxScore || attemptData.totalQuestions * 10,
         totalQuestions: attemptData.totalQuestions,
         totalTime: attemptData.totalTime,
         percentage: attemptData.percentage,
@@ -427,12 +433,18 @@ class FirebaseService {
           attemptData.selectedQuestionCount || attemptData.totalQuestions,
         originalTotalQuestions:
           attemptData.originalTotalQuestions || attemptData.totalQuestions,
-        answers: attemptData.answers || [],
+        answers: processedAnswers,
         difficulty: attemptData.difficulty || null,
         emoji: attemptData.emoji || null,
+        // บันทึก quiz data ที่สุ่มแล้วเข้าไปด้วย
+        quizData: attemptData.quizData || null,
       });
 
       console.log("✅ Student attempt saved with ID:", docRef.id);
+      console.log(
+        "📋 Saved with quiz data:",
+        attemptData.quizData ? "Yes" : "No"
+      );
       return docRef.id;
     } catch (error) {
       console.error("❌ Error saving student attempt:", error);

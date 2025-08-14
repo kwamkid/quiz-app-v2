@@ -95,8 +95,14 @@ const QuizList = ({ currentLanguage = 'th' }) => {
     if (selectedQuiz) {
       await audioService.correctAnswer();
       
+      // เพิ่ม originalIndex ให้แต่ละคำถามก่อนสุ่ม
+      const questionsWithIndex = selectedQuiz.questions.map((q, index) => ({
+        ...q,
+        originalIndex: index
+      }));
+      
       // สุ่มคำถามและเลือกจำนวนที่ต้องการ
-      const shuffledQuestions = [...selectedQuiz.questions].sort(() => Math.random() - 0.5);
+      const shuffledQuestions = [...questionsWithIndex].sort(() => Math.random() - 0.5);
       const selectedQuestions = shuffledQuestions.slice(0, questionCount);
       
       const quizWithSelectedQuestions = {
@@ -110,6 +116,11 @@ const QuizList = ({ currentLanguage = 'th' }) => {
       setSelectedQuiz(null);
       
       console.log('🎮 Starting quiz - keeping music status:', musicService.isCurrentlyPlaying());
+      console.log('📝 Quiz data:', {
+        totalQuestions: selectedQuiz.questions.length,
+        selectedCount: questionCount,
+        questionsWithIndex: selectedQuestions
+      });
       
       // Save quiz data to sessionStorage for QuizTaking to use
       sessionStorage.setItem('currentQuiz', JSON.stringify(quizWithSelectedQuestions));

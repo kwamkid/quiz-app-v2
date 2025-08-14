@@ -104,13 +104,19 @@ const StudentHistoryPage = ({ currentLanguage = 'th' }) => {
   const handleViewAnswers = async (attempt) => {
     setLoadingQuiz(true);
     try {
-      // โหลด quiz data จาก Firebase ถ้ายังไม่มี
-      if (!attempt.quiz && attempt.quizId) {
-        console.log('📚 Loading quiz data for:', attempt.quizId);
+      // ใช้ quizData ที่บันทึกไว้ก่อน ถ้าไม่มีค่อยโหลดจาก Firebase
+      if (attempt.quizData) {
+        console.log('📚 Using saved quiz data');
+        setSelectedReview({
+          ...attempt,
+          quiz: attempt.quizData
+        });
+      } else if (!attempt.quiz && attempt.quizId) {
+        console.log('📚 Loading quiz data from Firebase:', attempt.quizId);
         const quizData = await FirebaseService.getQuiz(attempt.quizId);
         setSelectedReview({
           ...attempt,
-          quiz: quizData // เพิ่ม quiz object
+          quiz: quizData
         });
       } else {
         setSelectedReview(attempt);
