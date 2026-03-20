@@ -14,6 +14,9 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  limit as firestoreLimit,
+  startAfter,
+  getCountFromServer,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -549,6 +552,56 @@ class FirebaseService {
     } catch (error) {
       console.error("❌ Error getting all student attempts:", error);
       return [];
+    }
+  }
+
+  // Paginated student attempts
+  static async getStudentAttemptsPaginated({ pageSize = 10, lastDoc = null, filters = {} } = {}) {
+    try {
+      console.log("📊 Getting paginated student attempts...", { pageSize, filters });
+
+      const constraints = [orderBy("timestamp", "desc")];
+
+      if (filters.schoolId && filters.schoolId !== "all") {
+        constraints.unshift(where("schoolId", "==", filters.schoolId));
+      }
+      if (filters.quizId && filters.quizId !== "all") {
+        constraints.unshift(where("quizId", "==", filters.quizId));
+      }
+
+      // Get total count
+      const countQuery = query(collection(db, "quiz_results"), ...constraints);
+      const countSnapshot = await getCountFromServer(countQuery);
+      const totalCount = countSnapshot.data().count;
+
+      // Build paginated query
+      const paginatedConstraints = [...constraints, firestoreLimit(pageSize)];
+      if (lastDoc) {
+        paginatedConstraints.push(startAfter(lastDoc));
+      }
+
+      const q = query(collection(db, "quiz_results"), ...paginatedConstraints);
+      const querySnapshot = await getDocs(q);
+      const attempts = [];
+      let lastVisible = null;
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        attempts.push({
+          id: docSnap.id,
+          ...data,
+          _docRef: docSnap,
+          displaySchoolName:
+            data.schoolName || data.studentSchool?.nameTh || "-",
+        });
+        lastVisible = docSnap;
+      });
+
+      console.log("✅ Paginated attempts loaded:", attempts.length, "/ total:", totalCount);
+      return { attempts, lastVisible, totalCount };
+    } catch (error) {
+      console.error("❌ Error getting paginated student attempts:", error);
+      return { attempts: [], lastVisible: null, totalCount: 0 };
     }
   }
 

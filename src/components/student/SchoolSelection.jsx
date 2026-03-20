@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, School, Search, MapPin, Users } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
+import SearchableDropdown from '../common/SearchableDropdown';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { t, getLocalizedField } from '../../translations';
@@ -117,7 +118,10 @@ const SchoolSelection = ({ studentName, currentLanguage = 'th', onSelectSchool, 
           marginBottom: '32px',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          animation: 'slideUp 0.8s ease-out'
+          animation: 'slideUp 0.8s ease-out',
+          position: 'relative',
+          zIndex: 10,
+          overflow: 'visible'
         }}>
           <div style={{
             display: 'flex',
@@ -230,33 +234,22 @@ const SchoolSelection = ({ studentName, currentLanguage = 'th', onSelectSchool, 
                 left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: 'rgba(255, 255, 255, 0.5)'
+                color: 'rgba(255, 255, 255, 0.5)',
+                zIndex: 1
               }} />
-              <select
+              <SearchableDropdown
                 value={selectedProvince}
-                onChange={(e) => setSelectedProvince(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px 12px 44px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  📍 {t('allProvinces', currentLanguage)}
-                </option>
-                {getProvinces().map((province) => (
-                  <option key={province} value={province} style={{ background: '#374151', color: 'white' }}>
-                    {province}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedProvince(val)}
+                iconLeft
+                placeholder={`📍 ${t('allProvinces', currentLanguage)}`}
+                options={[
+                  { value: 'all', label: `📍 ${t('allProvinces', currentLanguage)}` },
+                  ...getProvinces().map((province) => ({
+                    value: province,
+                    label: province
+                  }))
+                ]}
+              />
             </div>
           </div>
         </div>

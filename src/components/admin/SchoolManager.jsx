@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, School, Search, Save, X } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
+import SearchableDropdown from '../common/SearchableDropdown';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 
@@ -753,31 +754,16 @@ const SchoolManager = () => {
                 }}>
                   เลือกโรงเรียนปลายทาง
                 </label>
-                <select
+                <SearchableDropdown
                   value={targetSchoolId}
-                  onChange={(e) => setTargetSchoolId(e.target.value)}
+                  onChange={(val) => setTargetSchoolId(val)}
                   disabled={transferring}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '1rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="" style={{ background: '#374151', color: 'white' }}>
-                    -- เลือกโรงเรียน --
-                  </option>
-                  {schools.filter(s => s.id !== schoolToDelete?.id).map(school => (
-                    <option key={school.id} value={school.id} style={{ background: '#374151', color: 'white' }}>
-                      {school.nameTh} {school.province ? `(${school.province})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="-- เลือกโรงเรียน --"
+                  options={schools.filter(s => s.id !== schoolToDelete?.id).map(school => ({
+                    value: school.id,
+                    label: `${school.nameTh}${school.province ? ` (${school.province})` : ''}`
+                  }))}
+                />
               </div>
 
               <div style={{

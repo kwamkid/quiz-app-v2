@@ -1,8 +1,10 @@
 // src/components/admin/AdminScores.jsx - รองรับการแสดงผลตามภาษา
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Trophy, Target, Calendar, Search, Filter, Clock, Download, School } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
+import SearchableDropdown from '../common/SearchableDropdown';
+import Pagination from '../common/Pagination';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import AnswerReview from '../common/AnswerReview';
@@ -32,52 +34,61 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
   const [showAnswerReview, setShowAnswerReview] = useState(false);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const paginatedAttempts = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredAttempts.slice(start, start + rowsPerPage);
+  }, [filteredAttempts, currentPage, rowsPerPage]);
+
   // ใช้ useCallback เพื่อป้องกัน function ถูกสร้างใหม่
   const filterAttempts = useCallback(() => {
     console.log('🔍 Filtering attempts...');
     let filtered = [...allAttempts];
-    
+
     // Filter by search term (student name)
     if (searchTerm.trim()) {
-      filtered = filtered.filter(attempt => 
+      filtered = filtered.filter(attempt =>
         attempt.studentName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Filter by quiz
     if (selectedQuiz !== 'all') {
       filtered = filtered.filter(attempt => attempt.quizId === selectedQuiz);
     }
-    
+
     // Filter by school
     if (selectedSchool !== 'all') {
       filtered = filtered.filter(attempt => attempt.schoolId === selectedSchool);
     }
-    
+
     // Filter by date range
     if (selectedDateRange !== 'all') {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
+
       filtered = filtered.filter(attempt => {
         const attemptDate = attempt.timestamp ? new Date(attempt.timestamp.seconds * 1000) : new Date(0);
-        
+
         switch (selectedDateRange) {
           case 'today':
             return attemptDate >= today;
-            
+
           case 'week': {
             const weekAgo = new Date(today);
             weekAgo.setDate(weekAgo.getDate() - 7);
             return attemptDate >= weekAgo;
           }
-            
+
           case 'month': {
             const monthAgo = new Date(today);
             monthAgo.setMonth(monthAgo.getMonth() - 1);
             return attemptDate >= monthAgo;
           }
-            
+
           case 'custom':
             if (customStartDate && customEndDate) {
               const start = new Date(customStartDate);
@@ -86,21 +97,22 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
               return attemptDate >= start && attemptDate <= end;
             }
             return true;
-            
+
           default:
             return true;
         }
       });
     }
-    
+
     // Sort by date (newest first)
     filtered.sort((a, b) => {
       const dateA = a.timestamp ? new Date(a.timestamp.seconds * 1000) : new Date(0);
       const dateB = b.timestamp ? new Date(b.timestamp.seconds * 1000) : new Date(0);
       return dateB - dateA;
     });
-    
+
     setFilteredAttempts(filtered);
+    setCurrentPage(1); // Reset to page 1 when filters change
     console.log('✅ Filtered:', filtered.length, 'attempts');
   }, [allAttempts, searchTerm, selectedQuiz, selectedSchool, selectedDateRange, customStartDate, customEndDate]);
 
@@ -112,20 +124,20 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
       try {
         setLoading(true);
         console.log('📊 Loading admin scores data...');
-        
+
         // Load all data in parallel
         const [attempts, quizzesData, schoolsData] = await Promise.all([
           FirebaseService.getAllStudentAttempts(),
           FirebaseService.getQuizzes(),
           FirebaseService.getAllSchools()
         ]);
-        
+
         if (!mounted) return;
-        
+
         setAllAttempts(attempts);
         setQuizzes(quizzesData);
         setSchools(schoolsData);
-        
+
         console.log('✅ Admin scores loaded:', attempts.length, 'attempts,', quizzesData.length, 'quizzes,', schoolsData.length, 'schools');
       } catch (error) {
         console.error('❌ Error loading admin scores:', error);
@@ -154,11 +166,11 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
       const uniqueStudents = new Set(
         filteredAttempts.map(attempt => `${attempt.studentName}_${attempt.schoolId || 'no-school'}`)
       ).size;
-      
+
       const totalScore = filteredAttempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0);
       const averageScore = Math.round(totalScore / filteredAttempts.length);
       const topScore = Math.max(...filteredAttempts.map(attempt => attempt.percentage || 0));
-      
+
       setStats({
         totalStudents: uniqueStudents,
         totalAttempts: filteredAttempts.length,
@@ -174,6 +186,7 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
       });
     }
   }, [filteredAttempts]);
+
 
   const handleBack = async () => {
     await audioService.navigation();
@@ -303,7 +316,10 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
           padding: '24px',
           marginBottom: '24px',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          position: 'relative',
+          zIndex: 10,
+          overflow: 'visible'
         }}>
           <div style={{
             display: 'flex',
@@ -429,32 +445,21 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
                 left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: 'rgba(255, 255, 255, 0.5)'
+                color: 'rgba(255, 255, 255, 0.5)',
+                zIndex: 1
               }} />
-              <select
+              <SearchableDropdown
                 value={selectedSchool}
-                onChange={(e) => setSelectedSchool(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px 12px 44px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
-                <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  🏫 {t('allSchools', currentLanguage)}
-                </option>
-                {schools.map((school) => (
-                  <option key={school.id} value={school.id} style={{ background: '#374151', color: 'white' }}>
-                    {getLocalizedField(school, 'name', currentLanguage)}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedSchool(val)}
+                iconLeft
+                options={[
+                  { value: 'all', label: `🏫 ${t('allSchools', currentLanguage)}` },
+                  ...schools.map((school) => ({
+                    value: school.id,
+                    label: getLocalizedField(school, 'name', currentLanguage)
+                  }))
+                ]}
+              />
             </div>
 
             {/* Quiz Filter */}
@@ -464,32 +469,21 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
                 left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: 'rgba(255, 255, 255, 0.5)'
+                color: 'rgba(255, 255, 255, 0.5)',
+                zIndex: 1
               }} />
-              <select
+              <SearchableDropdown
                 value={selectedQuiz}
-                onChange={(e) => setSelectedQuiz(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px 12px 44px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
-                <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  📚 {t('allQuizzes', currentLanguage)}
-                </option>
-                {quizzes.map((quiz) => (
-                  <option key={quiz.id} value={quiz.id} style={{ background: '#374151', color: 'white' }}>
-                    {quiz.emoji} {getLocalizedField(quiz, 'title', currentLanguage)}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedQuiz(val)}
+                iconLeft
+                options={[
+                  { value: 'all', label: `📚 ${t('allQuizzes', currentLanguage)}` },
+                  ...quizzes.map((quiz) => ({
+                    value: quiz.id,
+                    label: `${quiz.emoji} ${getLocalizedField(quiz, 'title', currentLanguage)}`
+                  }))
+                ]}
+              />
             </div>
 
             {/* Date Range Filter */}
@@ -499,45 +493,27 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
                 left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: 'rgba(255, 255, 255, 0.5)'
+                color: 'rgba(255, 255, 255, 0.5)',
+                zIndex: 1
               }} />
-              <select
+              <SearchableDropdown
                 value={selectedDateRange}
-                onChange={(e) => {
-                  setSelectedDateRange(e.target.value);
-                  if (e.target.value !== 'custom') {
+                onChange={(val) => {
+                  setSelectedDateRange(val);
+                  if (val !== 'custom') {
                     setCustomStartDate('');
                     setCustomEndDate('');
                   }
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px 12px 44px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
-                <option value="all" style={{ background: '#374151', color: 'white' }}>
-                  📅 {t('allTime', currentLanguage)}
-                </option>
-                <option value="today" style={{ background: '#374151', color: 'white' }}>
-                  📆 {t('today', currentLanguage)}
-                </option>
-                <option value="week" style={{ background: '#374151', color: 'white' }}>
-                  📅 {t('last7Days', currentLanguage)}
-                </option>
-                <option value="month" style={{ background: '#374151', color: 'white' }}>
-                  📅 {t('last30Days', currentLanguage)}
-                </option>
-                <option value="custom" style={{ background: '#374151', color: 'white' }}>
-                  📅 {t('custom', currentLanguage)}
-                </option>
-              </select>
+                iconLeft
+                options={[
+                  { value: 'all', label: `📅 ${t('allTime', currentLanguage)}` },
+                  { value: 'today', label: `📆 ${t('today', currentLanguage)}` },
+                  { value: 'week', label: `📅 ${t('last7Days', currentLanguage)}` },
+                  { value: 'month', label: `📅 ${t('last30Days', currentLanguage)}` },
+                  { value: 'custom', label: `📅 ${t('custom', currentLanguage)}` },
+                ]}
+              />
             </div>
           </div>
 
@@ -700,13 +676,13 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📊</div>
               <h3 style={{ color: 'white', fontSize: '1.5rem', marginBottom: '10px' }}>
-                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' 
-                  ? t('noSearchResults', currentLanguage) 
+                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all'
+                  ? t('noSearchResults', currentLanguage)
                   : t('noScoreData', currentLanguage)}
               </h3>
               <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all' 
-                  ? t('tryDifferentFilter', currentLanguage) 
+                {searchTerm || selectedQuiz !== 'all' || selectedSchool !== 'all' || selectedDateRange !== 'all'
+                  ? t('tryDifferentFilter', currentLanguage)
                   : t('waitForStudents', currentLanguage)}
               </p>
             </div>
@@ -715,7 +691,7 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
               display: 'grid',
               gap: '12px'
             }}>
-              {filteredAttempts.map((attempt, index) => (
+              {paginatedAttempts.map((attempt, index) => (
                 <div 
                   key={attempt.id || index}
                   style={{
@@ -885,6 +861,15 @@ const AdminScores = ({ currentLanguage = 'th' }) => {
               ))}
             </div>
           )}
+
+          <Pagination
+            totalItems={filteredAttempts.length}
+            currentPage={currentPage}
+            rowsPerPage={rowsPerPage}
+            onPageChange={setCurrentPage}
+            onRowsPerPageChange={(val) => { setRowsPerPage(val); setCurrentPage(1); }}
+            lang={currentLanguage}
+          />
         </div>
       </div>
 

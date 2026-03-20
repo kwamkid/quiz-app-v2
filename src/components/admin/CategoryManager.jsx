@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, Palette } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
+import SearchableDropdown from '../common/SearchableDropdown';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 
@@ -306,7 +307,10 @@ const CategoryManager = () => {
             borderRadius: '20px',
             padding: cardPadding,
             marginBottom: isDesktop ? '24px' : '20px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            position: 'relative',
+            zIndex: 10,
+            overflow: 'visible'
           }}>
             <h2 style={{
               color: 'white',
@@ -363,28 +367,14 @@ const CategoryManager = () => {
                 }}>
                   สีธีม
                 </label>
-                <select
+                <SearchableDropdown
                   value={newCategory.color}
-                  onChange={(e) => setNewCategory({...newCategory, color: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '1rem',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit'
-                  }}
-                >
-                  {colorOptions.map((color) => (
-                    <option key={color.value} value={color.value} style={{ background: '#374151', color: 'white' }}>
-                      {color.display}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewCategory({...newCategory, color: val})}
+                  options={colorOptions.map((color) => ({
+                    value: color.value,
+                    label: color.display
+                  }))}
+                />
               </div>
 
               {/* Emoji */}
@@ -569,7 +559,10 @@ const CategoryManager = () => {
                 borderRadius: '20px',
                 padding: cardPadding,
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                zIndex: 10,
+                overflow: 'visible'
               }}
             >
               {editingCategory?.id === category.id ? (
@@ -598,50 +591,29 @@ const CategoryManager = () => {
                       }}
                     />
                     
-                    <select
+                    <SearchableDropdown
                       value={editingCategory.color}
-                      onChange={(e) => setEditingCategory({...editingCategory, color: e.target.value})}
-                      style={{
-                        padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        width: '100%'
-                      }}
-                    >
-                      {colorOptions.map((color) => (
-                        <option key={color.value} value={color.value} style={{ background: '#374151' }}>
-                          {color.display}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setEditingCategory({...editingCategory, color: val})}
+                      options={colorOptions.map((color) => ({
+                        value: color.value,
+                        label: color.display
+                      }))}
+                      style={{ padding: '10px 14px', borderRadius: '10px' }}
+                    />
 
-                    <select
+                    <SearchableDropdown
                       value={editingCategory.emoji}
-                      onChange={(e) => setEditingCategory({...editingCategory, emoji: e.target.value})}
+                      onChange={(val) => setEditingCategory({...editingCategory, emoji: val})}
+                      options={emojiOptions.map((emoji) => ({
+                        value: emoji,
+                        label: emoji
+                      }))}
                       style={{
                         padding: '10px 14px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '10px',
-                        color: 'white',
-                        fontSize: '1rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        width: '100%',
                         gridColumn: isDesktop ? 'auto' : '1 / -1'
                       }}
-                    >
-                      {emojiOptions.map((emoji) => (
-                        <option key={emoji} value={emoji} style={{ background: '#374151' }}>
-                          {emoji}
-                        </option>
-                      ))}
-                    </select>
+                    />
 
                     <input
                       type="text"

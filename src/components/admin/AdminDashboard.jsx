@@ -1,8 +1,9 @@
 // src/components/admin/AdminDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, BarChart3, ArrowLeft, Target, Calendar, Users, BookOpen, Filter, Tag, Volume2, VolumeX, QrCode } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
+import Pagination from '../common/Pagination';
 import audioService from '../../services/simpleAudio';
 import musicService from '../../services/musicService';
 import FirebaseService from '../../services/firebase';
@@ -24,6 +25,14 @@ const AdminDashboard = ({ onLogout }) => {
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedQuizForQR, setSelectedQuizForQR] = useState(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const paginatedQuizzes = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredQuizzes.slice(start, start + rowsPerPage);
+  }, [filteredQuizzes, currentPage, rowsPerPage]);
 
   useEffect(() => {
     loadData();
@@ -102,6 +111,7 @@ const AdminDashboard = ({ onLogout }) => {
   const handleCategoryFilter = async (categoryId) => {
     await audioService.buttonClick();
     setSelectedCategory(categoryId);
+    setCurrentPage(1);
   };
 
   const getCategoryInfo = (categoryId) => {
@@ -813,7 +823,7 @@ public/
                 </button>
               </div>
             ) : (
-              filteredQuizzes.map((quiz) => {
+              paginatedQuizzes.map((quiz) => {
                 const categoryInfo = getCategoryInfo(quiz.categoryId);
                 return (
                   <div 
@@ -1006,6 +1016,15 @@ public/
               })
             )}
           </div>
+
+          <Pagination
+            totalItems={filteredQuizzes.length}
+            currentPage={currentPage}
+            rowsPerPage={rowsPerPage}
+            onPageChange={setCurrentPage}
+            onRowsPerPageChange={(val) => { setRowsPerPage(val); setCurrentPage(1); }}
+            lang="th"
+          />
         </div>
       </div>
 

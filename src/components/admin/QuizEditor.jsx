@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Upload, Globe } from 'lucide-react';
 import QuizImport from './QuizImport';
+import SearchableDropdown from '../common/SearchableDropdown';
 import audioService from '../../services/simpleAudio';
 import FirebaseService from '../../services/firebase';
 import { t } from '../../translations';
@@ -455,7 +456,10 @@ const QuizEditor = ({ currentLanguage = 'th' }) => {
           borderRadius: '20px',
           padding: '24px',
           marginBottom: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative',
+          zIndex: 10,
+          overflow: 'visible'
         }}>
           <h2 style={{
             color: 'white',
@@ -584,28 +588,14 @@ const QuizEditor = ({ currentLanguage = 'th' }) => {
               }}>
                 {t('difficulty', currentLanguage)}
               </label>
-              <select
+              <SearchableDropdown
                 value={quizData.difficulty}
-                onChange={(e) => handleQuizInfoChange('difficulty', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
-                {difficultyOptions.map((level) => (
-                  <option key={level} value={level} style={{ background: '#374151', color: 'white' }}>
-                    {level}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleQuizInfoChange('difficulty', val)}
+                options={difficultyOptions.map((level) => ({
+                  value: level,
+                  label: level
+                }))}
+              />
             </div>
 
             {/* Category */}
@@ -619,28 +609,14 @@ const QuizEditor = ({ currentLanguage = 'th' }) => {
               }}>
                 {t('subjectCategory', currentLanguage)} <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>*</span>
               </label>
-              <select
+              <SearchableDropdown
                 value={quizData.categoryId}
-                onChange={(e) => handleQuizInfoChange('categoryId', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id} style={{ background: '#374151', color: 'white' }}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleQuizInfoChange('categoryId', val)}
+                options={categories.map((category) => ({
+                  value: category.id,
+                  label: category.name
+                }))}
+              />
             </div>
           </div>
         </div>
@@ -652,7 +628,10 @@ const QuizEditor = ({ currentLanguage = 'th' }) => {
           borderRadius: '20px',
           padding: '24px',
           marginBottom: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative',
+          zIndex: 5,
+          overflow: 'visible'
         }}>
           <h2 style={{
             color: 'white',
@@ -886,39 +865,19 @@ const QuizEditor = ({ currentLanguage = 'th' }) => {
                   }}>
                     {t('correctAnswer', currentLanguage)} <span style={{ color: '#10b981' }}>*</span>
                   </label>
-                  <select
+                  <SearchableDropdown
                     value={question.correctAnswer}
-                    onChange={(e) => handleQuestionChange(questionIndex, 'correctAnswer', parseInt(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      border: '2px solid #22c55e',
-                      borderRadius: '10px',
-                      color: 'white',
-                      fontSize: '0.9rem',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit'
-                    }}
-                  >
-                    {['A', 'B', 'C', 'D'].map((letter, index) => {
-                      const hasThai = question.optionsTh[index]?.trim();
-                      const hasEnglish = question.optionsEn[index]?.trim();
-                      if (hasThai || hasEnglish) {
-                        return (
-                          <option 
-                            key={index} 
-                            value={index}
-                            style={{ background: '#374151', color: 'white' }}
-                          >
-                            {letter}
-                          </option>
-                        );
-                      }
-                      return null;
-                    })}
-                  </select>
+                    onChange={(val) => handleQuestionChange(questionIndex, 'correctAnswer', val)}
+                    greenTheme
+                    options={['A', 'B', 'C', 'D']
+                      .map((letter, index) => ({
+                        value: index,
+                        label: letter,
+                        hasThai: question.optionsTh[index]?.trim(),
+                        hasEnglish: question.optionsEn[index]?.trim(),
+                      }))
+                      .filter((opt) => opt.hasThai || opt.hasEnglish)}
+                  />
                 </div>
 
                 <div>
